@@ -1,0 +1,4513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>Postfolio — Post + Story</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- Fonts laden non-blocking (media-swap), damit der erste Seitenaufbau nicht
+     auf die Schriftfamilien wartet. Die UI nutzt 'Helvetica Neue' (System);
+     die Google-Fonts werden nur vom Text-Werkzeug gebraucht und dürfen
+     nachladen. Kuratiertes Editorial-Set: Display/Headline (Bodoni Moda,
+     Playfair Display, DM Serif Display, Bricolage Grotesque, Archivo) +
+     elegante Sublines (Instrument Serif, Cormorant Garamond, Fraunces,
+     Arapey, Poppins). -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,100..900;1,100..900&family=Arapey:ital@0;1&family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..900;1,6..96,400..900&family=Bricolage+Grotesque:opsz,wght@12..96,200..800&family=Cormorant+Garamond:ital,wght@0,300..700;1,300..700&family=DM+Serif+Display:ital@0;1&family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Instrument+Serif:ital@0;1&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Poppins:ital,wght@0,300..900;1,300..900&display=swap" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,100..900;1,100..900&family=Arapey:ital@0;1&family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..900;1,6..96,400..900&family=Bricolage+Grotesque:opsz,wght@12..96,200..800&family=Cormorant+Garamond:ital,wght@0,300..700;1,300..700&family=DM+Serif+Display:ital@0;1&family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Instrument+Serif:ital@0;1&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Poppins:ital,wght@0,300..900;1,300..900&display=swap"></noscript>
+<!-- JSZip wird nur beim Export gebraucht → defer, blockiert das Parsen nicht. -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" defer></script>
+<style>
+:root {
+  --bg: #F4F1EB;
+  --surface: #FFFFFF;
+  --text: #2A2826;
+  --muted: #9B948A;
+  --line: #D8D1C6;
+  --accent: #D10101;
+  --dark: #2A2826;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { height: 100%; }
+/* Die App füllt genau eine Bildschirmhöhe und scrollt selbst NICHT — nur die
+   Werkzeugleiste (horizontal) und die Leinwand (innerhalb ihres Rahmens)
+   scrollen. So gibt es kein vertikales „Wackeln" der ganzen Seite auf dem
+   iPhone. overscroll-behavior:none unterdrückt zusätzlich den Gummiband-Effekt. */
+body {
+  background: var(--bg);
+  font-family: 'Helvetica Neue', sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100dvh;
+  padding: 16px;
+  gap: 14px;
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: none;        /* keine Browser-Pinch-Zoom/-Pan-Gesten auf der Seite */
+}
+#appHeader {
+  width: 100%;
+  max-width: 560px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+#brandBlock { display: flex; align-items: center; gap: 9px; text-align: left; }
+#logoMark { width: 30px; height: 30px; flex: 0 0 auto; display: block; }
+#brandText { display: flex; flex-direction: column; }
+/* Wortmarke: editorial-Serif, etwas präsenter, mit klarer Nutzen-Zeile. */
+#appHeader h1 {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1;
+  color: var(--text);
+  text-transform: none;
+}
+#appHeader .tagline {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-top: 5px;
+}
+#headerActions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.hint { font-size: 12px; color: var(--text); text-align: left; }
+/* Aufgeräumte Legende: kleine Abschnitts-Überschriften + Key/Bedeutung-Raster */
+.hint h4 {
+  font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--muted); font-weight: 600; margin: 12px 0 5px;
+}
+.hint h4:first-child { margin-top: 0; }
+.hint .kv {
+  display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px;
+  font-size: 12px; line-height: 1.35;
+}
+.hint .kv b { font-weight: 600; color: var(--text); white-space: nowrap; }
+.hint .kv span { color: var(--muted); }
+.hint .legend { display: flex; flex-wrap: wrap; gap: 7px 14px; }
+.hint .legend i {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-style: normal; font-size: 12px; color: var(--muted);
+}
+.hint .legend .d { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 auto; }
+details.hint-details { position: relative; }
+details.hint-details summary {
+  list-style: none;
+  cursor: pointer;
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+}
+details.hint-details summary::-webkit-details-marker { display: none; }
+details.hint-details .hint {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 284px;
+  max-width: calc(100vw - 24px);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px 16px;
+  box-shadow: 0 10px 28px rgba(0,0,0,0.08);
+  z-index: 80;
+}
+/* ── Controls ── */
+#mainToolbar {
+  display: flex;
+  flex-wrap: nowrap;          /* immer EINE Reihe — passt sich adaptiv an */
+  gap: 7px;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  max-width: 100%;
+}
+#mainToolbar > * { flex-shrink: 0; }
+#mainToolbar .row { gap: 5px; }
+button {
+  border: none;
+  padding: 0 16px;
+  height: 40px;
+  border-radius: 8px;
+  font-size: 13px;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  text-transform: none;
+  font-family: inherit;
+  background: transparent;
+  color: var(--text);
+}
+
+/* Button hierarchy: primary (dark, single most important action),
+   secondary (outline, toggled state fills dark), tertiary (small
+   neutral chip for minor/repeated actions). Red is reserved for the
+   export accent and destructive (delete) actions only. */
+.btn-primary {
+  background: var(--dark); color: var(--bg); border: none;
+}
+.btn-secondary {
+  background: transparent; color: var(--text);
+  border: 1px solid var(--line);
+}
+.btn-secondary.sel, .btn-secondary.active {
+  background: var(--dark); color: var(--bg); border-color: var(--dark);
+}
+.btn-tertiary {
+  background: #ECE7DC; color: var(--text); border: none;
+}
+
+/* Export — moved into the header, small circular icon button.
+   This is the one deliberate exception to "dark = primary": export is
+   the single most important action, accented in the brand red so it
+   stays unmistakably findable without competing with the toolbar. */
+#exportWrap { position: relative; }
+#exportBtn {
+  width: 38px; height: 38px; padding: 0; border-radius: 50%;
+  background: var(--accent); color: white;
+  display: flex; align-items: center; justify-content: center;
+}
+#exportBtn svg { width: 16px; height: 16px; }
+#exportMenu {
+  display: none; position: absolute; top: calc(100% + 8px); right: 0;
+  background: var(--surface); border: 1px solid var(--line); z-index: 100;
+  min-width: 150px; border-radius: 10px; overflow: hidden;
+  box-shadow: 0 10px 28px rgba(0,0,0,0.1);
+}
+#exportMenu.show { display: block; }
+#exportMenu button {
+  display: block; width: 100%; text-align: left; height: auto;
+  background: var(--surface); color: var(--text); border: none;
+  border-radius: 0;
+  padding: 12px 15px; font-size: 13px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--bg);
+}
+#exportMenu button:last-child { border-bottom: none; }
+#exportMenu button:hover { background: var(--bg); }
+#deleteBtn {
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  display: none;
+  align-items: center;
+  gap: 6px;
+}
+#deleteBtn svg { flex: 0 0 auto; }
+#deleteBtn.show { display: inline-flex; }
+#cropBtn {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--line);
+  display: none;
+}
+#cropBtn.show { display: inline-block; }
+#rotateBtn {
+  background: transparent; color: var(--text);
+  border: 1px solid var(--line); display: none;
+  align-items: center; justify-content: center;
+}
+#rotateBtn.show { display: inline-flex; }
+#rotateCtrl input[type=range] { flex: 1 1 auto; min-width: 0; }
+#rotVal { font-size: 12px; color: var(--muted); min-width: 40px; text-align: right; }
+#rotReset { font-size: 12px; padding: 0 12px; }
+
+.frame-btn, .margin-btn {
+  background: transparent; color: var(--text);
+  border: 1px solid var(--line);
+  font-size: 11px; letter-spacing: 0.02em; padding: 0 10px;
+  height: 32px; text-transform: none;
+}
+.frame-btn.sel, .margin-btn.sel { background: var(--dark); color: var(--bg); border-color: var(--dark); }
+#marginCtrl { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; }
+#marginCtrl::-webkit-scrollbar { height: 0; }
+#fitBtn { background: var(--dark); color: var(--bg); height: 32px; font-size: 11px; padding: 0 10px; }
+
+.mode-btn {
+  background: transparent; color: var(--text);
+  border: 1px solid var(--line);
+  font-size: 12px; letter-spacing: 0.01em; padding: 0 12px;
+  height: 34px; text-transform: none;
+}
+.mode-btn.sel { background: var(--dark); color: var(--bg); border-color: var(--dark); }
+
+/* Eingeklapptes Format-Menü */
+#formatWrap { position: relative; }
+#formatToggle {
+  background: var(--dark); color: var(--bg); border: 1px solid var(--dark);
+  font-size: 12px; height: 34px; padding: 0 12px; border-radius: 8px;
+}
+#formatMenu {
+  display: none; position: fixed; top: 0; left: 0; /* Position per JS, damit es
+    nicht von der scrollenden Toolbar abgeschnitten wird */
+  background: var(--surface); border: 1px solid var(--line); z-index: 200;
+  min-width: 130px; border-radius: 10px; overflow: hidden;
+  box-shadow: 0 10px 28px rgba(0,0,0,0.1);
+}
+#formatMenu.show { display: block; }
+#formatMenu .mode-btn {
+  display: block; width: 100%; text-align: left; height: auto;
+  border: none; border-radius: 0; padding: 11px 14px;
+  border-bottom: 1px solid var(--bg);
+}
+#formatMenu .mode-btn:last-child { border-bottom: none; }
+#formatMenu .mode-btn.sel { background: var(--bg); color: var(--text); }
+
+/* Text-Dropdown: bündelt + Blank / Editorial / Magazine */
+#textWrap { position: relative; }
+#textToggle {
+  background: transparent; color: var(--text);
+  border: 1px solid var(--line); border-radius: 8px;
+  height: 40px; padding: 0 14px; font-size: 13px;
+}
+#textMenu {
+  display: none; position: fixed; top: 0; left: 0; /* Position per JS, damit es
+    nicht von der scrollenden Toolbar abgeschnitten wird */
+  background: var(--surface); border: 1px solid var(--line); z-index: 200;
+  min-width: 160px; border-radius: 10px; overflow: hidden;
+  box-shadow: 0 10px 28px rgba(0,0,0,0.1);
+}
+#textMenu.show { display: block; }
+#textMenu { padding: 6px; min-width: 248px; }
+.tm-item {
+  display: flex; align-items: center; gap: 11px;
+  width: 100%; text-align: left; height: auto;
+  background: transparent; color: var(--text);
+  border: none; border-radius: 9px; padding: 9px 10px;
+}
+.tm-item:hover { background: var(--bg); }
+.tm-ico {
+  flex: 0 0 auto; width: 34px; height: 34px; border-radius: 8px;
+  border: 1px solid var(--line); background: var(--surface);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Playfair Display', Georgia, serif; font-size: 17px; color: var(--text);
+}
+.tm-txt { display: flex; flex-direction: column; line-height: 1.25; }
+.tm-txt b { font-size: 13px; font-weight: 600; }
+.tm-txt small { font-size: 11px; color: var(--muted); }
+.tm-sep {
+  font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--muted); padding: 9px 10px 4px;
+}
+/* Mini-Vorschau in den echten Schriften, damit der Look sofort klar ist */
+.tm-prev {
+  flex: 0 0 auto; width: 34px; height: 34px; border-radius: 8px;
+  border: 1px solid var(--line); background: var(--surface);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text); overflow: hidden; white-space: nowrap;
+}
+.tm-prev-ed { font-family: 'Playfair Display', serif; font-weight: 700; font-size: 11px; }
+.tm-prev-ed i { font-family: 'Cormorant Garamond', serif; font-style: italic; font-weight: 500; margin-right: 1px; }
+.tm-prev-mag { font-family: 'Bodoni Moda', serif; font-weight: 700; font-size: 7px; letter-spacing: 0.04em; }
+
+/* "New" (clear canvas) — Trash-Icon + Label, eindeutig vs. Undo/Redo */
+#newBtn {
+  display: flex; align-items: center; gap: 4px;
+  height: 30px; padding: 0 10px; border-radius: 999px;
+  border: 1px solid var(--line); background: transparent; color: var(--muted);
+  font-size: 12px;
+}
+#newBtn svg { width: 13px; height: 13px; }
+#newBtn:hover { color: var(--accent); border-color: var(--accent); }
+
+.row { display: flex; align-items: center; gap: 6px; }
+/* BORDER-Reihe immer in EINER Zeile (notfalls seitlich scrollbar). */
+#frameCtrl { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; }
+#frameCtrl::-webkit-scrollbar { height: 0; }
+.label {
+  font-size: 11px; letter-spacing: 0.12em;
+  color: var(--muted); text-transform: uppercase;
+}
+.icon-btn {
+  width: 28px; height: 28px;
+  padding: 0; line-height: 28px; text-align: center;
+  background: #ECE7DC; color: var(--text);
+  font-size: 14px; border-radius: 50%;
+}
+#slotLabel {
+  font-size: 11px; color: var(--muted); min-width: 24px; text-align: center;
+}
+#slideCount { font-size: 12px; color: var(--text); min-width: 28px; text-align: center; }
+
+.bg-btn {
+  width: 22px; height: 22px;
+  border-radius: 50%; border: 2px solid transparent;
+  cursor: pointer; padding: 0;
+}
+.bg-btn.sel { border-color: var(--accent); }
+.bg-btn.beige { background: #F4F1EB; box-shadow: 0 0 0 1px var(--line); }
+.bg-btn.white { background: #ffffff; box-shadow: 0 0 0 1px var(--line); }
+.bg-btn.black { background: #111111; }
+.bg-btn.grey  { background: #888888; }
+.bg-btn.red   { background: #D10101; }
+#bgEyedropBtn {
+  width: 22px; height: 22px;
+  border-radius: 50%; padding: 0;
+  background: #ECE7DC; color: var(--text);
+  border: 2px solid transparent;
+  display: flex; align-items: center; justify-content: center;
+}
+#bgEyedropBtn svg { width: 12px; height: 12px; pointer-events: none; }
+#bgEyedropBtn.picking { background: var(--dark); color: var(--bg); border-color: var(--accent); }
+
+/* Hex-Eingabefeld (Rahmen- & Hintergrundfarbe) — beliebige Farbe tippbar */
+.hex-input {
+  width: 78px; height: 30px; padding: 0 8px;
+  border: 1px solid var(--line); border-radius: 7px;
+  background: var(--surface); color: var(--text);
+  font-family: ui-monospace, Menlo, monospace; font-size: 12px; letter-spacing: 0.02em;
+}
+.hex-input:focus { outline: none; border-color: var(--text); }
+
+/* Background-Dropdown */
+#bgWrap { position: relative; }
+#bgToggle {
+  display: flex; align-items: center; gap: 5px;
+  background: transparent; color: var(--text);
+  border: 1px solid var(--line); border-radius: 8px;
+  height: 40px; padding: 0 9px;
+}
+#bgToggleSwatch {
+  width: 20px; height: 20px; border-radius: 5px;
+  box-shadow: 0 0 0 1px var(--line) inset; background: #F4F1EB; flex: 0 0 auto;
+}
+.bg-caret { font-size: 11px; color: var(--muted); }
+#bgMenu {
+  display: none; position: fixed; top: 0; left: 0; /* Position per JS */
+  background: var(--surface); border: 1px solid var(--line); z-index: 200;
+  border-radius: 12px; padding: 12px; box-shadow: 0 10px 28px rgba(0,0,0,0.1);
+}
+#bgMenu.show { display: block; }
+.bg-menu-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+
+.clr-btn {
+  width: 22px; height: 22px;
+  border-radius: 50%; border: 2px solid transparent;
+  cursor: pointer; padding: 0;
+}
+.clr-btn.sel   { border-color: var(--accent); }
+.clr-btn.beige { background: #F4F1EB; box-shadow: 0 0 0 1px var(--line); }
+.clr-btn.white { background: #ffffff; box-shadow: 0 0 0 1px var(--line); }
+.clr-btn.black { background: #111111; }
+.clr-btn.grey  { background: #888888; }
+.clr-btn.red   { background: var(--accent); }
+
+#frameEyedropBtn {
+  width: 22px; height: 22px;
+  border-radius: 50%; padding: 0;
+  background: #ECE7DC; color: var(--text);
+  border: 2px solid transparent;
+  display: flex; align-items: center; justify-content: center;
+}
+#frameEyedropBtn svg { width: 12px; height: 12px; pointer-events: none; }
+#frameEyedropBtn.picking { background: var(--dark); color: var(--bg); border-color: var(--accent); }
+canvas.picking-color { cursor: crosshair; }
+
+.style-btn {
+  background: transparent; color: var(--text);
+  border: 1px solid var(--line);
+  font-size: 12px; padding: 0;
+  width: 30px; height: 30px;
+}
+.style-btn.sel { background: var(--dark); color: var(--bg); border-color: var(--dark); }
+.style-btn[data-style="bold"]      { font-weight: 700; }
+.style-btn[data-style="italic"]    { font-style: italic; }
+.style-btn[data-style="underline"] { text-decoration: underline; }
+
+/* Text-Controls: zwei adaptive Reihen — (1) Schrift + Gewicht, (2) B/I/U + Farbe */
+#textCtrl { flex-direction: column; gap: 8px; align-items: stretch; width: 100%; max-width: 560px; }
+#textCtrl .tc-row { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; }
+#textCtrl .tc-row select { flex: 1 1 0; min-width: 0; }
+#textCtrl #textContentInput { width: 100%; }
+.tc-gap { flex: 1 1 auto; }
+#tc-track-row { gap: 10px; }
+#tc-track-row input[type=range] { flex: 1 1 auto; min-width: 0; }
+.tc-track-ico { font-size: 11px; color: var(--muted); letter-spacing: 0.06em; white-space: nowrap; }
+#trackVal { font-size: 11px; color: var(--muted); min-width: 26px; text-align: right; }
+#outlineVal { font-size: 11px; color: var(--muted); min-width: 26px; text-align: right; }
+#outlineInput { flex: 1 1 auto; min-width: 0; }
+#outlineCtrl { display: flex; flex-direction: column; gap: 8px; }
+.ol-toggle, .ol-mode-btn, .ol-dir-btn {
+  background: transparent; color: var(--text); border: 1px solid var(--line);
+  border-radius: 8px; height: 30px; font-size: 12px; padding: 0 11px;
+}
+.ol-mode-btn.sel, .ol-dir-btn.sel { background: var(--dark); color: var(--bg); border-color: var(--dark); }
+.ol-dir-btn { width: 34px; padding: 0; }
+.ol-clr-btn { width: 22px; height: 22px; border-radius: 50%; border: 2px solid transparent; box-shadow: 0 0 0 1px var(--line) inset; padding: 0; }
+.ol-clr-btn.sel { border-color: var(--accent); }
+#textCtrl select {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--text);
+  font-size: 12px;
+  height: 32px;
+  padding: 0 8px;
+  font-family: inherit;
+  cursor: pointer;
+  border-radius: 8px;
+}
+#textCtrl input[type="text"] {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12px;
+  height: 32px;
+  padding: 0 9px;
+  min-width: 140px;
+  font-family: inherit;
+  border-radius: 8px;
+}
+
+/* ── Main toolbar: always-visible, selection-independent actions ── */
+/* (#mainToolbar base rule defined above, shared with #controls legacy name) */
+
+/* ── Context sheet: appears only while something is selected.
+   Floats above the canvas instead of pushing it down, so the canvas
+   never resizes depending on selection state. ── */
+#contextSheet {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+  box-shadow: 0 -6px 24px rgba(0,0,0,0.08);
+  padding: 12px 14px calc(12px + env(safe-area-inset-bottom, 0px));
+  max-height: 48vh;
+  overflow-y: auto;
+  transform: translateY(110%);
+  transition: transform 0.22s ease;
+}
+#contextSheet.show { transform: translateY(0); }
+#contextSheet .row { flex-wrap: wrap; }
+
+/* Desktop: Panel als rechte Seitenleiste, damit die Slide die volle Höhe nutzt
+   (mobile/iPhone bleibt das Bottom-Sheet). */
+@media (min-width: 820px) {
+  #contextSheet {
+    left: auto; right: 0; top: 0; bottom: 0;
+    width: 330px; height: 100dvh; max-height: none;
+    border-top: none; border-left: 1px solid var(--line);
+    box-shadow: -6px 0 24px rgba(0,0,0,0.08);
+    padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+    transform: translateX(110%);
+    align-content: flex-start;
+  }
+  #contextSheet.show { transform: translateX(0); }
+}
+#contextTop { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+
+@media (max-width: 600px) {
+  body { padding: 10px; gap: 10px; }
+  #appHeader h1 { font-size: 18px; }
+  #mainToolbar { gap: 5px; }
+  /* Auf sehr schmalen Geräten Beschriftungen weglassen, damit alles in eine
+     Reihe passt (Symbole/Stepper bleiben). */
+  #mainToolbar .label { display: none; }
+  #formatToggle, #textToggle { padding: 0 10px; }
+  #mainToolbar .icon-btn { width: 30px; height: 30px; }
+  /* BORDER-Reihe kompakt, damit None·1–5·All·Fit in eine Zeile passen. */
+  #frameCtrl { gap: 5px; }
+  #frameCtrl .label { display: none; }
+  #frameCtrl .frame-btn { padding: 0 9px; }
+  #frameCtrl #frameAllBtn, #frameCtrl #fitBtn { padding: 0 11px; }
+  #marginCtrl { gap: 5px; }
+  #marginCtrl .label { display: none; }
+  #marginCtrl .margin-btn { padding: 0 9px; }
+}
+
+/* ── Canvas area: editorial/print presentation — the canvas is the
+   product, the controls are just there to serve it. ── */
+#canvas-wrap {
+  position: relative;
+  flex: 1 1 auto;        /* füllt den Platz zwischen Toolbar und unterem Rand */
+  min-height: 0;         /* erlaubt Schrumpfen im Flex-Layout statt Überlauf */
+  display: flex; align-items: center; justify-content: safe center; /* Slide zentriert */
+  width: 100%;           /* volle Breite — sonst „kollabiert" der Rahmen auf die Leinwandbreite */
+  overflow-x: auto;
+  overflow-y: hidden;    /* keine vertikale Bewegung — nur seitlich zwischen Slides */
+  max-width: 100vw;
+  background: #EDE8DF;
+  padding: 18px;
+  border-radius: 18px;
+  -webkit-overflow-scrolling: touch;
+  /* Nur horizontales Panen (zwischen Slides). Pinch-Zoom des Browsers ist
+     deaktiviert; das Zwei-Finger-Resize/Rotate eines Fotos ruft beim Ziehen
+     preventDefault auf. So bewegt sich sonst nichts. */
+  touch-action: pan-x;
+  /* Always-visible horizontal scrollbar (Firefox) — trackpad swipe scrolls
+     this natively; the bar itself just stays visible instead of OS auto-hide. */
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+canvas {
+  display: block;
+  border-radius: 2px;
+  box-shadow: 0 18px 50px rgba(0,0,0,0.1);
+}
+/* Always-visible horizontal scrollbar (WebKit/Chromium) */
+#canvas-wrap::-webkit-scrollbar { height: 8px; }
+#canvas-wrap::-webkit-scrollbar-track { background: transparent; }
+#canvas-wrap::-webkit-scrollbar-thumb {
+  background: var(--line); border-radius: 4px;
+}
+#canvas-wrap::-webkit-scrollbar-thumb:hover { background: #A8A39C; }
+
+/* Zoom controls — kept deliberately quiet: small, translucent, monochrome
+   line glyphs instead of solid dark filled buttons, so it reads as a
+   secondary utility rather than competing with the canvas. */
+#zoomCtrl {
+  position: fixed;
+  bottom: 14px; right: 14px;
+  transition: bottom 0.15s ease;
+  z-index: 65;
+  display: flex; align-items: center; gap: 2px;
+  background: rgba(255,255,255,0.82);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 999px;
+  padding: 4px 6px;
+}
+#zoomCtrl .icon-btn {
+  width: 22px; height: 22px;
+  padding: 0; line-height: 22px;
+  font-size: 12px;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+}
+#zoomCtrl .icon-btn:hover { color: var(--text); }
+#zoomLabel { font-size: 11px; color: var(--muted); min-width: 34px; text-align: center; cursor: pointer; user-select: none; padding: 2px 2px; }
+#zoomToggle svg { width: 15px; height: 15px; }
+/* Eingeklappt: nur das Lupen-Icon. Controls (−/%/+/⊡) erst nach Tippen. */
+#zoomCtrl:not(.expanded) #zoomOut,
+#zoomCtrl:not(.expanded) #zoomIn,
+#zoomCtrl:not(.expanded) #zoomFit,
+#zoomCtrl:not(.expanded) #zoomLabel { display: none; }
+#zoomCtrl.expanded #zoomToggle { display: none; }
+#previewBtn svg { width: 15px; height: 15px; }
+
+/* Vollbild-Vorschau */
+#preview { display: none; position: fixed; inset: 0; z-index: 700; background: #0b0b0b; }
+#preview.show { display: block; }
+#preview-track {
+  display: flex; height: 100%; overflow-x: auto; overflow-y: hidden;
+  scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; touch-action: pan-x;
+}
+.pv-panel {
+  flex: 0 0 100%; width: 100vw; height: 100%; scroll-snap-align: center;
+  display: flex; align-items: center; justify-content: center; padding: 18px;
+}
+.pv-panel img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 2px; box-shadow: 0 12px 50px rgba(0,0,0,0.5); }
+#preview-close {
+  position: absolute; top: calc(14px + env(safe-area-inset-top, 0px)); right: 14px; z-index: 2;
+  width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.16);
+  color: #fff; border: none; font-size: 18px; cursor: pointer;
+}
+#preview-dots { position: absolute; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); left: 0; right: 0; display: flex; gap: 7px; justify-content: center; z-index: 2; }
+#preview-dots .pvd { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,0.35); }
+#preview-dots .pvd.on { background: #fff; }
+
+/* Slide dots */
+#dots { display: flex; gap: 7px; align-items: center; }
+.dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--line); cursor: pointer;
+  transition: background .15s, transform .15s;
+}
+.dot.on { background: var(--text); transform: scale(1.35); }
+
+/* Loading */
+#loading {
+  display: none; position: fixed; inset: 0;
+  background: rgba(244,241,235,0.88); z-index: 100;
+  flex-direction: column; align-items: center; justify-content: center;
+  gap: 12px; font-size: 11px; letter-spacing: 0.15em;
+  color: #53504B; text-transform: uppercase;
+}
+#loading.show { display: flex; }
+.spinner {
+  width: 26px; height: 26px;
+  border: 2px solid #C5C1BB; border-top-color: #D10101;
+  border-radius: 50%; animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Export overlay */
+#exp-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.9); z-index: 200;
+  flex-direction: column; align-items: center; overflow-y: auto;
+}
+#exp-overlay.show { display: flex; }
+#exp-header {
+  position: sticky; top: 0; width: 100%;
+  background: rgba(0,0,0,0.96);
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 18px; z-index: 5;
+  flex-wrap: wrap; gap: 8px;
+}
+#exp-hint { font-size: 10px; color: rgba(255,255,255,0.55); letter-spacing: .1em; text-transform: uppercase; flex: 1 1 auto; min-width: 0; }
+#exp-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; flex-shrink: 0; }
+#downloadAllBtn, #shareAllBtn { background: #D10101; color: white; padding: 8px 14px; font-size: 11px; display: none; white-space: nowrap; flex-shrink: 0; height: auto; }
+#downloadAllBtn.show, #shareAllBtn.show { display: inline-block; }
+#downloadAllBtn:disabled, #shareAllBtn:disabled { opacity: 0.6; cursor: default; }
+#closeExp { background: #53504B; color: white; padding: 8px 14px; font-size: 11px; white-space: nowrap; flex-shrink: 0; height: auto; }
+#exp-list { display: flex; flex-direction: column; align-items: center; gap: 24px; padding: 24px 16px; width: 100%; }
+.exp-item { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.exp-item img { max-width: min(90vw, 280px); box-shadow: 0 4px 24px rgba(0,0,0,0.5); }
+.exp-item span { font-size: 10px; color: rgba(255,255,255,0.45); letter-spacing: .1em; text-transform: uppercase; }
+.dl-btn { background: #D10101; color: white; font-size: 10px; padding: 8px 14px; }
+
+/* Dezente Outro-Einladung im Export-Overlay */
+#promoInvite { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 9px 14px; padding: 12px 18px 0; }
+#promoInvite.hidden { display: none; }
+.pi-text { font-size: 11px; color: rgba(255,255,255,0.5); letter-spacing: 0.02em; text-align: center; }
+.pi-actions { display: flex; gap: 8px; }
+#promoInvite button {
+  background: transparent; color: rgba(255,255,255,0.85);
+  border: 1px solid rgba(255,255,255,0.3); border-radius: 8px;
+  font-size: 11px; padding: 7px 12px; height: auto; white-space: nowrap;
+}
+#promoInvite button:hover { border-color: rgba(255,255,255,0.7); }
+
+/* Crop overlay */
+#crop-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.94); z-index: 300;
+  flex-direction: column; align-items: center;
+}
+#crop-overlay.show { display: flex; }
+#crop-header {
+  width: 100%; display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 18px; gap: 10px;
+}
+#crop-title { font-size: 11px; letter-spacing: 0.15em; color: rgba(255,255,255,0.7); text-transform: uppercase; }
+#crop-actions { display: flex; gap: 8px; }
+#cropCancel { background: rgba(255,255,255,0.14); color: white; font-size: 12px; padding: 9px 16px; border-radius: 9px; }
+#cropApply  { background: #D10101; color: white; font-size: 12px; padding: 9px 18px; border-radius: 9px; }
+
+/* Aufgeräumtes Preset-Panel: dezente Karte, klar gruppiert, größere
+   Tap-Ziele. „Format" = klassische Seitenverhältnisse, „Layout" = Reihen/
+   Spalten (nur die Anzahl als Zahl, Achse sagt die Gruppen-Überschrift). */
+#crop-presets {
+  display: flex; flex-direction: column; gap: 14px;
+  padding: 14px 16px; margin: 4px 12px 0;
+  width: min(560px, calc(100% - 24px));
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 14px;
+}
+.preset-group { display: flex; flex-wrap: wrap; gap: 7px; align-items: center; }
+.preset-label {
+  width: 100%;
+  font-size: 9px; letter-spacing: 0.16em; color: rgba(255,255,255,0.45);
+  text-transform: uppercase; margin-bottom: 2px;
+}
+.ratio-btn {
+  background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.85);
+  border: 1px solid rgba(255,255,255,0.18);
+  font-size: 12px; letter-spacing: 0.02em; padding: 9px 14px;
+  border-radius: 9px; min-width: 44px; text-align: center;
+}
+.ratio-btn[data-axis] { min-width: 40px; font-weight: 600; }
+.ratio-btn.sel { background: #D10101; color: white; border-color: #D10101; }
+#crop-stage {
+  flex: 1; width: 100%; display: flex; align-items: center; justify-content: center;
+  overflow: auto; padding: 16px;
+}
+#cropCanvas { touch-action: none; box-shadow: 0 4px 30px rgba(0,0,0,0.6); }
+
+/* Farb-Lupe */
+#loupe { position: fixed; display: none; width: 96px; pointer-events: none; z-index: 600; text-align: center; }
+#loupe.show { display: block; }
+#loupeCanvas {
+  width: 96px; height: 96px; border-radius: 50%;
+  border: 3px solid #fff; box-shadow: 0 4px 18px rgba(0,0,0,0.3);
+  background: #fff; display: block;
+  image-rendering: pixelated; image-rendering: crisp-edges;
+}
+#loupeHex {
+  margin-top: 5px; display: inline-block;
+  font-family: ui-monospace, Menlo, monospace; font-size: 11px; letter-spacing: 0.04em;
+  color: #fff; background: rgba(42,40,38,0.92); padding: 3px 7px; border-radius: 6px;
+}
+
+/* ── Startansicht / Splash ── */
+#splash {
+  position: fixed; inset: 0; z-index: 500;
+  background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  padding: 32px;
+}
+#splash.hidden { display: none; }
+.splash-inner {
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  gap: 16px; width: 100%; max-width: 360px;
+}
+.splash-mark { width: 80px; height: 80px; }
+.splash-wm {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 44px; font-weight: 600; letter-spacing: -0.02em;
+  color: var(--text); line-height: 1;
+}
+.splash-rule { width: 36px; height: 1px; background: #C9C2B6; }
+.splash-tag {
+  font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--muted);
+}
+#splashStart {
+  margin-top: 14px; width: 100%; max-width: 280px; height: auto;
+  background: var(--dark); color: var(--bg); border: none;
+  border-radius: 14px; padding: 16px; font-size: 15px; font-weight: 500; cursor: pointer;
+}
+#splashStart:active { transform: scale(0.99); }
+.splash-credit {
+  position: absolute;
+  bottom: calc(26px + env(safe-area-inset-bottom, 0px));
+  left: 0; right: 0; text-align: center;
+  font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted);
+}
+@media (max-width: 600px) {
+  .splash-wm { font-size: 40px; }
+}
+</style>
+</head>
+<body>
+
+<div id="appHeader">
+  <div id="brandBlock">
+    <svg id="logoMark" viewBox="0 0 34 34" aria-hidden="true">
+      <rect x="1" y="1" width="32" height="32" rx="8" fill="#2A2826"/>
+      <text x="16.5" y="24" text-anchor="middle" font-family="'Playfair Display', Georgia, serif" font-size="21" font-weight="600" fill="#F4F1EB">P</text>
+      <circle cx="25" cy="9" r="2" fill="#D10101"/>
+    </svg>
+    <h1>Postfolio</h1>
+  </div>
+  <div id="headerActions">
+    <button class="icon-btn" id="undoBtn" title="Undo (⌘/Ctrl+Z)" aria-label="Undo" disabled>↶</button>
+    <button class="icon-btn" id="redoBtn" title="Redo (⌘/Ctrl+Shift+Z)" aria-label="Redo" disabled>↷</button>
+    <button id="newBtn" title="New project — start with a blank canvas" aria-label="New project">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M12 11.5v5"/><path d="M9.5 14h5"/></svg>
+      <span>New</span>
+    </button>
+    <div id="exportWrap">
+      <button id="exportBtn" title="Export" aria-label="Export">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 8l5-5 5 5"/><path d="M5 21h14"/></svg>
+      </button>
+      <div id="exportMenu">
+        <button id="exportAllBtn">All slides</button>
+        <button id="exportOneBtn">This slide</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="mainToolbar">
+  <!-- Format eingeklappt: ein Chip zeigt das aktive Format; Tippen öffnet die
+       Auswahl, nach der Wahl klappt sie wieder zu — spart dauerhaft Platz. -->
+  <div id="formatWrap">
+    <button id="formatToggle" title="Choose format">Post 4:5 ▾</button>
+    <div id="formatMenu">
+      <button class="mode-btn sel" data-mode="post">Post 4:5</button>
+      <button class="mode-btn" data-mode="story">Story 9:16</button>
+    </div>
+  </div>
+
+  <div class="row">
+    <span class="label">Slides</span>
+    <button class="icon-btn" id="rmSlide">−</button>
+    <span id="slideCount">1</span>
+    <button class="icon-btn" id="addSlide">+</button>
+  </div>
+
+  <!-- Foto laden: kein Toolbar-Button mehr — man tippt das „+" in der Slide-Mitte an. -->
+  <input type="file" id="fileInput" accept="image/*" style="display:none">
+
+  <!-- Add: Foto & alle Text-Aktionen gebündelt in einem Dropdown -->
+  <div id="textWrap">
+    <button id="textToggle" title="Add a photo or text">Add ▾</button>
+    <div id="textMenu">
+      <button id="addPhotoMenuBtn" class="tm-item" title="Add a photo to the current slide">
+        <span class="tm-ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#2A2826" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="M21 16l-5-5L5 19"/></svg></span>
+        <span class="tm-txt"><b>Add photo</b><small>Place on the current slide</small></span>
+      </button>
+      <div class="tm-sep">Text</div>
+      <button id="addTextBtn" class="tm-item" title="Add a plain, editable text box">
+        <span class="tm-ico">T</span>
+        <span class="tm-txt"><b>Add text</b><small>Any words, symbols &amp; emoji</small></span>
+      </button>
+      <button id="presetEditorialBtn" class="tm-item" title="Editorial duo: italic subline over a caps serif headline">
+        <span class="tm-prev tm-prev-ed"><i>Le</i> PORT</span>
+        <span class="tm-txt"><b>Editorial</b><small>Italic + caps serif</small></span>
+      </button>
+      <button id="presetMagazinBtn" class="tm-item" title="Magazine duo: caps headline with a clean sans subline">
+        <span class="tm-prev tm-prev-mag">MAISON</span>
+        <span class="tm-txt"><b>Magazine</b><small>Caps serif + sans</small></span>
+      </button>
+      <div class="tm-sep">Frames · photo + inset</div>
+      <button id="frames1Btn" class="tm-item" title="Background photo with a centered framed inset">
+        <span class="tm-prev"><svg viewBox="0 0 24 30" width="17" height="21" aria-hidden="true"><rect x="1" y="1" width="22" height="28" rx="2" fill="none" stroke="#9B948A" stroke-width="1.5"/><rect x="6.5" y="9" width="11" height="12" rx="1" fill="none" stroke="#2A2826" stroke-width="1.5"/></svg></span>
+        <span class="tm-txt"><b>Frames · single</b><small>1 photo + inset</small></span>
+      </button>
+      <button id="frames2Btn" class="tm-item" title="Two stacked bands, each with a framed inset">
+        <span class="tm-prev"><svg viewBox="0 0 24 30" width="17" height="21" aria-hidden="true"><rect x="1" y="1" width="22" height="13.5" rx="2" fill="none" stroke="#9B948A" stroke-width="1.5"/><rect x="7" y="4.5" width="10" height="6.5" rx="1" fill="none" stroke="#2A2826" stroke-width="1.5"/><rect x="1" y="15.5" width="22" height="13.5" rx="2" fill="none" stroke="#9B948A" stroke-width="1.5"/><rect x="7" y="19" width="10" height="6.5" rx="1" fill="none" stroke="#2A2826" stroke-width="1.5"/></svg></span>
+        <span class="tm-txt"><b>Frames · 2 stacked</b><small>The classic look</small></span>
+      </button>
+      <button id="frames3Btn" class="tm-item" title="Three stacked bands — great for 9:16 stories">
+        <span class="tm-prev"><svg viewBox="0 0 24 30" width="17" height="21" aria-hidden="true"><rect x="1" y="1" width="22" height="8.7" rx="1.5" fill="none" stroke="#9B948A" stroke-width="1.4"/><rect x="1" y="10.7" width="22" height="8.7" rx="1.5" fill="none" stroke="#9B948A" stroke-width="1.4"/><rect x="1" y="20.4" width="22" height="8.7" rx="1.5" fill="none" stroke="#9B948A" stroke-width="1.4"/></svg></span>
+        <span class="tm-txt"><b>Frames · 3 stacked</b><small>Best for 9:16 stories</small></span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Hintergrund als kompaktes Dropdown -->
+  <div id="bgWrap">
+    <button id="bgToggle" title="Background color" aria-label="Background color"><span id="bgToggleSwatch"></span><span class="bg-caret">▾</span></button>
+    <div id="bgMenu">
+      <div class="bg-menu-row">
+        <button class="bg-btn beige sel" data-bg="#F4F1EB" title="Beige"></button>
+        <button class="bg-btn white"     data-bg="#ffffff" title="White"></button>
+        <button class="bg-btn black"     data-bg="#111111" title="Black"></button>
+        <button class="bg-btn grey"      data-bg="#888888" title="Grey"></button>
+        <button class="bg-btn red"       data-bg="#D10101" title="Red"></button>
+        <button id="bgEyedropBtn" title="Pick background color from the image">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m2 22 1-1h3l9-9"/>
+            <path d="M3 21v-3l9-9"/>
+            <path d="m15 6 3.4-3.4a2.1 2.1 0 1 1 3 3L18 9l.4.4a2.1 2.1 0 1 1-3 3l-3.8-3.8a2.1 2.1 0 1 1 3-3l.4.4Z"/>
+          </svg>
+        </button>
+      </div>
+      <input type="text" id="bgHexInput" class="hex-input" maxlength="7" placeholder="#hex" autocomplete="off" autocapitalize="off" spellcheck="false" title="Type any hex color">
+    </div>
+  </div>
+</div>
+
+<!-- Context sheet: only relevant while a photo/text item is selected.
+     Floats over the bottom of the canvas instead of taking up fixed
+     vertical space, so the canvas size never depends on selection state. -->
+<div id="contextSheet">
+  <div class="row" id="contextTop">
+    <button id="deleteBtn" title="Delete photo" aria-label="Delete">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+    </button>
+    <button id="cropBtn">Crop</button>
+    <button id="rotateBtn" title="Rotate" aria-label="Rotate">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg>
+    </button>
+    <div class="row" id="layerCtrl" style="display:none">
+      <span class="label">Layer</span>
+      <button class="icon-btn" id="layerBack"  title="Send to Back">⇊</button>
+      <button class="icon-btn" id="layerDown"  title="Send Backward">↓</button>
+      <button class="icon-btn" id="layerUp"    title="Bring Forward">↑</button>
+      <button class="icon-btn" id="layerFront" title="Bring to Front">⇈</button>
+    </div>
+  </div>
+
+  <div class="row" id="rotateCtrl" style="display:none">
+    <span class="label">Rotate</span>
+    <input type="range" id="rotInput" min="-180" max="180" step="1" value="0">
+    <span id="rotVal">0°</span>
+    <button id="rotReset" title="Reset to 0°">0°</button>
+  </div>
+
+  <div class="row" id="frameCtrl" style="display:none">
+    <span class="label">Border</span>
+    <button class="frame-btn sel" data-frame="none" title="No border">None</button>
+    <button class="frame-btn" data-frame="s1" title="Border 1 · 8 px (very thin)">1</button>
+    <button class="frame-btn" data-frame="s2" title="Border 2 · 18 px (thin)">2</button>
+    <button class="frame-btn" data-frame="s3" title="Border 3 · 30 px (medium)">3</button>
+    <button class="frame-btn" data-frame="s4" title="Border 4 · 40 px (bold)">4</button>
+    <button class="frame-btn" data-frame="s5" title="Border 5 · 52 px (thick)">5</button>
+    <button id="frameAllBtn" title="Apply current border (width + color) to ALL photos">All</button>
+    <button id="fitBtn" title="Fit photo into slide / border (Enter)">Fit ⏎</button>
+  </div>
+
+  <div class="row" id="marginCtrl" style="display:none">
+    <span class="label">Margin</span>
+    <button class="margin-btn sel" data-margin="0"  title="No outer margin">None</button>
+    <button class="margin-btn" data-margin="8"  title="Margin 1 · 8 px (shows the slide background)">1</button>
+    <button class="margin-btn" data-margin="18" title="Margin 2 · 18 px">2</button>
+    <button class="margin-btn" data-margin="30" title="Margin 3 · 30 px">3</button>
+    <button class="margin-btn" data-margin="40" title="Margin 4 · 40 px">4</button>
+    <button class="margin-btn" data-margin="52" title="Margin 5 · 52 px">5</button>
+  </div>
+
+  <div class="row" id="frameColorCtrl" style="display:none">
+    <span class="label">Color</span>
+    <button class="clr-btn white sel" data-frameclr="#ffffff" title="White"></button>
+    <button class="clr-btn black"     data-frameclr="#111111" title="Black"></button>
+    <button class="clr-btn beige"     data-frameclr="#F4F1EB" title="Beige"></button>
+    <button class="clr-btn grey"      data-frameclr="#888888" title="Grey"></button>
+    <button class="clr-btn red"        data-frameclr="#D10101" title="Red"></button>
+    <button id="frameEyedropBtn" title="Pick color from photo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="m2 22 1-1h3l9-9"/>
+        <path d="M3 21v-3l9-9"/>
+        <path d="m15 6 3.4-3.4a2.1 2.1 0 1 1 3 3L18 9l.4.4a2.1 2.1 0 1 1-3 3l-3.8-3.8a2.1 2.1 0 1 1 3-3l.4.4Z"/>
+      </svg>
+    </button>
+    <input type="text" id="frameHexInput" class="hex-input" maxlength="7" placeholder="#hex" autocomplete="off" autocapitalize="off" spellcheck="false" title="Type any hex color">
+  </div>
+
+  <div id="textCtrl" style="display:none">
+    <input type="text" id="textContentInput" placeholder="Your text" maxlength="120">
+    <div class="tc-row">
+      <select id="fontSelect" title="Font">
+        <optgroup label="Headline · bold / caps">
+          <option value="Bodoni Moda">Bodoni Moda</option>
+          <option value="Playfair Display">Playfair Display</option>
+          <option value="DM Serif Display">DM Serif Display</option>
+          <option value="Bricolage Grotesque">Bricolage Grotesque</option>
+          <option value="Archivo">Archivo</option>
+        </optgroup>
+        <optgroup label="Subline · elegant / light">
+          <option value="Instrument Serif">Instrument Serif</option>
+          <option value="Cormorant Garamond">Cormorant Garamond</option>
+          <option value="Fraunces">Fraunces</option>
+          <option value="Arapey">Arapey</option>
+          <option value="Poppins">Poppins</option>
+        </optgroup>
+      </select>
+      <select id="weightSelect" title="Weight">
+        <option value="300">Light</option>
+        <option value="400">Regular</option>
+        <option value="600">Semibold</option>
+      </select>
+    </div>
+    <div class="tc-row">
+      <button class="style-btn" data-style="bold"      title="Bold">B</button>
+      <button class="style-btn" data-style="italic"    title="Italic">I</button>
+      <button class="style-btn" data-style="underline" title="Underline">U</button>
+      <span class="tc-gap"></span>
+      <button class="clr-btn black sel" data-clr="#111111" title="Black"></button>
+      <button class="clr-btn white"     data-clr="#ffffff" title="White"></button>
+      <button class="clr-btn grey"      data-clr="#888888" title="Grey"></button>
+      <button class="clr-btn beige"     data-clr="#F4F1EB" title="Beige"></button>
+      <button class="clr-btn red"       data-clr="#D10101" title="Red"></button>
+    </div>
+    <div class="tc-row" id="tc-track-row">
+      <span class="tc-track-ico" aria-hidden="true">A↔A</span>
+      <input type="range" id="trackInput" min="-10" max="120" step="1" value="0" title="Letter spacing">
+      <span id="trackVal">0</span>
+    </div>
+    <div class="tc-row">
+      <button id="outlineToggle" class="ol-toggle">Outline ▾</button>
+    </div>
+    <div id="outlineCtrl" style="display:none">
+      <div class="tc-row">
+        <span class="tc-track-ico">Outline</span>
+        <input type="range" id="outlineInput" min="0" max="24" step="1" value="0" title="Outline thickness (pt)">
+        <span id="outlineVal">0</span>
+      </div>
+      <div class="tc-row">
+        <button class="ol-mode-btn sel" data-olmode="full" title="Full outline">Full</button>
+        <button class="ol-mode-btn" data-olmode="side" title="One-sided edge">Side</button>
+        <span class="tc-gap"></span>
+        <button class="ol-dir-btn" data-oldir="left"  title="Left">←</button>
+        <button class="ol-dir-btn" data-oldir="down"  title="Down">↓</button>
+        <button class="ol-dir-btn sel" data-oldir="right" title="Right">→</button>
+      </div>
+      <div class="tc-row">
+        <span class="tc-track-ico">Color</span>
+        <button class="ol-clr-btn sel" data-olclr="#000000" style="background:#111111"></button>
+        <button class="ol-clr-btn" data-olclr="#ffffff" style="background:#ffffff"></button>
+        <button class="ol-clr-btn" data-olclr="#888888" style="background:#888888"></button>
+        <button class="ol-clr-btn" data-olclr="#D10101" style="background:#D10101"></button>
+        <input type="text" id="outlineHex" class="hex-input" maxlength="7" placeholder="#hex" autocomplete="off" autocapitalize="off" spellcheck="false">
+      </div>
+    </div>
+  </div>
+
+  <div class="row" id="slotCtrl" style="display:none">
+    <span class="label">Position</span>
+    <button class="icon-btn" id="slotUp"   title="Previous row / column">▲</button>
+    <span id="slotLabel">1/1</span>
+    <button class="icon-btn" id="slotDown" title="Next row / column">▼</button>
+  </div>
+</div>
+
+<div id="canvas-wrap">
+  <canvas id="c"></canvas>
+</div>
+
+<div id="dots"></div>
+
+<div id="zoomCtrl">
+  <button class="icon-btn" id="previewBtn" title="Fullscreen preview" aria-label="Fullscreen preview">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M21 16v3a2 2 0 0 1-2 2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+  </button>
+  <button class="icon-btn" id="zoomToggle" title="Zoom" aria-label="Zoom">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+  </button>
+  <button class="icon-btn" id="zoomOut" title="Zoom out">−</button>
+  <span id="zoomLabel" title="Hide zoom controls">100%</span>
+  <button class="icon-btn" id="zoomIn" title="Zoom in">+</button>
+  <button class="icon-btn" id="zoomFit" title="Fit all slides into view">⊡</button>
+</div>
+
+<div id="loading"><div class="spinner"></div>Exporting…</div>
+
+<!-- Vollbild-Vorschau: aktuelle Slide groß, per Wisch zwischen allen Slides -->
+<div id="preview">
+  <button id="preview-close" aria-label="Close preview">✕</button>
+  <div id="preview-track"></div>
+  <div id="preview-dots"></div>
+</div>
+
+<div id="exp-overlay">
+  <div id="exp-header">
+    <span id="exp-hint"></span>
+    <div id="exp-actions">
+      <button id="downloadAllBtn" title="Download all slides as a .zip">⬇ Download .zip</button>
+      <button id="shareAllBtn" title="Save all slides to Photos">⬆ Save all</button>
+      <button id="closeExp">Close</button>
+    </div>
+  </div>
+  <!-- Dezente Einladung: optionale Postfolio-Outro-Slide hinzufügen -->
+  <div id="promoInvite">
+    <span class="pi-text">Back indie makers ♥ — built by a photographer, for photo lovers.</span>
+    <span class="pi-actions">
+      <button id="promoAddLight">+ Outro · light</button>
+      <button id="promoAddDark">+ Outro · dark</button>
+    </span>
+  </div>
+  <div id="exp-list"></div>
+</div>
+
+<div id="crop-overlay">
+  <div id="crop-header">
+    <span id="crop-title">Crop Photo</span>
+    <div id="crop-actions">
+      <button id="cropCancel">Cancel</button>
+      <button id="cropApply">Apply</button>
+    </div>
+  </div>
+  <div id="crop-presets">
+    <div class="preset-group">
+      <span class="preset-label">Format</span>
+      <button class="ratio-btn sel" data-ratio="free">Free</button>
+      <button class="ratio-btn" data-ratio="1">1:1</button>
+      <button class="ratio-btn" data-ratio="0.8">4:5</button>
+      <button class="ratio-btn" data-ratio="1.25">5:4</button>
+      <button class="ratio-btn" data-ratio="0.6667">2:3</button>
+      <button class="ratio-btn" data-ratio="1.5">3:2</button>
+      <button class="ratio-btn" data-ratio="canvas">Full</button>
+    </div>
+    <div class="preset-group">
+      <span class="preset-label">Stacked rows · 1 slide</span>
+      <button class="ratio-btn" data-axis="row" data-n="2">2</button>
+      <button class="ratio-btn" data-axis="row" data-n="3">3</button>
+      <button class="ratio-btn" data-axis="row" data-n="4">4</button>
+      <button class="ratio-btn" data-axis="row" data-n="5">5</button>
+    </div>
+    <div class="preset-group">
+      <span class="preset-label">Side by side · 1 slide</span>
+      <button class="ratio-btn" data-axis="col" data-n="2">2</button>
+      <button class="ratio-btn" data-axis="col" data-n="3">3</button>
+      <button class="ratio-btn" data-axis="col" data-n="4">4</button>
+      <button class="ratio-btn" data-axis="col" data-n="5">5</button>
+    </div>
+  </div>
+  <div id="crop-stage">
+    <canvas id="cropCanvas"></canvas>
+  </div>
+</div>
+
+<!-- Startansicht (Splash): großes Logo + Claim + ein Einstieg. Sichtbar beim
+     Start mit leerer Leinwand; wird bei einem wiederhergestellten Projekt
+     automatisch übersprungen. -->
+<div id="splash">
+  <div class="splash-inner">
+    <svg class="splash-mark" viewBox="0 0 34 34" aria-hidden="true">
+      <rect x="1" y="1" width="32" height="32" rx="9" fill="#2A2826"/>
+      <text x="16.5" y="24" text-anchor="middle" font-family="'Playfair Display', Georgia, serif" font-size="21" font-weight="600" fill="#F4F1EB">P</text>
+      <circle cx="25" cy="9" r="2" fill="#D10101"/>
+    </svg>
+    <div class="splash-wm">Postfolio</div>
+    <div class="splash-rule"></div>
+    <div class="splash-tag">Carousels &amp; stories, in seconds</div>
+    <button id="splashStart">New carousel</button>
+  </div>
+  <div class="splash-credit">by Silvan Rapp</div>
+</div>
+
+<!-- Farb-Lupe: zeigt beim Pipettieren die Pixel unter dem Finger/Cursor -->
+<div id="loupe">
+  <canvas id="loupeCanvas" width="96" height="96"></canvas>
+  <div id="loupeHex">#000000</div>
+</div>
+
+<script>
+// ═══════════════════════════════════════
+// SETUP
+// ═══════════════════════════════════════
+
+// Two selectable formats — Post (Instagram feed, 4:5) and Story (9:16).
+// W/H are the CURRENT format's slide size in logical px; every aspect-ratio
+// dependent calculation in the app (crop split ratios, canvas scale, smart
+// guides, export) reads these two variables live, so switching format
+// re-derives everything automatically. See setMode() below.
+const MODES = {
+  post:  { w: 1080, h: 1350, label: 'Post 4:5'   },
+  story: { w: 1080, h: 1920, label: 'Story 9:16' }
+};
+let mode = 'post';
+let W = MODES[mode].w, H = MODES[mode].h;
+
+const DPR = window.devicePixelRatio || 1;
+// BASE_DSCALE is the auto-fit display scale for the current format (one
+// slide roughly filling the available viewport). `zoom` is a user-controlled
+// multiplier on top of it — zoom out to see an overview of every slide at
+// once, zoom in for fine detail work. DSCALE/S stay mutable so every place
+// that reads them (drawing, drag math, mouse↔logical conversion) picks up
+// the new scale immediately after setZoom() or a format switch runs.
+let BASE_DSCALE = 0.44;
+const ZOOM_MIN = 0.2, ZOOM_MAX = 2.5;
+let zoom   = 1;
+let DSCALE = BASE_DSCALE * zoom;
+let S      = DSCALE * DPR; // canvas draw units per logical unit
+const EX   = 3;            // export multiplier
+
+// Recomputes BASE_DSCALE/DSCALE/S for the current H — called once at load
+// and again whenever the format switch changes H (Post vs. Story have
+// different heights, so the same width-based scale would over/undersize
+// the canvas).
+// Skaliert die Leinwand so, dass eine Slide IMMER vollständig in den sichtbaren
+// Bereich des Leinwand-Rahmens passt — mit Sicherheitsrand und zentriert. Der
+// Rahmen schrumpft, wenn unten das Werkzeug-Panel offen ist (margin-bottom),
+// daher rechnen wir mit der echten clientHeight/Width des Rahmens.
+function computeScale() {
+  const pad = 18, safety = 14;
+  let availH, availW;
+  try {
+    availH = wrap.clientHeight - pad * 2 - safety;
+    availW = wrap.clientWidth  - pad * 2 - safety;
+  } catch (e) { /* wrap noch nicht definiert (Erstaufruf) */ }
+  if (!availH || availH < 80) availH = window.innerHeight - 200;
+  if (!availW || availW < 80) availW = window.innerWidth - 52;
+  // Slide so groß wie möglich: füllt die kürzere verfügbare Achse, kein Cap.
+  BASE_DSCALE = Math.min(availH / H, availW / W);
+  DSCALE = BASE_DSCALE * zoom;
+  S = DSCALE * DPR;
+}
+computeScale();
+
+const canvas = document.getElementById('c');
+const ctx    = canvas.getContext('2d');
+const wrap   = document.getElementById('canvas-wrap');
+const isIOS  = /iP(hone|ad|od)/.test(navigator.userAgent);
+
+// ═══════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════
+
+let slides      = [{ bg: '#F4F1EB' }];
+let photos      = []; // { img, cx, cy, w, h, rot }
+let sel         = -1; // selected photo index
+let activeSlide = 0;
+let guides      = []; // active smart guides { type:'v'|'h', pos:number }
+
+// Interaction state
+let dragMode    = null; // 'move' | 'rotate' | 'resize' | null
+let armUndo     = false; // beim Gesten-Start gesetzt; der erste echte Move legt EINEN Undo-Schritt an (reiner Klick ohne Bewegung erzeugt keinen)
+let tapAlreadySelected = false; // war das angetippte Element schon ausgewählt? (Frames: 1. Tipp = wählen, 2. Tipp = Upload)
+let dragStartCX = 0, dragStartCY = 0;
+let dragStartMX = 0, dragStartMY = 0;
+let dragStartRot = 0, dragStartAngle = 0;
+let dragStartDist = 0, dragStartW = 0, dragStartH = 0; // for corner-handle resize
+let pinchData   = null; // { dist, angle, w, h, rot }
+
+// Click/tap on empty canvas → add a photo at that exact spot
+let addCandidate  = null; // { lx, ly, mx, my } while a click/tap on empty space is in progress
+let pendingAddPos = null; // { cx, cy } logical position for the next file picked
+let pendingReplaceIdx = -1; // Index eines Frames-Platzhalters, der gerade befüllt wird
+let frameGroupSeq = 0;      // fortlaufende ID je Frames-Layout (verbindet die Insets)
+// Hält alle Insets einer Frames-Gruppe gleich groß: ändert sich eines, ziehen
+// die anderen in derselben Gruppe proportional mit.
+function syncFrameGroupInsets(p) {
+  if (!p || p.role !== 'inset' || !p.frameGroup) return;
+  photos.forEach(o => {
+    if (o !== p && o.role === 'inset' && o.frameGroup === p.frameGroup) { o.w = p.w; o.h = p.h; }
+  });
+}
+
+// ═══════════════════════════════════════
+// RENDER-SCHEDULER (Punkt 1)
+// ═══════════════════════════════════════
+// redraw() wird bei JEDER Maus-/Touch-Bewegung aufgerufen und zeichnet die
+// gesamte Leinwand neu. Statt das pro Event sofort zu tun, koalieren wir auf
+// einen requestAnimationFrame: pro Bildschirm-Frame wird maximal einmal
+// gezeichnet. renderNow() enthält die eigentliche Zeichenlogik.
+let _rafPending = false;
+function redraw() {
+  if (_rafPending) return;
+  _rafPending = true;
+  requestAnimationFrame(() => { _rafPending = false; renderNow(); });
+}
+
+// ═══════════════════════════════════════
+// VORSCHAU-BITMAPS (Punkt 2)
+// ═══════════════════════════════════════
+// Auf dem Bildschirm zeichnen wir nicht aus dem (evtl. 6000 px großen)
+// Originalbild, sondern aus einer einmalig herunterskalierten Kopie. Das
+// teure Hochwertig-Resampling pro Frame wird damit deutlich billiger. Der
+// EXPORT nutzt weiterhin das Original (p.img) in voller Auflösung.
+const SCREEN_MAX = 2048;
+function buildScreenCanvas(img) {
+  const nw = img.naturalWidth, nh = img.naturalHeight;
+  const scale = Math.min(1, SCREEN_MAX / Math.max(nw, nh));
+  if (scale >= 1) return img; // schon klein genug → Original direkt verwenden
+  const c = document.createElement('canvas');
+  c.width  = Math.max(1, Math.round(nw * scale));
+  c.height = Math.max(1, Math.round(nh * scale));
+  const cx = c.getContext('2d');
+  cx.imageSmoothingEnabled = true;
+  cx.imageSmoothingQuality = 'high';
+  cx.drawImage(img, 0, 0, c.width, c.height);
+  return c;
+}
+function srcW(s) { return s.naturalWidth  || s.width; }
+function srcH(s) { return s.naturalHeight || s.height; }
+
+// ═══════════════════════════════════════
+// UNDO / REDO (Punkt 5)
+// ═══════════════════════════════════════
+// Schnappschüsse des bearbeitbaren Zustands. Bild-/Vorschau-Objekte werden per
+// Referenz geteilt (nicht kopiert) — nur die leichten Metadaten werden tief
+// geklont, damit verschachtelte Objekte (crop/frame/split) sich nicht
+// gegenseitig überschreiben.
+let undoStack = [], redoStack = [];
+const UNDO_LIMIT = 60;
+function clonePhoto(p) {
+  return { ...p,
+    crop:  p.crop  ? { ...p.crop }  : p.crop,
+    frame: p.frame ? { ...p.frame } : p.frame,
+    split: p.split ? { ...p.split } : p.split };
+}
+function snapshot() {
+  return {
+    mode, W, H, sel, activeSlide,
+    slides: slides.map(s => ({ ...s })),
+    photos: photos.map(clonePhoto)
+  };
+}
+function applySnapshot(st) {
+  mode = st.mode; W = st.W; H = st.H;
+  slides = st.slides.map(s => ({ ...s }));
+  photos = st.photos.map(clonePhoto);
+  sel = Math.min(st.sel, photos.length - 1);
+  activeSlide = Math.min(st.activeSlide, slides.length - 1);
+  computeScale();
+  resizeCanvas();
+  syncModeButtons(); updateSplitButtonLabels(); syncBgButtons();
+  updateDots(); updateDeleteBtn(); syncFrameButtons(); syncTextUI(); syncSlotUI();
+  redraw();
+}
+// Vor jeder zustandsändernden Aktion aufrufen. Kontinuierliche Aktionen
+// (Ziehen, Mausrad, Pfeiltasten) werden über ein "tag" zusammengefasst, damit
+// nicht hunderte Mini-Schritte im Verlauf landen.
+let _coTag = null, _coTime = 0;
+function beginAction(tag) {
+  if (tag) {
+    const now = Date.now();
+    if (tag === _coTag && now - _coTime < 900) { _coTime = now; scheduleSave(); return; }
+    _coTag = tag; _coTime = now;
+  } else {
+    _coTag = null;
+  }
+  undoStack.push(snapshot());
+  if (undoStack.length > UNDO_LIMIT) undoStack.shift();
+  redoStack = [];
+  syncUndoButtons();
+  scheduleSave();
+}
+function undo() {
+  if (!undoStack.length) return;
+  redoStack.push(snapshot());
+  applySnapshot(undoStack.pop());
+  _coTag = null; syncUndoButtons(); scheduleSave();
+}
+function redo() {
+  if (!redoStack.length) return;
+  undoStack.push(snapshot());
+  applySnapshot(redoStack.pop());
+  _coTag = null; syncUndoButtons(); scheduleSave();
+}
+function syncUndoButtons() {
+  const u = document.getElementById('undoBtn'), r = document.getElementById('redoBtn');
+  if (u) u.disabled = undoStack.length === 0;
+  if (r) r.disabled = redoStack.length === 0;
+}
+
+// ═══════════════════════════════════════
+// AUTO-SAVE via IndexedDB (Punkt 6)
+// ═══════════════════════════════════════
+// Bilder sind zu groß für localStorage (~5 MB Limit), daher IndexedDB. Wir
+// speichern den Zustand inkl. Bild-DataURLs entprellt und stellen ihn beim
+// nächsten Laden wieder her. Schlägt IndexedDB fehl (z. B. privater Modus),
+// passiert still nichts.
+const DB_NAME = 'postfolio', DB_STORE = 'state', DB_KEY = 'current';
+function idbOpen() {
+  return new Promise((res, rej) => {
+    let req;
+    try { req = indexedDB.open(DB_NAME, 1); } catch (e) { return rej(e); }
+    req.onupgradeneeded = () => req.result.createObjectStore(DB_STORE);
+    req.onsuccess = () => res(req.result);
+    req.onerror   = () => rej(req.error);
+  });
+}
+async function idbSet(val) {
+  try {
+    const db = await idbOpen();
+    await new Promise((res, rej) => {
+      const tx = db.transaction(DB_STORE, 'readwrite');
+      tx.objectStore(DB_STORE).put(val, DB_KEY);
+      tx.oncomplete = res; tx.onerror = () => rej(tx.error);
+    });
+    db.close();
+  } catch (e) { /* still ignorieren */ }
+}
+async function idbGet() {
+  try {
+    const db = await idbOpen();
+    const val = await new Promise((res, rej) => {
+      const tx = db.transaction(DB_STORE, 'readonly');
+      const r = tx.objectStore(DB_STORE).get(DB_KEY);
+      r.onsuccess = () => res(r.result || null); r.onerror = () => rej(r.error);
+    });
+    db.close();
+    return val;
+  } catch (e) { return null; }
+}
+function serializeState() {
+  return {
+    mode, activeSlide,
+    slides: slides.map(s => ({ ...s })),
+    photos: photos.map(p => {
+      const o = { ...p };
+      delete o.img; delete o.screen;       // Laufzeit-Objekte nicht speichern
+      if (p.kind !== 'text' && p.img) o.src = p.img.src; // DataURL ist persistierbar
+      return o;
+    })
+  };
+}
+let _saveTimer = null;
+function scheduleSave() {
+  clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(() => idbSet(serializeState()), 700);
+}
+async function loadSaved() {
+  const st = await idbGet();
+  if (!st || !Array.isArray(st.photos)) return false;
+  mode = MODES[st.mode] ? st.mode : 'post';
+  W = MODES[mode].w; H = MODES[mode].h;
+  slides = (st.slides && st.slides.length ? st.slides : [{ bg: '#F4F1EB' }]).map(s => ({ ...s }));
+  activeSlide = Math.min(st.activeSlide || 0, slides.length - 1);
+  // Bilder asynchron aus den gespeicherten DataURLs wiederherstellen.
+  await Promise.all(st.photos.map(p => new Promise(resolve => {
+    if (p.kind === 'text' || !p.src) return resolve();
+    const im = new Image();
+    im.onload  = () => { p.img = im; p.screen = buildScreenCanvas(im); resolve(); };
+    im.onerror = () => resolve();
+    im.src = p.src;
+  })));
+  // Fotos ohne gültiges Bild verwerfen, src-Feld entfernen.
+  photos = st.photos
+    .filter(p => p.kind === 'text' || p.kind === 'logo' || p.kind === 'placeholder' || p.img)
+    .map(p => { const o = { ...p }; delete o.src; return o; });
+  sel = -1;
+  return true;
+}
+
+// ═══════════════════════════════════════
+// CANVAS SIZE
+// ═══════════════════════════════════════
+
+// iOS Safari (und mobile Browser generell) begrenzen Canvas-Backing-Stores:
+// grob max. ~4096 px je Kante bzw. ~16 MP Fläche auf älteren Geräten. Da WIR
+// ALLE Slides nebeneinander auf EINE Leinwand zeichnen (Breite = n·W·S), kann
+// ein langes Karussell dieses Limit reißen → die Leinwand bleibt komplett
+// weiß. Deshalb begrenzen wir die *Render-Auflösung* (effektives DPR) dynamisch,
+// sodass der Backing-Store im sicheren Bereich bleibt. Die CSS-Darstellungsgröße
+// (DSCALE) bleibt unverändert — nur die Pixel-Dichte sinkt minimal bei sehr
+// vielen Slides. Der Export ist davon NICHT betroffen (eigene Leinwand, eine
+// Slide, EX=3 → 3240×4050, klar unter dem Limit).
+const MAX_CANVAS_DIM  = 4096;
+const MAX_CANVAS_AREA  = 16e6;
+function resizeCanvas() {
+  const n = slides.length;
+  const cssW = n * W * DSCALE, cssH = H * DSCALE; // Darstellungsgröße in CSS-px
+  let rdpr = DPR;
+  // Kantenlimit
+  rdpr = Math.min(rdpr, MAX_CANVAS_DIM / cssW, MAX_CANVAS_DIM / cssH);
+  // Flächenlimit
+  rdpr = Math.min(rdpr, Math.sqrt(MAX_CANVAS_AREA / (cssW * cssH)));
+  // nie unter eine vernünftige Mindestschärfe fallen
+  rdpr = Math.max(0.75, rdpr);
+  S = DSCALE * rdpr; // Zeichen-Einheiten je logischer Einheit (Backing-Store)
+
+  canvas.width        = Math.round(n * W * S);
+  canvas.height       = Math.round(H * S);
+  canvas.style.width  = Math.round(cssW) + 'px';
+  canvas.style.height = Math.round(cssH) + 'px';
+}
+
+// ═══════════════════════════════════════
+// ZOOM (overview vs. detail)
+// ═══════════════════════════════════════
+
+function setZoom(z) {
+  // Keep the slide currently centered in view roughly centered after the
+  // resize, instead of jumping back to scroll position 0.
+  const prevDSCALE   = DSCALE;
+  const centerLogical = (wrap.scrollLeft + wrap.clientWidth / 2) / prevDSCALE;
+
+  zoom   = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, z));
+  DSCALE = BASE_DSCALE * zoom;
+  S      = DSCALE * DPR;
+
+  resizeCanvas();
+  redraw();
+  document.getElementById('zoomLabel').textContent = Math.round(zoom * 100) + '%';
+  wrap.scrollLeft = centerLogical * DSCALE - wrap.clientWidth / 2;
+}
+
+// Neu einpassen (Skalierung) OHNE die aktuell betrachtete Slide aus dem Blick
+// zu verlieren — hält die horizontale Position, damit bei Aktionen (Löschen,
+// Panel auf/zu, Drehen des Geräts) nicht zur ersten Slide gesprungen wird.
+function relayout() {
+  const prev = DSCALE || 1;
+  const centerLogical = (wrap.scrollLeft + wrap.clientWidth / 2) / prev;
+  computeScale();
+  resizeCanvas();
+  redraw();
+  wrap.scrollLeft = centerLogical * DSCALE - wrap.clientWidth / 2;
+}
+
+// ═══════════════════════════════════════
+// FORMAT SWITCH (Post 4:5 / Story 9:16)
+// ═══════════════════════════════════════
+// Switching format changes the base slide size for every aspect-ratio
+// dependent calculation in the app (crop split ratios, canvas scale, smart
+// guides, export). Existing photos/slides don't translate sensibly across
+// such a different shape (e.g. a 3-row split computed for 4:5 is wrong for
+// 9:16), so switching clears the canvas — with a confirmation if there's
+// anything to lose.
+
+function hasContent() {
+  return photos.length > 0 || slides.length > 1 || slides[0].bg !== '#F4F1EB';
+}
+
+function setMode(key) {
+  if (key === mode || !MODES[key]) return;
+  if (hasContent()) {
+    const ok = window.confirm('Switching format clears the current canvas (photos & slides). Continue?');
+    if (!ok) return;
+  }
+  beginAction(); // Format-Wechsel ist per Undo umkehrbar
+  mode = key;
+  W = MODES[key].w; H = MODES[key].h;
+  slides = [{ bg: '#F4F1EB' }];
+  photos = [];
+  sel = -1; activeSlide = 0; guides = [];
+
+  zoom = 1;
+  computeScale();
+  document.getElementById('zoomLabel').textContent = '100%';
+  resizeCanvas();
+  syncModeButtons();
+  updateSplitButtonLabels();
+  syncBgButtons();
+  updateDots();
+  updateDeleteBtn();
+  redraw();
+  scheduleSave();
+}
+
+function syncModeButtons() {
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('sel', b.dataset.mode === mode));
+  const ft = document.getElementById('formatToggle');
+  if (ft) ft.textContent = (mode === 'post' ? 'Post' : 'Story') + ' ▾';
+}
+
+document.querySelectorAll('.mode-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    setMode(btn.dataset.mode);
+    document.getElementById('formatMenu').classList.remove('show');
+  });
+});
+
+// Positioniert ein fixed-Menü direkt unter seinem Toggle-Button (damit es nicht
+// von der horizontal scrollenden Toolbar abgeschnitten wird).
+function positionMenu(menu, toggle) {
+  const r = toggle.getBoundingClientRect();
+  // Breite messen (auch wenn noch unsichtbar), damit das Menü nicht rechts aus
+  // dem Bildschirm läuft.
+  const prevDisp = menu.style.display;
+  menu.style.visibility = 'hidden'; menu.style.display = 'block';
+  const mw = menu.offsetWidth || 200;
+  menu.style.display = prevDisp; menu.style.visibility = '';
+  const margin = 8;
+  let left = Math.min(r.left, window.innerWidth - mw - margin);
+  if (left < margin) left = margin;
+  menu.style.left = Math.round(left) + 'px';
+  menu.style.top  = Math.round(r.bottom + 6) + 'px';
+}
+
+// Format-Klappmenü öffnen/schließen
+document.getElementById('formatToggle').addEventListener('click', (e) => {
+  e.stopPropagation();
+  const menu = document.getElementById('formatMenu');
+  if (!menu.classList.contains('show')) positionMenu(menu, e.currentTarget);
+  menu.classList.toggle('show');
+});
+document.addEventListener('click', (e) => {
+  const wrap = document.getElementById('formatWrap'), menu = document.getElementById('formatMenu');
+  if (wrap && !wrap.contains(e.target) && !menu.contains(e.target)) menu.classList.remove('show');
+});
+
+// A row of n stacked photos (or n side-by-side columns) needs this single-
+// photo aspect ratio to exactly fill its slide-relative cell — derived from
+// the ACTIVE format's W/H, so it adapts automatically between Post and Story
+// instead of being hardcoded to one shape.
+function splitRatio(axis, n) {
+  return axis === 'row' ? n * (W / H) : (W / H) / n;
+}
+
+// Keeps each split-preset button's label showing the LIVE ratio for the
+// current format, so it's never stale after switching Post ↔ Story.
+function updateSplitButtonLabels() {
+  // Nur die Anzahl anzeigen — ob Reihen oder Spalten, sagt die Gruppen-
+  // Überschrift. Das hält die Buttons aufgeräumt (keine kryptischen Ratios).
+  document.querySelectorAll('.ratio-btn[data-axis]').forEach(btn => {
+    btn.textContent = btn.dataset.n;
+  });
+  updateFormatPresets();
+}
+
+// Die klassische „Format"-Reihe (Seitenverhältnisse) passt sich dem aktiven
+// App-Format an: in Story 9:16 ist das native Hochformat 9:16, die Alternativen
+// sind entsprechend gewählt. „Free" und „Full" (Slide-eigenes Verhältnis)
+// bleiben unverändert; nur die fünf mittleren Verhältnis-Buttons wechseln.
+const FORMAT_PRESETS = {
+  post:  [['1', '1:1'], ['0.8', '4:5'], ['1.25', '5:4'], ['0.6667', '2:3'], ['1.5', '3:2']],
+  story: [['1', '1:1'], ['0.5625', '9:16'], ['0.8', '4:5'], ['0.6667', '2:3'], ['0.75', '3:4']]
+};
+function updateFormatPresets() {
+  const set = FORMAT_PRESETS[mode] || FORMAT_PRESETS.post;
+  let k = 0;
+  document.querySelectorAll('#crop-presets .preset-group .ratio-btn[data-ratio]').forEach(b => {
+    const r = b.dataset.ratio;
+    if (r === 'free' || r === 'canvas') return;   // bleiben fest
+    if (k < set.length) { b.dataset.ratio = set[k][0]; b.textContent = set[k][1]; k++; }
+  });
+}
+
+// ═══════════════════════════════════════
+// SLIDE DOTS
+// ═══════════════════════════════════════
+
+function updateDots() {
+  const el = document.getElementById('dots');
+  el.innerHTML = '';
+  slides.forEach((_, i) => {
+    const d = document.createElement('div');
+    d.className = 'dot' + (i === activeSlide ? ' on' : '');
+    d.addEventListener('click', () => {
+      activeSlide = i;
+      syncBgButtons();
+      updateDots();
+      wrap.scrollLeft = i * W * DSCALE;
+      redraw();
+    });
+    el.appendChild(d);
+  });
+  document.getElementById('slideCount').textContent = slides.length;
+}
+
+// ═══════════════════════════════════════
+// COORDINATE HELPERS
+// ═══════════════════════════════════════
+
+function clientToLogical(cx, cy) {
+  const r = canvas.getBoundingClientRect();
+  return { lx: (cx - r.left) / DSCALE, ly: (cy - r.top) / DSCALE };
+}
+
+const ROT_OFFSET  = 32; // px above photo top (logical)
+const HANDLE_R    = 24; // hit radius for rotation handle (logical) — großzügig für Touch
+
+function rotHandlePos(p) {
+  const off = p.h / 2 + ROT_OFFSET;
+  return {
+    hx: p.cx - off * Math.sin(p.rot),  // sin because rotate around center
+    hy: p.cy - off * Math.cos(p.rot)
+  };
+}
+
+function hitRotHandle(p, lx, ly) {
+  const { hx, hy } = rotHandlePos(p);
+  return Math.hypot(lx - hx, ly - hy) <= HANDLE_R;
+}
+
+const CORNER_HANDLE_R = 26; // hit radius for corner resize dots (logical) — generous for touch
+
+// The 4 corner-dot positions in canvas space, accounting for rotation.
+function cornerHandlePositions(p) {
+  const hw = p.w / 2, hh = p.h / 2;
+  const cos = Math.cos(p.rot), sin = Math.sin(p.rot);
+  return [[-hw,-hh],[hw,-hh],[hw,hh],[-hw,hh]].map(([x,y]) => ({
+    x: p.cx + (x * cos - y * sin),
+    y: p.cy + (x * sin + y * cos)
+  }));
+}
+
+function hitCornerHandle(p, lx, ly) {
+  const c = cornerHandlePositions(p)[2]; // nur unten rechts dient zum Skalieren
+  return Math.hypot(lx - c.x, ly - c.y) <= CORNER_HANDLE_R;
+}
+
+// Lösch-Griff (×) diagonal außerhalb der oberen LINKEN Ecke — gegenüber dem
+// Rotations-Griff (oben Mitte), damit sich beide nicht in die Quere kommen.
+const DEL_OFFSET = 24; // logische px, diagonal nach außen
+const DEL_R      = 26; // Trefferradius (logisch), großzügig für Touch
+function deleteHandlePos(p) {
+  const hw = p.w / 2, hh = p.h / 2;
+  const k = DEL_OFFSET / Math.SQRT2;
+  const lx0 = -hw - k, ly0 = -hh - k;
+  const cos = Math.cos(p.rot), sin = Math.sin(p.rot);
+  return { x: p.cx + (lx0 * cos - ly0 * sin), y: p.cy + (lx0 * sin + ly0 * cos) };
+}
+function hitDeleteHandle(p, lx, ly) {
+  const d = deleteHandlePos(p);
+  return Math.hypot(lx - d.x, ly - d.y) <= DEL_R;
+}
+
+function hitPhoto(lx, ly) {
+  for (let i = photos.length - 1; i >= 0; i--) {
+    const p = photos[i];
+    const dx = lx - p.cx, dy = ly - p.cy;
+    const cos = Math.cos(-p.rot), sin = Math.sin(-p.rot);
+    const lxr = dx * cos - dy * sin;
+    const lyr = dx * sin + dy * cos;
+    if (Math.abs(lxr) <= p.w / 2 && Math.abs(lyr) <= p.h / 2) return i;
+  }
+  return -1;
+}
+
+// ═══════════════════════════════════════
+// SMART GUIDES + SNAPPING
+// ═══════════════════════════════════════
+
+const SNAP = 30; // snap threshold in logical px — kräftig magnetisch, damit Kanten klar einrasten
+
+function applyGuides(p) {
+  guides = [];
+  const rotNorm = ((p.rot % (Math.PI*2)) + Math.PI*2) % (Math.PI*2);
+  const nearAxis = rotNorm < 0.09 || rotNorm > Math.PI*2 - 0.09
+                || Math.abs(rotNorm - Math.PI) < 0.09;
+  if (!nearAxis) return;
+
+  let pL = p.cx - p.w/2, pR = p.cx + p.w/2;
+  let pT = p.cy - p.h/2, pB = p.cy + p.h/2;
+
+  // ── Slide edge + center snaps ──
+  slides.forEach((_, i) => {
+    const sL = i * W, sR = (i+1) * W;
+    const sCX = sL + W/2, sCY = H/2;
+
+    // Center-to-center snaps
+    if (Math.abs(p.cx - sCX) < SNAP)              { p.cx = sCX; pushGuide('v', sCX, 'center'); }
+    if (Math.abs(p.cy - sCY) < SNAP)              { p.cy = sCY; pushGuide('h', sCY, 'center'); }
+    // Slide outer edge snaps
+    if (Math.abs(pL - sL) < SNAP)                 { p.cx = sL + p.w/2; pushGuide('v', sL, 'edge'); }
+    if (Math.abs(pR - sR) < SNAP)                 { p.cx = sR - p.w/2; pushGuide('v', sR, 'edge'); }
+    if (Math.abs(pT) < SNAP)                      { p.cy = p.h/2; pushGuide('h', 0, 'edge'); }
+    if (Math.abs(pB - H) < SNAP)                  { p.cy = H - p.h/2; pushGuide('h', H, 'edge'); }
+    // Photo EDGE → Slide CENTER (e.g. top edge of landscape photo to vertical midline)
+    if (Math.abs(pT - sCY) < SNAP)                { p.cy = sCY + p.h/2; pushGuide('h', sCY, 'center'); }
+    if (Math.abs(pB - sCY) < SNAP)                { p.cy = sCY - p.h/2; pushGuide('h', sCY, 'center'); }
+    if (Math.abs(pL - sCX) < SNAP)                { p.cx = sCX + p.w/2; pushGuide('v', sCX, 'center'); }
+    if (Math.abs(pR - sCX) < SNAP)                { p.cx = sCX - p.w/2; pushGuide('v', sCX, 'center'); }
+    // Equal margin snaps
+    if (Math.abs((p.cx-sL)-(sR-p.cx)) < SNAP*2.5){ p.cx = sCX; pushGuide('v', sCX, 'center'); }
+    if (Math.abs(pT-(H-pB)) < SNAP*2.5)           { p.cy = sCY; pushGuide('h', sCY, 'center'); }
+  });
+
+  // ── Snap center to slide boundaries (between slides) ──
+  // This is what makes a spanning photo lock to exactly between 2 slides
+  for (let i = 1; i < slides.length; i++) {
+    const boundary = i * W;
+    if (Math.abs(p.cx - boundary) < SNAP) {
+      p.cx = boundary;
+      pushGuide('v', boundary, 'edge');
+    }
+  }
+
+  // Refresh edges after snapping
+  pL = p.cx - p.w/2; pR = p.cx + p.w/2;
+  pT = p.cy - p.h/2; pB = p.cy + p.h/2;
+
+  // ── Alignment with other photos ──
+  photos.forEach((other, j) => {
+    if (j === sel) return;
+    const oL = other.cx - other.w/2, oR = other.cx + other.w/2;
+    const oT = other.cy - other.h/2, oB = other.cy + other.h/2;
+
+    if (Math.abs(p.cx - other.cx) < SNAP) { p.cx = other.cx; pushGuide('v', other.cx, 'align'); }
+    if (Math.abs(p.cy - other.cy) < SNAP) { p.cy = other.cy; pushGuide('h', other.cy, 'align'); }
+    if (Math.abs(pL - oL) < SNAP) { p.cx = oL + p.w/2; pushGuide('v', oL, 'align'); }
+    if (Math.abs(pR - oR) < SNAP) { p.cx = oR - p.w/2; pushGuide('v', oR, 'align'); }
+    if (Math.abs(pT - oT) < SNAP) { p.cy = oT + p.h/2; pushGuide('h', oT, 'align'); }
+    if (Math.abs(pB - oB) < SNAP) { p.cy = oB - p.h/2; pushGuide('h', oB, 'align'); }
+  });
+
+  // ── Equal vertical spacing (top / between / bottom) ──
+  checkEqualSpacingV(p);
+  checkEqualSpacingH(p);
+}
+
+// kind: 'center' (slide/photo center line), 'edge' (slide or canvas boundary),
+// 'align' (lining up with another photo). Drives color + label in redraw().
+function pushGuide(type, pos, kind) {
+  if (!guides.find(g => g.type === type && Math.abs(g.pos - pos) < 2))
+    guides.push({ type, pos, kind });
+}
+
+// Corner-handle resize never used to invoke the snap logic above (only
+// drag-move did), which left resized photos a few px shy of slide/canvas
+// edges. This is the resize equivalent of applyGuides(): given the
+// in-progress uniform scale factor, finds the nearest slide/canvas boundary
+// the resized photo's edges would land within SNAP px of, and returns a
+// corrected scale that makes that edge land exactly on the boundary.
+function applyResizeGuides(p, scale) {
+  guides = [];
+  const rotNorm = ((p.rot % (Math.PI*2)) + Math.PI*2) % (Math.PI*2);
+  const nearAxis = rotNorm < 0.09 || rotNorm > Math.PI*2 - 0.09
+                || Math.abs(rotNorm - Math.PI) < 0.09;
+  if (!nearAxis) return scale;
+
+  const xBoundaries = [0, slides.length * W];
+  for (let i = 1; i < slides.length; i++) xBoundaries.push(i * W);
+  const yBoundaries = [0, H];
+
+  const w = dragStartW * scale, h = dragStartH * scale;
+  const pL = p.cx - w/2, pR = p.cx + w/2;
+  const pT = p.cy - h/2, pB = p.cy + h/2;
+
+  let best = null; // { error, scale, axis, pos }
+  const consider = (err, candidateScale, axis, pos) => {
+    if (candidateScale > 0 && err < SNAP && (!best || err < best.error)) {
+      best = { error: err, scale: candidateScale, axis, pos };
+    }
+  };
+
+  xBoundaries.forEach(bx => {
+    consider(Math.abs(pR - bx), (2 * (bx - p.cx)) / dragStartW, 'v', bx);
+    consider(Math.abs(pL - bx), (2 * (p.cx - bx)) / dragStartW, 'v', bx);
+  });
+  yBoundaries.forEach(by => {
+    consider(Math.abs(pB - by), (2 * (by - p.cy)) / dragStartH, 'h', by);
+    consider(Math.abs(pT - by), (2 * (p.cy - by)) / dragStartH, 'h', by);
+  });
+
+  if (best) {
+    pushGuide(best.axis, best.pos, 'edge');
+    return best.scale;
+  }
+  return scale;
+}
+
+// Equal vertical distribution: finds boundaries above/below and snaps to equal gap
+function checkEqualSpacingV(p) {
+  const pL = p.cx - p.w/2, pR = p.cx + p.w/2;
+
+  // Collect all vertical obstacles that overlap horizontally with p
+  // Obstacles: slide edges (0, H) and other photo edges
+  let boundaries = [
+    { y: 0,  side: 'bottom', label: 'edge' },
+    { y: H,  side: 'top',    label: 'edge' }
+  ];
+  photos.forEach((o, j) => {
+    if (j === sel) return;
+    const oL = o.cx - o.w/2, oR = o.cx + o.w/2;
+    if (Math.min(pR, oR) - Math.max(pL, oL) < Math.min(p.w, o.w) * 0.25) return;
+    boundaries.push({ y: o.cy - o.h/2, side: 'top',    ref: o });
+    boundaries.push({ y: o.cy + o.h/2, side: 'bottom', ref: o });
+  });
+
+  // Find nearest obstacle above p (bottom-side boundaries)
+  const above = boundaries
+    .filter(b => b.side === 'bottom' && b.y <= p.cy - p.h/2)
+    .sort((a,b) => b.y - a.y)[0];
+  // Find nearest obstacle below p (top-side boundaries)
+  const below = boundaries
+    .filter(b => b.side === 'top' && b.y >= p.cy + p.h/2)
+    .sort((a,b) => a.y - b.y)[0];
+
+  if (!above || !below) return;
+
+  const topEdge = above.y, bottomEdge = below.y;
+  const gapAbove = (p.cy - p.h/2) - topEdge;
+  const gapBelow = bottomEdge - (p.cy + p.h/2);
+
+  if (Math.abs(gapAbove - gapBelow) < SNAP * 2.5) {
+    p.cy = (topEdge + bottomEdge) / 2;
+    const equalGap = (bottomEdge - topEdge - p.h) / 2;
+    guides.push({
+      type: 'spacing-v',
+      topEdge, bottomEdge,
+      photoT: p.cy - p.h/2, photoB: p.cy + p.h/2,
+      cx: p.cx, gap: equalGap
+    });
+  }
+}
+
+// Equal horizontal distribution
+function checkEqualSpacingH(p) {
+  const pT = p.cy - p.h/2, pB = p.cy + p.h/2;
+
+  // Use the full canvas extent — includes all slide boundaries
+  let boundaries = [
+    { x: 0,                  side: 'right', label: 'edge' },
+    { x: slides.length * W,  side: 'left',  label: 'edge' }
+  ];
+  // Add all inner slide boundaries as potential snap walls
+  for (let i = 1; i < slides.length; i++) {
+    boundaries.push({ x: i * W, side: 'right', label: 'slide' });
+    boundaries.push({ x: i * W, side: 'left',  label: 'slide' });
+  }
+  photos.forEach((o, j) => {
+    if (j === sel) return;
+    const oT = o.cy - o.h/2, oB = o.cy + o.h/2;
+    if (Math.min(pB, oB) - Math.max(pT, oT) < Math.min(p.h, o.h) * 0.25) return;
+    boundaries.push({ x: o.cx - o.w/2, side: 'left',  ref: o });
+    boundaries.push({ x: o.cx + o.w/2, side: 'right', ref: o });
+  });
+
+  const leftOf = boundaries
+    .filter(b => b.side === 'right' && b.x <= p.cx - p.w/2)
+    .sort((a,b) => b.x - a.x)[0];
+  const rightOf = boundaries
+    .filter(b => b.side === 'left' && b.x >= p.cx + p.w/2)
+    .sort((a,b) => a.x - b.x)[0];
+
+  if (!leftOf || !rightOf) return;
+
+  const leftEdge = leftOf.x, rightEdge = rightOf.x;
+  const gapLeft  = (p.cx - p.w/2) - leftEdge;
+  const gapRight = rightEdge - (p.cx + p.w/2);
+
+  if (Math.abs(gapLeft - gapRight) < SNAP * 2.5) {
+    p.cx = (leftEdge + rightEdge) / 2;
+    const equalGap = (rightEdge - leftEdge - p.w) / 2;
+    guides.push({
+      type: 'spacing-h',
+      leftEdge, rightEdge,
+      photoL: p.cx - p.w/2, photoR: p.cx + p.w/2,
+      cy: p.cy, gap: equalGap
+    });
+  }
+}
+
+// ═══════════════════════════════════════
+// RENDERING
+// ═══════════════════════════════════════
+
+// Draws a text item's content. Called with the canvas already translated to
+// the item's center and rotated — so drawing happens in local (0,0)-centered
+// space. `scale` is S for live drawing, EX for export — keeps font sizing
+// and line positions correct in logical px regardless of which canvas this
+// is rendered into.
+function drawTextContent(c, p, scale) {
+  const lines = String(p.text || '').split('\n');
+  const lineCount = Math.max(1, lines.length);
+  const fontSize = Math.max(4, (p.h / lineCount) * 0.78);
+  const weight = p.bold ? 700 : (p.weight || 300);
+  const style = p.italic ? 'italic' : 'normal';
+  c.font = `${style} ${weight} ${Math.round(fontSize * scale)}px "${p.fontFamily}", sans-serif`;
+  c.fillStyle = p.color;
+  c.textAlign = 'center';
+  c.textBaseline = 'middle';
+  // Laufweite (Letter-Spacing) — ändert nur den Abstand, nicht die Größe.
+  const hasLS = ('letterSpacing' in c);
+  if (hasLS) c.letterSpacing = ((p.tracking || 0) * scale) + 'px';
+  const lineHeight = p.h / lineCount;
+  const underlineOffset = fontSize * scale * 0.34;
+  const underlineThickness = Math.max(1, fontSize * scale * 0.045);
+  // Outline/Kontur — rundherum (stroke) oder einseitig (versetzte Kopie).
+  const ol = (p.outline || 0) * scale;
+  if (ol > 0) {
+    const olCol = p.outlineColor || '#000000';
+    if ((p.outlineMode || 'full') === 'side') {
+      const dir = p.outlineDir || 'right';
+      const dx = dir === 'left' ? -1 : dir === 'right' ? 1 : 0;
+      const dy = dir === 'down' ? 1 : 0;
+      c.fillStyle = olCol;
+      for (let s = Math.round(ol); s >= 1; s--) {
+        lines.forEach((line, i) => {
+          const ly = (-p.h / 2 + lineHeight * (i + 0.5)) * scale;
+          c.fillText(line, dx * s, ly + dy * s);
+        });
+      }
+    } else {
+      c.strokeStyle = olCol;
+      c.lineWidth = ol * 2; c.lineJoin = 'round'; c.lineCap = 'round';
+      lines.forEach((line, i) => {
+        const ly = (-p.h / 2 + lineHeight * (i + 0.5)) * scale;
+        c.strokeText(line, 0, ly);
+      });
+    }
+    c.fillStyle = p.color; // für die eigentliche Füllung zurücksetzen
+  }
+  lines.forEach((line, i) => {
+    const ly = (-p.h / 2 + lineHeight * (i + 0.5)) * scale;
+    c.fillText(line, 0, ly);
+    if (p.underline) {
+      const lineWidth = c.measureText(line).width;
+      c.fillRect(-lineWidth / 2, ly + underlineOffset, lineWidth, underlineThickness);
+    }
+  });
+  if (hasLS) c.letterSpacing = '0px'; // zurücksetzen, damit es nicht nachwirkt
+}
+
+// Misst die Breite des längsten Textzeilen-Strings in LOGISCHEN px (scale=1),
+// inkl. aktueller Laufweite — damit die Box dem gespreizten Text folgen kann.
+function measureTextWidth(p) {
+  const lines = String(p.text || '').split('\n');
+  const lineCount = Math.max(1, lines.length);
+  const fontSize = Math.max(4, (p.h / lineCount) * 0.78);
+  const weight = p.bold ? 700 : (p.weight || 300);
+  const style = p.italic ? 'italic' : 'normal';
+  ctx.save();
+  ctx.font = `${style} ${weight} ${Math.round(fontSize)}px "${p.fontFamily}", sans-serif`;
+  if ('letterSpacing' in ctx) ctx.letterSpacing = ((p.tracking || 0)) + 'px';
+  let max = 0;
+  lines.forEach(l => { max = Math.max(max, ctx.measureText(l || ' ').width); });
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+  ctx.restore();
+  return max;
+}
+
+// Zeichnet das Postfolio-Badge (wie im Startbildschirm) als Slide-Element.
+// logoDark=true → helles Quadrat mit dunklem P (für dunkle Hintergründe).
+function drawLogoItem(c, p, scale) {
+  const s = p.w * scale, r = s * 0.24, x = -s / 2, y = -s / 2;
+  c.beginPath();
+  if (c.roundRect) { c.roundRect(x, y, s, s, r); }
+  else {
+    c.moveTo(x + r, y); c.arcTo(x + s, y, x + s, y + s, r); c.arcTo(x + s, y + s, x, y + s, r);
+    c.arcTo(x, y + s, x, y, r); c.arcTo(x, y, x + s, y, r); c.closePath();
+  }
+  c.fillStyle = p.logoDark ? '#F4F1EB' : '#2A2826';
+  c.fill();
+  c.fillStyle = p.logoDark ? '#2A2826' : '#F4F1EB';
+  c.font = `600 ${Math.round(s * 0.6)}px "Playfair Display", Georgia, serif`;
+  c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.fillText('P', 0, s * 0.04);
+  c.beginPath();
+  c.arc(s * 0.27, -s * 0.24, s * 0.06, 0, Math.PI * 2);
+  c.fillStyle = '#D10101'; c.fill();
+}
+
+// Leerer Foto-Platzhalter (für das Frames-Template): gestrichelte Box + „+".
+// Bei Inset wird der weiße Rahmen schon angedeutet. Wird nur am Bildschirm
+// gezeichnet (im Export übersprungen).
+function drawPlaceholderItem(c, p, scale) {
+  const w = p.w * scale, h = p.h * scale, x = -w / 2, y = -h / 2;
+  if (p.frame && p.frame.width > 0) {
+    const fw = p.frame.width * scale;
+    c.fillStyle = p.frame.color || '#ffffff';
+    c.fillRect(x - fw, y - fw, w + 2 * fw, h + 2 * fw);
+  }
+  c.fillStyle = 'rgba(42,40,38,0.06)';
+  c.fillRect(x, y, w, h);
+  c.strokeStyle = 'rgba(42,40,38,0.45)';
+  c.lineWidth = 1.5 * DPR;
+  c.setLineDash([6 * DPR, 5 * DPR]);
+  c.strokeRect(x, y, w, h);
+  c.setLineDash([]);
+  const pl = Math.min(w, h) * 0.12;
+  c.strokeStyle = 'rgba(42,40,38,0.5)';
+  c.lineWidth = 2.2 * DPR;
+  c.beginPath();
+  c.moveTo(-pl, 0); c.lineTo(pl, 0);
+  c.moveTo(0, -pl); c.lineTo(0, pl);
+  c.stroke();
+}
+
+function renderNow() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Slide backgrounds
+  slides.forEach((slide, i) => {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(i * W * S, 0, W * S, H * S);
+    ctx.clip();
+    ctx.fillStyle = slide.bg;
+    ctx.fillRect(i * W * S, 0, W * S, H * S);
+    ctx.restore();
+  });
+
+  // „+"-Platzhalter mittig auf jeder LEEREN Slide — antippen lädt ein Foto
+  // (die normale Tippen-auf-leere-Fläche-Logik öffnet den Dateidialog). Ersetzt
+  // den früheren „+ Photo"-Button.
+  const occupied = new Set();
+  photos.forEach(p => occupied.add(slideIndexOf(p)));
+  slides.forEach((slide, i) => {
+    if (occupied.has(i)) return;
+    const cxp = (i * W + W / 2) * S, cyp = (H / 2) * S;
+    const r = 36 * S;
+    const onDark = (typeof slide.bg === 'string') && /^#(0|1|2|3|4|5)/i.test(slide.bg);
+    const tint = onDark ? 'rgba(255,255,255,0.5)' : 'rgba(42,40,38,0.32)';
+    ctx.save();
+    ctx.strokeStyle = tint; ctx.fillStyle = tint;
+    ctx.lineWidth = 2 * DPR;
+    ctx.setLineDash([6 * DPR, 5 * DPR]);
+    ctx.beginPath(); ctx.arc(cxp, cyp, r, 0, Math.PI * 2); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.lineWidth = 3 * DPR;
+    const pl = 15 * S;
+    ctx.beginPath();
+    ctx.moveTo(cxp - pl, cyp); ctx.lineTo(cxp + pl, cyp);
+    ctx.moveTo(cxp, cyp - pl); ctx.lineTo(cxp, cyp + pl);
+    ctx.stroke();
+    ctx.font = `${Math.round(13 * DPR)}px Helvetica Neue, sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    ctx.fillText('Tap to add a photo', cxp, cyp + r + 12 * DPR);
+    ctx.restore();
+  });
+
+  // Photos + text items — no clipping for seamless spanning
+  photos.forEach(p => {
+    ctx.save();
+    ctx.translate(p.cx * S, p.cy * S);
+    ctx.rotate(p.rot);
+    if (p.kind === 'text') {
+      drawTextContent(ctx, p, S);
+      ctx.restore();
+      return;
+    }
+    if (p.kind === 'logo') { drawLogoItem(ctx, p, S); ctx.restore(); return; }
+    if (p.kind === 'placeholder') { drawPlaceholderItem(ctx, p, S); ctx.restore(); return; }
+    if (p.frame && p.frame.width > 0) {
+      const ins = frameInsets(p);
+      ctx.fillStyle = p.frame.color;
+      ctx.fillRect(-(p.w / 2 + ins.left) * S, -(p.h / 2 + ins.top) * S,
+                    (p.w + ins.left + ins.right) * S, (p.h + ins.top + ins.bottom) * S);
+    }
+    const c = p.crop || { x: 0, y: 0, w: 1, h: 1 };
+    // Auf dem Bildschirm aus der herunterskalierten Vorschau zeichnen (Punkt 2);
+    // crop ist anteilig (0..1), daher mit den Maßen der jeweiligen Quelle skalieren.
+    const src = p.screen || p.img;
+    const nw = srcW(src), nh = srcH(src);
+    const sx = c.x * nw, sw = c.w * nw;
+    const sy = c.y * nh, sh = c.h * nh;
+    ctx.drawImage(src, sx, sy, sw, sh, -p.w / 2 * S, -p.h / 2 * S, p.w * S, p.h * S);
+    ctx.restore();
+  });
+
+  // Slide dividers (thin dashed lines)
+  for (let i = 1; i < slides.length; i++) {
+    ctx.save();
+    ctx.strokeStyle = 'rgba(83,80,75,0.22)';
+    ctx.lineWidth   = 0.75 * DPR;
+    ctx.setLineDash([4 * DPR, 5 * DPR]);
+    ctx.beginPath();
+    ctx.moveTo(i * W * S, 0);
+    ctx.lineTo(i * W * S, H * S);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Slide numbers (top-left of each slide)
+  ctx.textAlign    = 'left';
+  ctx.textBaseline = 'top';
+  slides.forEach((_, i) => {
+    const active = (i === activeSlide);
+    ctx.font      = `${Math.round(10 * DPR)}px Helvetica Neue, sans-serif`;
+    ctx.fillStyle = active ? 'rgba(42,40,38,0.55)' : 'rgba(42,40,38,0.25)';
+    ctx.fillText(String(i + 1).padStart(2, '0'), i * W * S + 10 * DPR, 10 * DPR);
+  });
+
+  // Smart guides — color + label per kind, so it's obvious WHAT a photo is
+  // snapping to (center line, an edge, another photo, or equal spacing).
+  const GUIDE_STYLE = {
+    center: { color: '#1E8FFF', label: 'CENTER', dash: [2*DPR, 2*DPR] },
+    edge:   { color: '#D10101', label: 'EDGE',    dash: [7*DPR, 3*DPR] },
+    align:  { color: '#FF8A00', label: 'ALIGN',   dash: [4*DPR, 2*DPR] },
+  };
+  if (guides.length > 0) {
+    ctx.save();
+    const totalW = slides.length * W;
+    const selP = (sel >= 0 && sel < photos.length) ? photos[sel] : null;
+
+    guides.forEach(g => {
+      if (g.type === 'v' || g.type === 'h') {
+        const style = GUIDE_STYLE[g.kind] || GUIDE_STYLE.edge;
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = style.color;
+        ctx.lineWidth   = 1.4 * DPR;
+        ctx.setLineDash(style.dash);
+        ctx.beginPath();
+        if (g.type === 'v') {
+          ctx.moveTo(g.pos * S, 0);
+          ctx.lineTo(g.pos * S, H * S);
+        } else {
+          ctx.moveTo(0, g.pos * S);
+          ctx.lineTo(totalW * S, g.pos * S);
+        }
+        ctx.stroke();
+
+        // Marker dot at the snap point on the selected photo's own edge/center,
+        // plus a small uppercase tag naming the snap kind.
+        if (selP) {
+          ctx.setLineDash([]);
+          let mx, my;
+          if (g.type === 'v') { mx = g.pos * S; my = selP.cy * S; }
+          else                { mx = selP.cx * S; my = g.pos * S; }
+          ctx.beginPath();
+          ctx.arc(mx, my, 3.5 * DPR, 0, Math.PI * 2);
+          ctx.fillStyle = style.color;
+          ctx.fill();
+
+          // (Snap-Textlabels bewusst entfernt — nur Linie + Punkt, kein Text.)
+        }
+
+      } else if (g.type === 'spacing-v') {
+        // Equal vertical spacing brackets
+        const TICK = 18 * DPR;
+        const xDraw = g.cx * S;
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = '#1FB67A';
+        ctx.fillStyle   = '#1FB67A';
+        ctx.lineWidth   = 1.4 * DPR;
+        ctx.setLineDash([]);
+        // Top gap: topEdge → photoT
+        drawVBracket(xDraw, g.topEdge * S, g.photoT * S, TICK);
+        // Bottom gap: photoB → bottomEdge
+        drawVBracket(xDraw, g.photoB * S, g.bottomEdge * S, TICK);
+
+      } else if (g.type === 'spacing-h') {
+        // Equal horizontal spacing brackets
+        const TICK = 18 * DPR;
+        const yDraw = g.cy * S;
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = '#1FB67A';
+        ctx.fillStyle   = '#1FB67A';
+        ctx.lineWidth   = 1.4 * DPR;
+        ctx.setLineDash([]);
+        drawHBracket(yDraw, g.leftEdge * S, g.photoL * S, TICK);
+        drawHBracket(yDraw, g.photoR * S, g.rightEdge * S, TICK);
+      }
+    });
+
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+
+  // Center crosshair: full-length lines for selected photo (especially useful for spanning photos)
+  if (sel >= 0 && sel < photos.length) {
+    const p = photos[sel];
+    const alpha = dragMode === 'move' ? 0.55 : 0.25;
+    const totalW = slides.length * W;
+    ctx.save();
+    ctx.strokeStyle = `rgba(209,1,1,${alpha})`;
+    ctx.lineWidth   = 1 * DPR;
+    ctx.setLineDash([3*DPR, 2*DPR]);
+    ctx.beginPath();
+    // Horizontal center line — full canvas width
+    ctx.moveTo(0, p.cy * S);
+    ctx.lineTo(totalW * S, p.cy * S);
+    // Vertical center line — full canvas height
+    ctx.moveTo(p.cx * S, 0);
+    ctx.lineTo(p.cx * S, H * S);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+
+  // Selection handles
+  if (sel >= 0 && sel < photos.length) {
+    drawSelection(photos[sel]);
+  }
+}
+
+// Helper: draw vertical bracket (spine + two tick caps) at x between y1 and y2
+function drawVBracket(x, y1, y2, tick) {
+  const mid = (y1 + y2) / 2;
+  ctx.beginPath();
+  // Spine
+  ctx.moveTo(x, y1); ctx.lineTo(x, y2);
+  // Top cap
+  ctx.moveTo(x - tick, y1); ctx.lineTo(x + tick, y1);
+  // Bottom cap
+  ctx.moveTo(x - tick, y2); ctx.lineTo(x + tick, y2);
+  // Center arrow chevrons
+  const A = Math.min(7*DPR, (y2-y1)*0.18);
+  ctx.moveTo(x - A*0.7, mid - A); ctx.lineTo(x, mid - A*0.2); ctx.lineTo(x + A*0.7, mid - A);
+  ctx.moveTo(x - A*0.7, mid + A); ctx.lineTo(x, mid + A*0.2); ctx.lineTo(x + A*0.7, mid + A);
+  ctx.stroke();
+}
+
+// Helper: draw horizontal bracket at y between x1 and x2
+function drawHBracket(y, x1, x2, tick) {
+  const mid = (x1 + x2) / 2;
+  ctx.beginPath();
+  ctx.moveTo(x1, y); ctx.lineTo(x2, y);
+  ctx.moveTo(x1, y - tick); ctx.lineTo(x1, y + tick);
+  ctx.moveTo(x2, y - tick); ctx.lineTo(x2, y + tick);
+  const A = Math.min(7*DPR, (x2-x1)*0.18);
+  ctx.moveTo(mid - A, y - A*0.7); ctx.lineTo(mid - A*0.2, y); ctx.lineTo(mid - A, y + A*0.7);
+  ctx.moveTo(mid + A, y - A*0.7); ctx.lineTo(mid + A*0.2, y); ctx.lineTo(mid + A, y + A*0.7);
+  ctx.stroke();
+}
+
+function drawSelection(p) {
+  const hw = p.w / 2 * S;
+  const hh = p.h / 2 * S;
+  const HR = 6 * DPR;  // corner handle radius (canvas px) — dezenter
+  const RO = ROT_OFFSET * S; // rotation handle offset (canvas px)
+
+  ctx.save();
+  ctx.translate(p.cx * S, p.cy * S);
+  ctx.rotate(p.rot);
+
+  // Dashed bounding box
+  ctx.strokeStyle = '#D10101';
+  ctx.lineWidth   = 1.5 * DPR;
+  ctx.setLineDash([5 * DPR, 3 * DPR]);
+  ctx.strokeRect(-hw, -hh, hw * 2, hh * 2);
+  ctx.setLineDash([]);
+
+  // Nur EIN Skalier-Griff unten rechts (alle anderen Ecken- und Drehgriffe entfernt).
+  ctx.beginPath();
+  ctx.arc(hw, hh, HR, 0, Math.PI * 2);
+  ctx.fillStyle = '#D10101';
+  ctx.fill();
+
+  // Lösch-Griff: roter Kreis mit Mülleimer-Symbol (löscht Foto ODER Text),
+  // diagonal außerhalb der oberen linken Ecke.
+  const DK = (DEL_OFFSET / Math.SQRT2) * S;
+  const dxh = -hw - DK, dyh = -hh - DK;
+  const r = HR * 1.5;
+  ctx.beginPath();
+  ctx.arc(dxh, dyh, r, 0, Math.PI * 2);
+  ctx.fillStyle = '#D10101';
+  ctx.fill();
+  ctx.strokeStyle = 'white';
+  ctx.lineWidth = 1.5 * DPR;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  const u = r * 0.42;
+  const topY = dyh - u * 0.7, botY = dyh + u * 1.05;
+  ctx.beginPath(); ctx.moveTo(dxh - u, topY); ctx.lineTo(dxh + u, topY); ctx.stroke();           // Deckel
+  ctx.beginPath();                                                                                  // Griff
+  ctx.moveTo(dxh - u * 0.34, topY); ctx.lineTo(dxh - u * 0.34, topY - u * 0.36);
+  ctx.lineTo(dxh + u * 0.34, topY - u * 0.36); ctx.lineTo(dxh + u * 0.34, topY); ctx.stroke();
+  ctx.beginPath();                                                                                  // Korpus
+  ctx.moveTo(dxh - u * 0.78, topY); ctx.lineTo(dxh - u * 0.6, botY);
+  ctx.lineTo(dxh + u * 0.6, botY); ctx.lineTo(dxh + u * 0.78, topY); ctx.stroke();
+  ctx.beginPath();                                                                                  // Innenstriche
+  ctx.moveTo(dxh - u * 0.22, topY + u * 0.3); ctx.lineTo(dxh - u * 0.18, botY - u * 0.24);
+  ctx.moveTo(dxh + u * 0.22, topY + u * 0.3); ctx.lineTo(dxh + u * 0.18, botY - u * 0.24);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+// ═══════════════════════════════════════
+// MOUSE INTERACTION
+// ═══════════════════════════════════════
+
+canvas.addEventListener('mousedown', e => {
+  // Pipette aktiv → ausschließlich Farbe picken, keine Auswahl/Verschiebung.
+  if (pickingFrameColor || pickingBgColor) { e.preventDefault(); doPick(e.clientX, e.clientY); return; }
+  const { lx, ly } = clientToLogical(e.clientX, e.clientY);
+  addCandidate = null;
+
+  // Lösch-Griff (× am Foto) zuerst prüfen.
+  if (sel >= 0 && hitDeleteHandle(photos[sel], lx, ly)) { deleteSelected(); return; }
+
+  if (sel >= 0 && hitCornerHandle(photos[sel], lx, ly)) {
+    dragMode      = 'resize';
+    armUndo       = true;
+    dragStartDist = Math.hypot(lx - photos[sel].cx, ly - photos[sel].cy);
+    dragStartW    = photos[sel].w;
+    dragStartH    = photos[sel].h;
+    return;
+  }
+
+  const hit = hitPhoto(lx, ly);
+  if (hit >= 0) {
+    tapAlreadySelected = (sel === hit);
+    sel          = hit;
+    dragMode     = 'move';
+    armUndo      = true;
+    dragStartMX  = e.clientX;
+    dragStartMY  = e.clientY;
+    dragStartCX  = photos[sel].cx;
+    dragStartCY  = photos[sel].cy;
+    activeSlide  = Math.max(0, Math.min(slides.length - 1, Math.floor(photos[sel].cx / W)));
+  } else {
+    sel          = -1;
+    activeSlide  = Math.max(0, Math.min(slides.length - 1, Math.floor(lx / W)));
+    addCandidate = { lx, ly, mx: e.clientX, my: e.clientY };
+  }
+  syncBgButtons();
+  updateDots();
+  updateDeleteBtn();
+  redraw();
+});
+
+window.addEventListener('mousemove', e => {
+  if (!dragMode || sel < 0) return;
+  if (armUndo) { beginAction(); armUndo = false; } // ein Undo-Schritt pro Geste
+  photos[sel].fitted = false; // frei bewegt → Rahmen rundum gleich (siehe frameInsets)
+  if (dragMode === 'move') {
+    const p = photos[sel];
+    p.cx = dragStartCX + (e.clientX - dragStartMX) / DSCALE;
+    p.cy = dragStartCY + (e.clientY - dragStartMY) / DSCALE;
+    applyGuides(p);
+    redraw();
+  } else if (dragMode === 'rotate') {
+    const { lx, ly } = clientToLogical(e.clientX, e.clientY);
+    const angle = Math.atan2(ly - photos[sel].cy, lx - photos[sel].cx);
+    photos[sel].rot = dragStartRot + (angle - dragStartAngle);
+    redraw();
+  } else if (dragMode === 'resize') {
+    const { lx, ly } = clientToLogical(e.clientX, e.clientY);
+    const p = photos[sel];
+    const dist  = Math.hypot(lx - p.cx, ly - p.cy);
+    let scale = Math.max(0.05, dist / dragStartDist);
+    scale = applyResizeGuides(p, scale);
+    p.w = Math.max(20, dragStartW * scale);
+    p.h = Math.max(20, dragStartH * scale);
+    syncFrameGroupInsets(p);
+    redraw();
+  }
+});
+
+window.addEventListener('mouseup', e => {
+  const wasDragging = !!dragMode;
+  // Tap (ohne Ziehen) auf einen leeren Platzhalter → Datei zum Befüllen wählen.
+  if (dragMode === 'move' && tapAlreadySelected && sel >= 0 && photos[sel] && photos[sel].kind === 'placeholder'
+      && Math.hypot(e.clientX - dragStartMX, e.clientY - dragStartMY) < 6) {
+    dragMode = null; guides = []; armUndo = false;
+    fillPlaceholder(sel);
+    return;
+  }
+  dragMode = null; guides = []; armUndo = false;
+  if (addCandidate) {
+    const moved = Math.hypot(e.clientX - addCandidate.mx, e.clientY - addCandidate.my);
+    if (moved < 6) {
+      pendingAddPos = { cx: addCandidate.lx, cy: addCandidate.ly };
+      document.getElementById('fileInput').click();
+    }
+    addCandidate = null;
+  }
+  if (wasDragging) scheduleSave();
+  redraw();
+});
+
+canvas.addEventListener('wheel', e => {
+  if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+  const { lx, ly } = clientToLogical(e.clientX, e.clientY);
+  const hit = hitPhoto(lx, ly);
+  if (hit < 0) return;
+  e.preventDefault();
+  beginAction('wheel');
+  const factor = e.deltaY > 0 ? 0.93 : 1.07;
+  photos[hit].w = Math.max(40, photos[hit].w * factor);
+  photos[hit].h = Math.max(40, photos[hit].h * factor);
+  photos[hit].fitted = false;
+  syncFrameGroupInsets(photos[hit]);
+  if (sel !== hit) { sel = hit; updateDeleteBtn(); }
+  redraw();
+}, { passive: false });
+
+// ═══════════════════════════════════════
+// KEYBOARD: nudge (arrows) + precise scale (⌘/Ctrl + / -)
+// ═══════════════════════════════════════
+
+window.addEventListener('keydown', e => {
+  const tag = (e.target && e.target.tagName) || '';
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+  // Vollbild-Vorschau offen → Tastatur nur zum Schließen.
+  if (document.getElementById('preview').classList.contains('show')) {
+    if (e.key === 'Escape') closePreview();
+    return;
+  }
+  if (cropOpen) {
+    if (e.key === 'Escape') closeCropOverlay();
+    if (e.key === 'Enter')  document.getElementById('cropApply').click();
+    return;
+  }
+
+  // Undo / Redo (⌘/Ctrl+Z, ⌘/Ctrl+Shift+Z bzw. Ctrl+Y) — auch ohne Auswahl.
+  const isMod = e.metaKey || e.ctrlKey;
+  if (isMod && (e.key === 'z' || e.key === 'Z')) {
+    e.preventDefault();
+    if (e.shiftKey) redo(); else undo();
+    return;
+  }
+  if (isMod && (e.key === 'y' || e.key === 'Y')) { e.preventDefault(); redo(); return; }
+
+  if (sel < 0 || sel >= photos.length) return;
+  const p   = photos[sel];
+  const mod = e.metaKey || e.ctrlKey;
+
+  // Entf / Backspace → ausgewähltes Foto/Text löschen
+  if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); deleteSelected(); return; }
+
+  // ⌘/Ctrl + "+"/"-" → pedantically precise resize, anchored on center
+  if (mod && (e.key === '+' || e.key === '=')) {
+    e.preventDefault();
+    beginAction('nudge'); p.fitted = false;
+    p.w = Math.max(20, p.w * 1.01);
+    p.h = Math.max(20, p.h * 1.01);
+    redraw();
+    return;
+  }
+  if (mod && (e.key === '-' || e.key === '_')) {
+    e.preventDefault();
+    beginAction('nudge'); p.fitted = false;
+    p.w = Math.max(20, p.w * 0.99);
+    p.h = Math.max(20, p.h * 0.99);
+    redraw();
+    return;
+  }
+
+  // Arrow keys → nudge position. Shift = coarse step.
+  const STEP = e.shiftKey ? 10 : 1;
+  if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) {
+    beginAction('nudge'); p.fitted = false;
+  }
+  if (e.key === 'ArrowUp')    { e.preventDefault(); p.cy -= STEP; redraw(); }
+  if (e.key === 'ArrowDown')  { e.preventDefault(); p.cy += STEP; redraw(); }
+  if (e.key === 'ArrowLeft')  { e.preventDefault(); p.cx -= STEP; redraw(); }
+  if (e.key === 'ArrowRight') { e.preventDefault(); p.cx += STEP; redraw(); }
+
+  // Enter → instantly fit the selected photo into its slide / frame
+  if (e.key === 'Enter') { e.preventDefault(); fitSelectedPhoto(); }
+});
+
+// ═══════════════════════════════════════
+// TOUCH INTERACTION
+// ═══════════════════════════════════════
+
+canvas.addEventListener('touchstart', e => {
+  // Pipette aktiv → ausschließlich Farbe picken.
+  if ((pickingFrameColor || pickingBgColor) && e.touches.length === 1) {
+    e.preventDefault();
+    const t = e.touches[0];
+    pickXY = { x: t.clientX, y: t.clientY };  // erst beim Loslassen picken
+    updateLoupe(t.clientX, t.clientY);
+    return;
+  }
+  if (e.touches.length === 1) {
+    const t = e.touches[0];
+    const { lx, ly } = clientToLogical(t.clientX, t.clientY);
+    addCandidate = null;
+
+    // Lösch-Griff (× am Foto) zuerst prüfen.
+    if (sel >= 0 && hitDeleteHandle(photos[sel], lx, ly)) { e.preventDefault(); deleteSelected(); return; }
+
+    // Corner handle → resize
+    if (sel >= 0 && hitCornerHandle(photos[sel], lx, ly)) {
+      e.preventDefault();
+      dragMode      = 'resize';
+      armUndo       = true;
+      dragStartDist = Math.hypot(lx - photos[sel].cx, ly - photos[sel].cy);
+      dragStartW    = photos[sel].w;
+      dragStartH    = photos[sel].h;
+      return;
+    }
+
+    const hit = hitPhoto(lx, ly);
+    if (hit >= 0) {
+      e.preventDefault();
+      tapAlreadySelected = (sel === hit);
+      sel         = hit;
+      dragMode    = 'move';
+      armUndo     = true;
+      dragStartMX = t.clientX;
+      dragStartMY = t.clientY;
+      dragStartCX = photos[sel].cx;
+      dragStartCY = photos[sel].cy;
+      activeSlide = Math.max(0, Math.min(slides.length - 1, Math.floor(photos[sel].cx / W)));
+    } else {
+      // Let container scroll — but remember this spot in case it turns out to be a tap
+      sel          = -1;
+      activeSlide  = Math.max(0, Math.min(slides.length - 1, Math.floor(lx / W)));
+      addCandidate = { lx, ly, mx: t.clientX, my: t.clientY };
+    }
+    syncBgButtons();
+    updateDots();
+    updateDeleteBtn();
+    redraw();
+  }
+
+  if (e.touches.length === 2) {
+    e.preventDefault();
+    dragMode = null;
+    addCandidate = null;
+    const t1 = e.touches[0], t2 = e.touches[1];
+    const mx = (t1.clientX + t2.clientX) / 2;
+    const my = (t1.clientY + t2.clientY) / 2;
+    const { lx, ly } = clientToLogical(mx, my);
+    const hit = hitPhoto(lx, ly);
+    if (hit >= 0) {
+      sel = hit;
+      armUndo = true;
+      pinchData = {
+        dist:  Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY),
+        angle: Math.atan2(t1.clientY - t2.clientY, t1.clientX - t2.clientX),
+        w: photos[sel].w, h: photos[sel].h, rot: photos[sel].rot
+      };
+      updateDeleteBtn();
+      redraw();
+    }
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchmove', e => {
+  if ((pickingFrameColor || pickingBgColor) && e.touches.length === 1) {
+    e.preventDefault();
+    const t = e.touches[0];
+    pickXY = { x: t.clientX, y: t.clientY };
+    updateLoupe(t.clientX, t.clientY);
+    return;
+  }
+  if (sel >= 0 && (dragMode || pinchData)) {
+    if (armUndo) { beginAction(); armUndo = false; } // ein Undo-Schritt pro Geste
+    photos[sel].fitted = false; // frei bewegt → Rahmen rundum gleich
+  }
+  if (e.touches.length === 1) {
+    if (dragMode === 'move' && sel >= 0) {
+      e.preventDefault();
+      const t = e.touches[0];
+      const p = photos[sel];
+      p.cx = dragStartCX + (t.clientX - dragStartMX) / DSCALE;
+      p.cy = dragStartCY + (t.clientY - dragStartMY) / DSCALE;
+      applyGuides(p);
+      redraw();
+    } else if (dragMode === 'rotate' && sel >= 0) {
+      e.preventDefault();
+      const t = e.touches[0];
+      const { lx, ly } = clientToLogical(t.clientX, t.clientY);
+      const angle = Math.atan2(ly - photos[sel].cy, lx - photos[sel].cx);
+      photos[sel].rot = dragStartRot + (angle - dragStartAngle);
+      redraw();
+    } else if (dragMode === 'resize' && sel >= 0) {
+      e.preventDefault();
+      const t = e.touches[0];
+      const { lx, ly } = clientToLogical(t.clientX, t.clientY);
+      const p = photos[sel];
+      const dist  = Math.hypot(lx - p.cx, ly - p.cy);
+      let scale = Math.max(0.05, dist / dragStartDist);
+      scale = applyResizeGuides(p, scale);
+      p.w = Math.max(20, dragStartW * scale);
+      p.h = Math.max(20, dragStartH * scale);
+      syncFrameGroupInsets(p);
+      redraw();
+    }
+  }
+
+  if (e.touches.length === 2 && pinchData && sel >= 0) {
+    e.preventDefault();
+    const t1 = e.touches[0], t2 = e.touches[1];
+    const dist  = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+    const angle = Math.atan2(t1.clientY - t2.clientY, t1.clientX - t2.clientX);
+    const scale = dist / pinchData.dist;
+    const p = photos[sel];
+    p.w   = Math.max(40, pinchData.w * scale);
+    p.h   = Math.max(40, pinchData.h * scale);
+    // Pinch = nur Zoomen, KEIN Drehen (Drehen geht über den Rotate-Regler).
+    syncFrameGroupInsets(p);
+    redraw();
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchend', e => {
+  if (pickingFrameColor || pickingBgColor) {
+    if (pickXY) doPick(pickXY.x, pickXY.y);  // Farbe an der zuletzt gezeigten Stelle übernehmen
+    pickXY = null;
+    return;
+  }
+  if (e.touches.length < 2) pinchData = null;
+  if (e.touches.length === 0) {
+    // Tap (ohne Ziehen) auf einen leeren Platzhalter → Datei zum Befüllen wählen.
+    const ct0 = e.changedTouches[0];
+    if (dragMode === 'move' && tapAlreadySelected && sel >= 0 && photos[sel] && photos[sel].kind === 'placeholder'
+        && ct0 && Math.hypot(ct0.clientX - dragStartMX, ct0.clientY - dragStartMY) < 8) {
+      dragMode = null; guides = []; armUndo = false; addCandidate = null;
+      fillPlaceholder(sel);
+      return;
+    }
+    dragMode = null; guides = []; armUndo = false;
+    if (addCandidate) {
+      const ct = e.changedTouches[0];
+      const moved = ct ? Math.hypot(ct.clientX - addCandidate.mx, ct.clientY - addCandidate.my) : 999;
+      if (moved < 8) {
+        pendingAddPos = { cx: addCandidate.lx, cy: addCandidate.ly };
+        document.getElementById('fileInput').click();
+      }
+      addCandidate = null;
+    }
+    scheduleSave();
+    redraw();
+  }
+}, { passive: true });
+
+// ═══════════════════════════════════════
+// DRAG & DROP onto canvas
+// ═══════════════════════════════════════
+
+canvas.addEventListener('dragover', e => { e.preventDefault(); wrap.style.outline = '3px solid #D10101'; });
+canvas.addEventListener('dragleave', () => { wrap.style.outline = ''; });
+canvas.addEventListener('drop', e => {
+  e.preventDefault();
+  wrap.style.outline = '';
+  const file = Array.from(e.dataTransfer.files).find(f => f.type.startsWith('image/'));
+  if (!file) return;
+  const { lx, ly } = clientToLogical(e.clientX, e.clientY);
+  loadPhoto(file, lx, ly);
+});
+
+// ═══════════════════════════════════════
+// PHOTO LOADING
+// ═══════════════════════════════════════
+
+document.getElementById('fileInput').addEventListener('change', function() {
+  if (!this.files[0]) return;
+  const file = this.files[0];
+  this.value = '';
+  // Wurde ein Frames-Platzhalter angetippt → Foto dort einsetzen.
+  if (pendingReplaceIdx >= 0 && photos[pendingReplaceIdx] && photos[pendingReplaceIdx].kind === 'placeholder') {
+    const idx = pendingReplaceIdx; pendingReplaceIdx = -1;
+    loadPhotoIntoPlaceholder(file, idx);
+    return;
+  }
+  pendingReplaceIdx = -1;
+  // Sonst: an Tipp-Position bzw. zentriert auf der aktiven Slide.
+  const pos = pendingAddPos || { cx: activeSlide * W + W / 2, cy: H / 2 };
+  pendingAddPos = null;
+  loadPhoto(file, pos.cx, pos.cy);
+});
+
+// Ersetzt einen Platzhalter durch ein Foto, das die Box füllt (Cover-Crop),
+// inkl. evtl. Rahmen (Inset). Geometrie/Position bleiben erhalten.
+function loadPhotoIntoPlaceholder(file, idx) {
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const img = new Image();
+    img.onload = () => {
+      const ph = photos[idx];
+      if (!ph || ph.kind !== 'placeholder') return;
+      beginAction();
+      const photo = {
+        kind: 'image', img, screen: buildScreenCanvas(img),
+        cx: ph.cx, cy: ph.cy, w: ph.w, h: ph.h, rot: ph.rot || 0,
+        crop: { x: 0, y: 0, w: 1, h: 1 },
+        frame: ph.frame ? { ...ph.frame } : null,
+        role: ph.role, frameGroup: ph.frameGroup,   // Inset-Verknüpfung beibehalten
+        slot: 0, split: null, fitted: false
+      };
+      // Cover-Crop: Bild exakt auf die Box-Proportion zuschneiden.
+      photo.crop = adjustCropToAspect(photo, ph.w / ph.h);
+      photos[idx] = photo;
+      sel = idx;
+      updateDeleteBtn(); redraw(); scheduleSave();
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function loadPhoto(file, targetCX, targetCY) {
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const img = new Image();
+    img.onload = () => {
+      const maxW = W * 0.85, maxH = H * 0.85;
+      let w = img.naturalWidth, h = img.naturalHeight;
+      const ratio = Math.min(maxW / w, maxH / h);
+      w *= ratio; h *= ratio;
+      beginAction();
+      photos.push({ kind: 'image', img, screen: buildScreenCanvas(img), cx: targetCX, cy: targetCY, w, h, rot: 0, crop: { x: 0, y: 0, w: 1, h: 1 }, frame: null, slot: 0, split: null, fitted: false });
+      sel = photos.length - 1;
+      updateDeleteBtn();
+      redraw();
+      scheduleSave();
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+// ═══════════════════════════════════════
+// TEXT ITEMS
+// ═══════════════════════════════════════
+
+const TEXT_FONTS = ['Bodoni Moda', 'Playfair Display', 'DM Serif Display', 'Bricolage Grotesque', 'Archivo', 'Instrument Serif', 'Cormorant Garamond', 'Fraunces', 'Arapey', 'Poppins'];
+
+// A text item reuses the same cx/cy/w/h/rot fields as a photo, so all the
+// generic geometry code (hit-testing, drag/rotate/resize, snapping, layer
+// ordering) works on it unchanged — only rendering and the toolbar panel
+// branch on `kind === 'text'`.
+function addTextItem() {
+  beginAction();
+  const fontSize = 64; // logical px, single line, before any resizing
+  const w = 480, h = fontSize / 0.78; // matches drawTextContent's size formula
+  photos.push({
+    kind: 'text', text: 'Your text', fontFamily: TEXT_FONTS[0], color: '#111111',
+    weight: 300, bold: false, italic: false, underline: false,
+    cx: activeSlide * W + W / 2, cy: H / 2, w, h, rot: 0
+  });
+  sel = photos.length - 1;
+  updateDeleteBtn();
+  redraw();
+  scheduleSave();
+}
+
+document.getElementById('addTextBtn').addEventListener('click', addTextItem);
+
+// Erzeugt ein Text-Item mit sinnvoller Box-Größe aus einer Wunsch-Schriftgröße.
+function makeTextItem(text, fontFamily, opts = {}) {
+  const size = opts.size || 64;
+  const lines = String(text).split('\n').length;
+  const h = (size / 0.78) * lines;
+  const w = Math.max(160, Math.round(text.length * size * 0.62));
+  return {
+    kind: 'text', text, fontFamily, color: opts.color || '#111111',
+    weight: opts.weight || 300, bold: !!opts.bold, italic: !!opts.italic,
+    underline: false, cx: 0, cy: 0, w, h, rot: 0
+  };
+}
+
+// Fügt ein fertiges Schrift-Duo (Subline + Headline) zentriert auf der aktiven
+// Slide ein — ein Klick, fertiger Editorial-/Magazin-Look. Beide Texte sind
+// danach frei editier-/verschiebbar.
+function addTextPair(kind) {
+  beginAction();
+  const cx = activeSlide * W + W / 2, cy = H / 2;
+  let sub, head;
+  if (kind === 'magazin') {
+    sub  = makeTextItem('TRAVEL DIARY', 'Archivo',     { weight: 500, size: 38 });
+    head = makeTextItem('MONTENEGRO',   'Bodoni Moda', { weight: 700, size: 116 });
+  } else { // editorial — Ogg-Look: kursive Subline über Versal-Headline
+    sub  = makeTextItem('Le',   'Cormorant Garamond', { italic: true, weight: 500, size: 78 });
+    head = makeTextItem('PORT', 'Playfair Display',    { weight: 700, size: 150 });
+  }
+  head.cx = cx; head.cy = cy;
+  sub.cx  = cx; sub.cy  = cy - head.h * 0.5 - sub.h * 0.15;
+  photos.push(sub, head);
+  sel = photos.length - 1; // Headline ausgewählt
+  updateDeleteBtn();
+  redraw();
+  scheduleSave();
+}
+
+document.getElementById('presetEditorialBtn').addEventListener('click', () => addTextPair('editorial'));
+document.getElementById('presetMagazinBtn').addEventListener('click', () => addTextPair('magazin'));
+
+// "Add photo" aus dem Dropdown — öffnet den Dateidialog; ohne Tipp-Position
+// landet das Foto zentriert auf der aktiven Slide (fileInput-Handler).
+document.getElementById('addPhotoMenuBtn').addEventListener('click', () => {
+  pendingAddPos = null;
+  document.getElementById('fileInput').click();
+});
+
+// Branded Outro-/Werbe-Slide ans Ende anhängen — im Stil des Startbildschirms
+// (Badge-Logo + Wortmarke + Claim + Credit). hell oder dunkel.
+function addOutroSlide(dark) {
+  beginAction();
+  slides.push({ bg: dark ? '#2A2826' : '#F4F1EB' });
+  const idx = slides.length - 1;
+  const cx = idx * W + W / 2;
+  const col = dark ? '#F4F1EB' : '#2A2826';
+  const center = H * 0.46;
+
+  const eyebrow = makeTextItem('MADE WITH', 'Archivo', { weight: 500, size: 26, color: col });
+  const logo    = { kind: 'logo', cx, cy: center - 240, w: 200, h: 200, rot: 0, logoDark: dark };
+  const wm      = makeTextItem('Postfolio', 'Playfair Display', { weight: 600, size: 118, color: col });
+  const tag     = makeTextItem('CAROUSELS & STORIES, IN SECONDS', 'Archivo', { weight: 500, size: 28, color: col });
+  const credit  = makeTextItem('By photographers, for photo lovers', 'Cormorant Garamond', { italic: true, weight: 500, size: 38, color: col });
+
+  eyebrow.cx = cx; eyebrow.cy = logo.cy - logo.h * 0.5 - eyebrow.h * 0.8;
+  wm.cx = cx;      wm.cy = center;
+  tag.cx = cx;     tag.cy = center + wm.h * 0.5 + tag.h * 0.9;
+  credit.cx = cx;  credit.cy = tag.cy + tag.h * 0.5 + credit.h * 0.9;
+
+  photos.push(eyebrow, logo, wm, tag, credit);
+  activeSlide = idx; sel = -1;
+  resizeCanvas(); syncBgButtons(); updateDots(); updateDeleteBtn();
+  redraw(); scheduleSave();
+  setTimeout(() => { wrap.scrollLeft = idx * W * DSCALE; }, 30);
+}
+// (Outro wird nicht mehr über das Add-Menü angeboten, sondern als Einladung
+//  auf der Export-Seite — siehe addOutroAndReexport.)
+
+// ── Frames-Layout (Hintergrundfoto + gerahmtes Inset, n gestapelte Bänder) ──
+function fillPlaceholder(idx) {
+  pendingReplaceIdx = idx;
+  pendingAddPos = null;
+  document.getElementById('fileInput').click();
+}
+function framesSlideOccupied(idx) {
+  return photos.some(p => slideIndexOf(p) === idx);
+}
+function addFramesLayout(n) {
+  beginAction();
+  let idx = activeSlide;
+  if (framesSlideOccupied(idx) && slides.length < 20) {
+    slides.push({ bg: slides[slides.length - 1].bg });
+    idx = slides.length - 1;
+  }
+  const cxBase = idx * W;
+  const bandH = H / n;
+  const frameW = n >= 3 ? 14 : 22;       // Inset-Rahmenbreite
+  const gid = ++frameGroupSeq;           // verbindet die Insets dieser Gruppe (gleiche Größe)
+  const insetW = W * 0.52;
+  const insetH = Math.min(bandH * 0.62, insetW * 1.25);
+  for (let i = 0; i < n; i++) {
+    const bandCY = i * bandH + bandH / 2;
+    photos.push({ kind: 'placeholder', role: 'bg', frameGroup: gid, cx: cxBase + W / 2, cy: bandCY, w: W, h: bandH, rot: 0, frame: null });
+    photos.push({ kind: 'placeholder', role: 'inset', frameGroup: gid, cx: cxBase + W / 2, cy: bandCY, w: insetW, h: insetH, rot: 0, frame: { width: frameW, color: '#ffffff' } });
+  }
+  activeSlide = idx; sel = -1;
+  resizeCanvas(); syncBgButtons(); updateDots(); updateDeleteBtn();
+  redraw(); scheduleSave();
+  setTimeout(() => { wrap.scrollLeft = idx * W * DSCALE; }, 30);
+}
+document.getElementById('frames1Btn').addEventListener('click', () => addFramesLayout(1));
+document.getElementById('frames2Btn').addEventListener('click', () => addFramesLayout(2));
+document.getElementById('frames3Btn').addEventListener('click', () => addFramesLayout(3));
+
+// Text-Dropdown öffnen/schließen
+document.getElementById('textToggle').addEventListener('click', (e) => {
+  e.stopPropagation();
+  const menu = document.getElementById('textMenu');
+  if (!menu.classList.contains('show')) positionMenu(menu, e.currentTarget);
+  menu.classList.toggle('show');
+});
+document.querySelectorAll('#textMenu button').forEach(b =>
+  b.addEventListener('click', () => document.getElementById('textMenu').classList.remove('show')));
+document.addEventListener('click', (e) => {
+  const w = document.getElementById('textWrap'), menu = document.getElementById('textMenu');
+  if (w && !w.contains(e.target) && !menu.contains(e.target)) menu.classList.remove('show');
+});
+
+document.getElementById('textContentInput').addEventListener('input', function() {
+  if (sel < 0 || sel >= photos.length || photos[sel].kind !== 'text') return;
+  beginAction('text');
+  photos[sel].text = this.value;
+  redraw();
+});
+
+document.getElementById('fontSelect').addEventListener('change', function() {
+  if (sel < 0 || sel >= photos.length || photos[sel].kind !== 'text') return;
+  beginAction();
+  photos[sel].fontFamily = this.value;
+  redraw();
+});
+
+document.getElementById('weightSelect').addEventListener('change', function() {
+  if (sel < 0 || sel >= photos.length || photos[sel].kind !== 'text') return;
+  beginAction();
+  photos[sel].weight = parseInt(this.value, 10);
+  redraw();
+});
+
+document.querySelectorAll('#textCtrl .clr-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (sel < 0 || sel >= photos.length || photos[sel].kind !== 'text') return;
+    beginAction();
+    photos[sel].color = btn.dataset.clr;
+    syncTextUI();
+    redraw();
+  });
+});
+
+document.querySelectorAll('#textCtrl .style-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (sel < 0 || sel >= photos.length || photos[sel].kind !== 'text') return;
+    beginAction();
+    const key = btn.dataset.style; // 'bold' | 'italic' | 'underline'
+    photos[sel][key] = !photos[sel][key];
+    syncTextUI();
+    redraw();
+  });
+});
+
+// Laufweite (Letter-Spacing): Abstand wächst, Größe bleibt; Box folgt der Breite.
+document.getElementById('trackInput').addEventListener('input', function() {
+  if (sel < 0 || sel >= photos.length || photos[sel].kind !== 'text') return;
+  beginAction('track');
+  const p = photos[sel];
+  p.tracking = parseInt(this.value, 10) || 0;
+  p.w = Math.max(40, measureTextWidth(p));
+  document.getElementById('trackVal').textContent = p.tracking;
+  redraw();
+  scheduleSave();
+});
+
+// ── Text-Outline (Kontur) ──
+document.getElementById('outlineToggle').addEventListener('click', () => {
+  const oc = document.getElementById('outlineCtrl');
+  oc.style.display = (oc.style.display === 'none' || !oc.style.display) ? 'flex' : 'none';
+  reserveForPanel();
+});
+document.getElementById('outlineInput').addEventListener('input', function() {
+  if (sel < 0 || sel >= photos.length || photos[sel].kind !== 'text') return;
+  beginAction('outline');
+  photos[sel].outline = parseInt(this.value, 10) || 0;
+  document.getElementById('outlineVal').textContent = photos[sel].outline;
+  redraw(); scheduleSave();
+});
+document.querySelectorAll('.ol-mode-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (sel < 0 || sel >= photos.length || photos[sel].kind !== 'text') return;
+    beginAction();
+    photos[sel].outlineMode = btn.dataset.olmode;
+    syncOutlineUI(); redraw(); scheduleSave();
+  });
+});
+document.querySelectorAll('.ol-dir-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (sel < 0 || sel >= photos.length || photos[sel].kind !== 'text') return;
+    beginAction();
+    photos[sel].outlineDir = btn.dataset.oldir;
+    photos[sel].outlineMode = 'side';   // Richtung wählen impliziert einseitig
+    syncOutlineUI(); redraw(); scheduleSave();
+  });
+});
+document.querySelectorAll('.ol-clr-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (sel < 0 || sel >= photos.length || photos[sel].kind !== 'text') return;
+    beginAction();
+    photos[sel].outlineColor = btn.dataset.olclr;
+    syncOutlineUI(); redraw(); scheduleSave();
+  });
+});
+function applyOutlineHex() {
+  if (sel < 0 || sel >= photos.length || photos[sel].kind !== 'text') return;
+  const hex = normHex(document.getElementById('outlineHex').value);
+  if (!hex) { syncOutlineUI(); return; }
+  beginAction();
+  photos[sel].outlineColor = hex;
+  syncOutlineUI(); redraw(); scheduleSave();
+}
+document.getElementById('outlineHex').addEventListener('change', applyOutlineHex);
+document.getElementById('outlineHex').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); applyOutlineHex(); e.target.blur(); } });
+function syncOutlineUI() {
+  const p = (sel >= 0 && sel < photos.length && photos[sel].kind === 'text') ? photos[sel] : null;
+  if (!p) return;
+  const ow = p.outline || 0, mode = p.outlineMode || 'full', dir = p.outlineDir || 'right', col = (p.outlineColor || '#000000').toLowerCase();
+  const oi = document.getElementById('outlineInput');
+  if (document.activeElement !== oi) oi.value = ow;
+  document.getElementById('outlineVal').textContent = ow;
+  document.querySelectorAll('.ol-mode-btn').forEach(b => b.classList.toggle('sel', b.dataset.olmode === mode));
+  document.querySelectorAll('.ol-dir-btn').forEach(b => b.classList.toggle('sel', b.dataset.oldir === dir));
+  const oh = document.getElementById('outlineHex');
+  if (document.activeElement !== oh) oh.value = ow ? col : '';
+  document.querySelectorAll('.ol-clr-btn').forEach(b => b.classList.toggle('sel', b.dataset.olclr.toLowerCase() === col));
+}
+
+function syncTextUI() {
+  const isText = sel >= 0 && sel < photos.length && photos[sel].kind === 'text';
+  document.getElementById('textCtrl').style.display = isText ? 'flex' : 'none';
+  if (!isText) return;
+  const p = photos[sel];
+  const input = document.getElementById('textContentInput');
+  if (document.activeElement !== input) input.value = p.text;
+  document.getElementById('fontSelect').value = p.fontFamily;
+  document.getElementById('weightSelect').value = String(p.weight || 300);
+  document.querySelectorAll('#textCtrl .clr-btn').forEach(b => {
+    b.classList.toggle('sel', b.dataset.clr.toLowerCase() === p.color.toLowerCase());
+  });
+  document.querySelectorAll('#textCtrl .style-btn').forEach(b => {
+    b.classList.toggle('sel', !!p[b.dataset.style]);
+  });
+  const tr = p.tracking || 0;
+  const ti = document.getElementById('trackInput');
+  if (document.activeElement !== ti) ti.value = tr;
+  document.getElementById('trackVal').textContent = tr;
+  syncOutlineUI();
+}
+
+// ═══════════════════════════════════════
+// SLIDE MANAGEMENT
+// ═══════════════════════════════════════
+
+document.getElementById('addSlide').addEventListener('click', () => {
+  if (slides.length >= 20) return;
+  beginAction();
+  slides.push({ bg: slides[slides.length - 1].bg });
+  activeSlide = slides.length - 1;
+  resizeCanvas();
+  syncBgButtons();
+  updateDots();
+  redraw();
+  scheduleSave();
+  setTimeout(() => { wrap.scrollLeft = activeSlide * W * DSCALE; }, 30);
+});
+
+document.getElementById('rmSlide').addEventListener('click', () => {
+  if (slides.length <= 1) return;
+  beginAction();
+  slides.pop();
+  if (activeSlide >= slides.length) activeSlide = slides.length - 1;
+  resizeCanvas();
+  syncBgButtons();
+  updateDots();
+  redraw();
+  scheduleSave();
+});
+
+// ═══════════════════════════════════════
+// ZOOM CONTROLS
+// ═══════════════════════════════════════
+
+// Lupen-Icon öffnet die Zoom-Regler; Tippen auf die %-Anzeige (oder daneben)
+// klappt sie wieder ein. So ist im Ruhezustand nur das kleine Icon zu sehen.
+document.getElementById('zoomToggle').addEventListener('click', (e) => {
+  e.stopPropagation();
+  document.getElementById('zoomCtrl').classList.add('expanded');
+});
+document.getElementById('zoomLabel').addEventListener('click', () => {
+  document.getElementById('zoomCtrl').classList.remove('expanded');
+});
+document.addEventListener('click', (e) => {
+  const z = document.getElementById('zoomCtrl');
+  if (z && !z.contains(e.target)) z.classList.remove('expanded');
+});
+document.getElementById('zoomIn').addEventListener('click', () => setZoom(zoom * 1.25));
+document.getElementById('zoomOut').addEventListener('click', () => setZoom(zoom / 1.25));
+
+// "Fit all" — shrink just enough that every slide is visible at once,
+// without ever zooming IN past 100% if there's only one or two slides.
+document.getElementById('zoomFit').addEventListener('click', () => {
+  const avail  = window.innerWidth * 0.92;
+  const totalW = slides.length * W * BASE_DSCALE;
+  setZoom(Math.min(1, avail / totalW));
+});
+
+// ═══════════════════════════════════════
+// VOLLBILD-VORSCHAU (Preview) — Slide groß, per Wisch durchblättern
+// ═══════════════════════════════════════
+let previewUrls = [];
+// Rendert EINE Slide eigenständig auf eine Leinwand (mult = Pixel je logischer
+// Einheit). Platzhalter werden übersprungen.
+function renderPreviewCanvas(i, mult) {
+  const ec = document.createElement('canvas');
+  ec.width = Math.max(1, Math.round(W * mult));
+  ec.height = Math.max(1, Math.round(H * mult));
+  const c = ec.getContext('2d');
+  c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'high';
+  c.save(); c.beginPath(); c.rect(0, 0, ec.width, ec.height); c.clip();
+  c.fillStyle = slides[i].bg; c.fillRect(0, 0, ec.width, ec.height);
+  photos.forEach(p => {
+    c.save();
+    c.translate((p.cx - i * W) * mult, p.cy * mult);
+    c.rotate(p.rot || 0);
+    if (p.kind === 'text')        { drawTextContent(c, p, mult); c.restore(); return; }
+    if (p.kind === 'logo')        { drawLogoItem(c, p, mult);    c.restore(); return; }
+    if (p.kind === 'placeholder') { c.restore(); return; }
+    if (p.frame && p.frame.width > 0) {
+      const ins = frameInsets(p);
+      c.fillStyle = p.frame.color;
+      c.fillRect(-(p.w / 2 + ins.left) * mult, -(p.h / 2 + ins.top) * mult,
+                  (p.w + ins.left + ins.right) * mult, (p.h + ins.top + ins.bottom) * mult);
+    }
+    const cr = p.crop || { x: 0, y: 0, w: 1, h: 1 };
+    const sx = cr.x * p.img.naturalWidth,  sw = cr.w * p.img.naturalWidth;
+    const sy = cr.y * p.img.naturalHeight, sh = cr.h * p.img.naturalHeight;
+    c.drawImage(p.img, sx, sy, sw, sh, -p.w / 2 * mult, -p.h / 2 * mult, p.w * mult, p.h * mult);
+    c.restore();
+  });
+  c.restore();
+  return ec;
+}
+async function openPreview() {
+  if (!slides.length) return;
+  const track = document.getElementById('preview-track');
+  const dots  = document.getElementById('preview-dots');
+  track.innerHTML = ''; dots.innerHTML = '';
+  previewUrls.forEach(u => { try { URL.revokeObjectURL(u); } catch (e) {} });
+  previewUrls = [];
+  const mult = Math.min(2.5, (window.innerWidth * (window.devicePixelRatio || 1)) / W) || 1.2;
+  for (let i = 0; i < slides.length; i++) {
+    const panel = document.createElement('div'); panel.className = 'pv-panel';
+    const img = document.createElement('img');
+    const blob = await canvasToBlob(renderPreviewCanvas(i, mult));
+    const url = URL.createObjectURL(blob); previewUrls.push(url);
+    img.src = url; panel.appendChild(img); track.appendChild(panel);
+    const d = document.createElement('div'); d.className = 'pvd' + (i === activeSlide ? ' on' : ''); dots.appendChild(d);
+  }
+  document.getElementById('preview').classList.add('show');
+  requestAnimationFrame(() => { track.scrollLeft = activeSlide * track.clientWidth; });
+}
+function closePreview() {
+  document.getElementById('preview').classList.remove('show');
+  document.getElementById('preview-track').innerHTML = '';
+  previewUrls.forEach(u => { try { URL.revokeObjectURL(u); } catch (e) {} });
+  previewUrls = [];
+}
+document.getElementById('previewBtn').addEventListener('click', openPreview);
+document.getElementById('preview-close').addEventListener('click', closePreview);
+// aktive Punkt-Anzeige beim Wischen
+document.getElementById('preview-track').addEventListener('scroll', () => {
+  const track = document.getElementById('preview-track');
+  const i = Math.round(track.scrollLeft / track.clientWidth);
+  document.querySelectorAll('#preview-dots .pvd').forEach((d, k) => d.classList.toggle('on', k === i));
+});
+
+// ═══════════════════════════════════════
+// BACKGROUND COLOR
+// ═══════════════════════════════════════
+
+document.querySelectorAll('.bg-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    beginAction();
+    slides[activeSlide].bg = btn.dataset.bg;
+    syncBgButtons();
+    redraw();
+    scheduleSave();
+    document.getElementById('bgMenu').classList.remove('show');
+  });
+});
+
+function syncBgButtons() {
+  const cur = slides[activeSlide].bg;
+  document.querySelectorAll('.bg-btn').forEach(b => {
+    b.classList.toggle('sel', b.dataset.bg === cur);
+  });
+  const sw = document.getElementById('bgToggleSwatch');
+  if (sw) sw.style.background = cur;
+  const hx = document.getElementById('bgHexInput');
+  if (hx && document.activeElement !== hx) hx.value = (cur || '').toLowerCase();
+}
+
+// Hex-Eingabe → Hintergrundfarbe der aktiven Slide
+function applyBgHex() {
+  const hex = normHex(document.getElementById('bgHexInput').value);
+  if (!hex) { syncBgButtons(); return; }
+  beginAction();
+  slides[activeSlide].bg = hex;
+  syncBgButtons();
+  redraw();
+  scheduleSave();
+}
+document.getElementById('bgHexInput').addEventListener('change', applyBgHex);
+document.getElementById('bgHexInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); applyBgHex(); e.target.blur(); } });
+
+// Background-Dropdown öffnen/schließen (fixed positioniert, damit es nicht
+// von der scrollenden Toolbar abgeschnitten wird).
+document.getElementById('bgToggle').addEventListener('click', (e) => {
+  e.stopPropagation();
+  const menu = document.getElementById('bgMenu');
+  if (!menu.classList.contains('show')) positionMenu(menu, e.currentTarget);
+  menu.classList.toggle('show');
+});
+document.addEventListener('click', (e) => {
+  const w = document.getElementById('bgWrap'), menu = document.getElementById('bgMenu');
+  if (w && !w.contains(e.target) && !menu.contains(e.target)) menu.classList.remove('show');
+});
+
+// iOS-Fix: position:fixed-Menüs, die in der (scrollbaren/umbrechenden) Toolbar
+// liegen, werden auf iOS abgeschnitten. Wir hängen sie ans <body>, damit sie
+// frei über allem schweben. Positioniert werden sie weiter per positionMenu().
+['formatMenu', 'textMenu', 'bgMenu'].forEach(id => {
+  const m = document.getElementById(id);
+  if (m && m.parentElement !== document.body) document.body.appendChild(m);
+});
+
+// ═══════════════════════════════════════
+// DELETE PHOTO
+// ═══════════════════════════════════════
+
+function updateDeleteBtn() {
+  const hasSel = sel >= 0 && sel < photos.length;
+  const isText = hasSel && photos[sel].kind === 'text';
+  const isImage = hasSel && photos[sel].kind === 'image'; // Frame/Crop nur für echte Fotos
+  const delBtn = document.getElementById('deleteBtn');
+  delBtn.classList.toggle('show', hasSel);
+  delBtn.title = isText ? 'Delete text' : 'Delete photo';
+  document.getElementById('cropBtn').classList.toggle('show', isImage);
+  document.getElementById('rotateBtn').classList.toggle('show', hasSel);
+  document.getElementById('rotateCtrl').style.display = 'none'; // beim Auswahlwechsel einklappen
+  document.getElementById('layerCtrl').style.display = hasSel ? 'flex' : 'none';
+  document.getElementById('frameCtrl').style.display = isImage ? 'flex' : 'none';
+  document.getElementById('marginCtrl').style.display = isImage ? 'flex' : 'none';
+  const sheet = document.getElementById('contextSheet');
+  sheet.classList.toggle('show', hasSel);
+  syncFrameButtons();
+  syncMarginButtons();
+  syncSlotUI();
+  syncTextUI();
+  reserveForPanel();
+}
+
+// Verkleinert den Leinwand-Rahmen über dem (evtl. höheren) Panel, damit die
+// Slide vollständig + zentriert sichtbar bleibt. Nach dem Layout messen.
+function reserveForPanel() {
+  const sheet = document.getElementById('contextSheet');
+  const zoom  = document.getElementById('zoomCtrl');
+  const hasSel = sel >= 0 && sel < photos.length;
+  const desktop = window.innerWidth >= 820;
+  requestAnimationFrame(() => {
+    if (desktop) {
+      // Seitenleiste rechts → Platz seitlich reservieren (Höhe bleibt voll).
+      const reserve = hasSel ? sheet.offsetWidth : 0;
+      wrap.style.alignSelf    = 'stretch';   // füllt die Breite, damit margin sie reduziert
+      wrap.style.width        = 'auto';
+      wrap.style.marginRight  = reserve + 'px';
+      wrap.style.marginBottom = '';
+      zoom.style.right  = (reserve ? reserve + 14 : 14) + 'px';
+      zoom.style.bottom = '14px';
+    } else {
+      const reserve = hasSel ? sheet.offsetHeight : 0;
+      wrap.style.alignSelf    = '';
+      wrap.style.width        = '';
+      wrap.style.marginRight  = '';
+      wrap.style.marginBottom = (reserve ? reserve + 12 : 0) + 'px';
+      zoom.style.bottom = (reserve ? reserve + 14 : 14) + 'px';
+      zoom.style.right  = '14px';
+    }
+    relayout();
+  });
+}
+
+function deleteSelected() {
+  if (sel < 0 || sel >= photos.length) return;
+  beginAction();
+  photos.splice(sel, 1);
+  sel = -1;
+  updateDeleteBtn();
+  redraw();
+  scheduleSave();
+}
+document.getElementById('deleteBtn').addEventListener('click', deleteSelected);
+
+// ── Layer ordering ──────────────────────────────────
+document.getElementById('layerUp').addEventListener('click', () => {
+  if (sel < 0 || sel >= photos.length - 1) return;
+  beginAction();
+  [photos[sel], photos[sel+1]] = [photos[sel+1], photos[sel]];
+  sel++;
+  redraw();
+  scheduleSave();
+});
+
+document.getElementById('layerDown').addEventListener('click', () => {
+  if (sel <= 0) return;
+  beginAction();
+  [photos[sel], photos[sel-1]] = [photos[sel-1], photos[sel]];
+  sel--;
+  redraw();
+  scheduleSave();
+});
+
+document.getElementById('layerFront').addEventListener('click', () => {
+  if (sel < 0 || sel >= photos.length - 1) return;
+  beginAction();
+  const [p] = photos.splice(sel, 1);
+  photos.push(p);
+  sel = photos.length - 1;
+  redraw();
+  scheduleSave();
+});
+
+document.getElementById('layerBack').addEventListener('click', () => {
+  if (sel <= 0) return;
+  beginAction();
+  const [p] = photos.splice(sel, 1);
+  photos.unshift(p);
+  sel = 0;
+  redraw();
+  scheduleSave();
+});
+
+// ═══════════════════════════════════════
+// FRAME (mat border) + FIT
+// ═══════════════════════════════════════
+
+// Widths in logical px at the 1080-wide base canvas (W is the same in both
+// Post and Story, only H differs) — a clean white mat, like a gallery print
+// mount. Three sizes: subtle, balanced, bold.
+// 5-stufige Skala: Stufe 1 (sehr dünn) bis 5 (dick). Logische px bei 1080er
+// Breite. Stufen so gewählt, dass zwischen der alten S(8) und M(30) sowie
+// zwischen M(30) und L(52) je eine Zwischenstufe liegt.
+const FRAME_PRESETS = { none: 0, s1: 8, s2: 18, s3: 30, s4: 40, s5: 52 };
+const FRAME_COLOR   = '#ffffff';
+
+// Wendet eine Rahmenbreite (+Farbe) auf EIN Foto an. Gefittete Split-Fotos
+// werden neu in ihre Zelle eingepasst (exakte, halbierte Nähte). Frei
+// platzierte Fotos behalten ihre Außenkontur (Foto + Rahmen), die Bildgröße
+// wächst/schrumpft um die Randdifferenz — Position/Drehung bleiben.
+function applyFrameToPhoto(p, newFw, color) {
+  if (!p || p.kind !== 'image') return;
+  const oldFw = (p.frame && p.frame.width) || 0;
+  p.frame = newFw > 0 ? { width: newFw, color: color || (p.frame && p.frame.color) || FRAME_COLOR } : null;
+
+  const { axis, n } = getPhotoSplit(p);
+  if (p.fitted && axis && n > 1) {
+    fitPhoto(p);
+    return;
+  }
+  const delta = oldFw - newFw;
+  if (delta !== 0) {
+    const newW = Math.max(20, p.w + 2 * delta);
+    const newH = Math.max(20, p.h + 2 * delta);
+    if (newW <= p.w && newH <= p.h) {
+      const newAspect = newW / newH;
+      const c = p.crop || { x: 0, y: 0, w: 1, h: 1 };
+      const curAspect = (c.w * p.img.naturalWidth) / (c.h * p.img.naturalHeight);
+      if (Math.abs(curAspect - newAspect) > 0.001) p.crop = adjustCropToAspect(p, newAspect);
+    }
+    p.w = newW; p.h = newH;
+  }
+}
+
+document.querySelectorAll('.frame-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (sel < 0 || sel >= photos.length || photos[sel].kind === 'text') return;
+    beginAction();
+    const p = photos[sel];
+    const color = (p.frame && p.frame.color) || FRAME_COLOR;
+    applyFrameToPhoto(p, FRAME_PRESETS[btn.dataset.frame], color);
+    syncFrameButtons();
+    redraw();
+    scheduleSave();
+  });
+});
+
+// "Alle": aktuellen Rahmen (Breite + Farbe des gewählten Fotos – sonst Stufe 1
+// / Weiß) in einem Schritt auf JEDES Foto anwenden. Ideal, um mehrere
+// gestapelte Fotos gemeinsam mit demselben dünnen Rahmen zu versehen.
+document.getElementById('frameAllBtn').addEventListener('click', () => {
+  const imgs = photos.filter(p => p.kind !== 'text');
+  if (imgs.length === 0) return;
+  beginAction();
+  const selP  = (sel >= 0 && photos[sel] && photos[sel].kind !== 'text') ? photos[sel] : null;
+  const fw    = selP && selP.frame ? selP.frame.width : FRAME_PRESETS.s1;
+  const color = selP && selP.frame ? selP.frame.color : FRAME_COLOR;
+  imgs.forEach(p => applyFrameToPhoto(p, fw, color));
+  syncFrameButtons();
+  redraw();
+  scheduleSave();
+});
+
+// Margin: gleichmäßiger Außenabstand (zeigt die Slide-Hintergrundfarbe). Wirkt
+// über Fit — Auswahl eines Werts passt das Foto sofort mit diesem Abstand ein.
+document.querySelectorAll('.margin-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (sel < 0 || sel >= photos.length || photos[sel].kind !== 'image') return;
+    beginAction();
+    const p = photos[sel];
+    p.margin = parseInt(btn.dataset.margin, 10) || 0;
+    fitPhoto(p);                 // mit dem gewählten Außenabstand neu einpassen
+    syncMarginButtons();
+    redraw();
+    scheduleSave();
+  });
+});
+function syncMarginButtons() {
+  const p = (sel >= 0 && sel < photos.length) ? photos[sel] : null;
+  const m = (p && p.margin) ? p.margin : 0;
+  document.querySelectorAll('.margin-btn').forEach(b => b.classList.toggle('sel', parseInt(b.dataset.margin, 10) === m));
+}
+
+function syncFrameButtons() {
+  const p = (sel >= 0 && sel < photos.length) ? photos[sel] : null;
+  const w = p && p.frame ? p.frame.width : 0;
+  let key = 'none';
+  for (const [k, val] of Object.entries(FRAME_PRESETS)) { if (val === w) key = k; }
+  document.querySelectorAll('.frame-btn').forEach(b => b.classList.toggle('sel', b.dataset.frame === key));
+
+  document.getElementById('frameColorCtrl').style.display = (w > 0) ? 'flex' : 'none';
+  syncFrameColorButtons();
+}
+
+function syncFrameColorButtons() {
+  const p = (sel >= 0 && sel < photos.length) ? photos[sel] : null;
+  const color = (p && p.frame && p.frame.color) ? p.frame.color.toLowerCase() : null;
+  document.querySelectorAll('#frameColorCtrl .clr-btn').forEach(b => {
+    b.classList.toggle('sel', !!color && b.dataset.frameclr.toLowerCase() === color);
+  });
+  const hx = document.getElementById('frameHexInput');
+  if (hx && document.activeElement !== hx) hx.value = color || '';
+}
+
+// Normalisiert eine Hex-Eingabe (#abc, abc, #aabbcc) → "#aabbcc" oder null.
+function normHex(v) {
+  v = (v || '').trim();
+  if (!v) return null;
+  if (v[0] !== '#') v = '#' + v;
+  if (/^#([0-9a-fA-F]{3})$/.test(v)) v = '#' + v.slice(1).split('').map(c => c + c).join('');
+  return /^#([0-9a-fA-F]{6})$/.test(v) ? v.toLowerCase() : null;
+}
+
+// Hex-Eingabe → Rahmenfarbe des gewählten Fotos
+function applyFrameHex() {
+  if (sel < 0 || sel >= photos.length) return;
+  const p = photos[sel];
+  if (!p.frame || !(p.frame.width > 0)) return;
+  const hex = normHex(document.getElementById('frameHexInput').value);
+  if (!hex) { syncFrameColorButtons(); return; }
+  beginAction();
+  p.frame.color = hex;
+  syncFrameColorButtons();
+  redraw();
+  scheduleSave();
+}
+document.getElementById('frameHexInput').addEventListener('change', applyFrameHex);
+document.getElementById('frameHexInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); applyFrameHex(); e.target.blur(); } });
+
+document.querySelectorAll('#frameColorCtrl .clr-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (sel < 0 || sel >= photos.length) return;
+    const p = photos[sel];
+    if (!p.frame || !(p.frame.width > 0)) return;
+    beginAction();
+    p.frame.color = btn.dataset.frameclr;
+    syncFrameColorButtons();
+    redraw();
+    scheduleSave();
+  });
+});
+
+// Eyedropper: tap the button to arm "pick" mode, then tap anywhere on the
+// selected photo to sample that exact pixel and use it as the frame color.
+// Reads straight off the live canvas bitmap, so it picks up the photo
+// exactly as currently cropped/filtered — no separate color analysis needed.
+let pickingFrameColor = false;
+let pickingBgColor    = false; // Pipette für den Slide-Hintergrund
+let pickTargetIdx     = -1; // photo index captured when eyedropper is armed —
+                             // a stray click landing just outside the photo
+                             // (selecting nothing / a different photo) on the
+                             // sampling tap should still color THIS frame.
+
+// Beendet beide Pipetten-Modi und räumt die UI-Hervorhebung auf.
+function disarmPickers() {
+  pickingFrameColor = false;
+  pickingBgColor = false;
+  pickTargetIdx = -1;
+  document.getElementById('frameEyedropBtn').classList.remove('picking');
+  document.getElementById('bgEyedropBtn').classList.remove('picking');
+  canvas.classList.remove('picking-color');
+  hideLoupe();
+}
+
+document.getElementById('frameEyedropBtn').addEventListener('click', () => {
+  if (sel < 0 || sel >= photos.length || !photos[sel].frame || !(photos[sel].frame.width > 0)) return;
+  const arm = !pickingFrameColor;
+  disarmPickers();
+  pickingFrameColor = arm;
+  pickTargetIdx = arm ? sel : -1;
+  document.getElementById('frameEyedropBtn').classList.toggle('picking', arm);
+  canvas.classList.toggle('picking-color', arm);
+});
+
+// Pipette für die Hintergrundfarbe der aktiven Slide.
+document.getElementById('bgEyedropBtn').addEventListener('click', () => {
+  const arm = !pickingBgColor;
+  disarmPickers();
+  pickingBgColor = arm;
+  document.getElementById('bgEyedropBtn').classList.toggle('picking', arm);
+  canvas.classList.toggle('picking-color', arm);
+  if (arm) document.getElementById('bgMenu').classList.remove('show'); // Menü schließen, damit man die Leinwand antippen kann
+});
+
+// Farbe an einer Bildschirmposition aus der Live-Leinwand picken. Wird von
+// mousedown/touchstart (für sofortige Reaktion auf Touch) und vom Klick
+// aufgerufen. Beendet danach den Pipetten-Modus.
+// Liest die Farbe eines Pixels aus der Live-Leinwand (oder null außerhalb).
+function sampleCanvasColor(clientX, clientY) {
+  const { lx, ly } = clientToLogical(clientX, clientY);
+  const px = Math.round(lx * S), py = Math.round(ly * S);
+  if (px < 0 || py < 0 || px >= canvas.width || py >= canvas.height) return null;
+  try {
+    const data = ctx.getImageData(px, py, 1, 1).data;
+    return '#' + [data[0], data[1], data[2]].map(v => v.toString(16).padStart(2, '0')).join('');
+  } catch (err) { return null; } // Canvas tainted (sollte nicht passieren)
+}
+
+// Pipette: Rahmenfarbe des Zielfotos setzen.
+function pickColorAt(clientX, clientY) {
+  const targetIdx = pickTargetIdx;
+  disarmPickers();
+  if (targetIdx < 0 || targetIdx >= photos.length || !photos[targetIdx].frame) return;
+  const hex = sampleCanvasColor(clientX, clientY);
+  if (!hex) return;
+  beginAction();
+  photos[targetIdx].frame.color = hex;
+  if (sel === targetIdx) syncFrameColorButtons();
+  redraw();
+  scheduleSave();
+}
+
+// Pipette: Hintergrundfarbe der aktiven Slide setzen.
+function pickBgColorAt(clientX, clientY) {
+  disarmPickers();
+  const hex = sampleCanvasColor(clientX, clientY);
+  if (!hex) return;
+  beginAction();
+  slides[activeSlide].bg = hex;
+  syncBgButtons();
+  redraw();
+  scheduleSave();
+}
+
+// ── Farb-Lupe (Pixel-Zoom + Fadenkreuz beim Pipettieren) ──
+let pickXY = null; // letzte Pick-Position (Touch: erst beim Loslassen picken)
+const LOUPE_SRC = 15; // wie viele Quellpixel die Lupe zeigt (ungerade → echte Mitte)
+function hideLoupe() { document.getElementById('loupe').classList.remove('show'); }
+function updateLoupe(clientX, clientY) {
+  const lp = document.getElementById('loupe');
+  const lcan = document.getElementById('loupeCanvas');
+  const r = canvas.getBoundingClientRect();
+  const cx = Math.round((clientX - r.left) / DSCALE * S);
+  const cy = Math.round((clientY - r.top)  / DSCALE * S);
+  if (cx < 0 || cy < 0 || cx >= canvas.width || cy >= canvas.height) { hideLoupe(); return; }
+  const lctx = lcan.getContext('2d');
+  const D = lcan.width;            // 96
+  const half = Math.floor(LOUPE_SRC / 2);
+  lctx.imageSmoothingEnabled = false;
+  lctx.clearRect(0, 0, D, D);
+  lctx.drawImage(canvas, cx - half, cy - half, LOUPE_SRC, LOUPE_SRC, 0, 0, D, D);
+  // Markierung des Zielpixels in der Mitte
+  const cell = D / LOUPE_SRC;
+  lctx.lineWidth = 1; lctx.strokeStyle = 'rgba(0,0,0,0.5)';
+  lctx.strokeRect(Math.round(D/2 - cell/2) + 0.5, Math.round(D/2 - cell/2) + 0.5, Math.round(cell), Math.round(cell));
+  // kleines + Fadenkreuz
+  lctx.strokeStyle = 'rgba(255,255,255,0.95)'; lctx.lineWidth = 1.5;
+  lctx.beginPath();
+  lctx.moveTo(D/2 - 7, D/2); lctx.lineTo(D/2 + 7, D/2);
+  lctx.moveTo(D/2, D/2 - 7); lctx.lineTo(D/2, D/2 + 7);
+  lctx.stroke();
+  // Mittelfarbe → Rahmen + Hex-Anzeige
+  let hex = '#ffffff';
+  try { const d = ctx.getImageData(cx, cy, 1, 1).data; hex = '#' + [d[0],d[1],d[2]].map(v => v.toString(16).padStart(2,'0')).join(''); } catch (e) {}
+  lcan.style.borderColor = hex;
+  document.getElementById('loupeHex').textContent = hex;
+  // Lupe über dem Finger/Cursor platzieren (im Sichtbereich halten)
+  let left = clientX - D / 2;
+  let top  = clientY - D - 34;
+  left = Math.max(6, Math.min(window.innerWidth - D - 6, left));
+  if (top < 6) top = clientY + 28;
+  lp.style.left = left + 'px';
+  lp.style.top  = top + 'px';
+  lp.classList.add('show');
+}
+function doPick(clientX, clientY) {
+  if (pickingFrameColor) pickColorAt(clientX, clientY);
+  else if (pickingBgColor) pickBgColorAt(clientX, clientY);
+  hideLoupe();
+}
+
+canvas.addEventListener('click', e => {
+  if (pickingFrameColor || pickingBgColor) doPick(e.clientX, e.clientY);
+});
+// Desktop-Hover: Lupe folgt dem Cursor solange die Pipette aktiv ist.
+canvas.addEventListener('mousemove', e => {
+  if (pickingFrameColor || pickingBgColor) updateLoupe(e.clientX, e.clientY);
+});
+
+// A photo's row/column split is recorded explicitly (p.split) the moment a
+// Landscape Span / Side-by-Side crop preset is applied — NOT re-derived from
+// the crop's aspect ratio. Re-deriving from aspect was the root cause of a
+// bug: Fit tightens the crop slightly to match the frame-adjusted cell
+// aspect, which shifts it just enough that an aspect-based re-check no
+// longer recognizes the group, silently falling back to whole-slide
+// placement (every photo in the group then jumps to the same spot).
+function getPhotoSplit(p) {
+  return p.split || { axis: null, n: 1 };
+}
+
+// Per-side frame thickness for a photo. Split-group members (stacked rows /
+// side-by-side columns) get HALF the nominal width on the side(s) that face
+// a neighboring photo in the same group, and the FULL width on the side(s)
+// that face the slide's outer edge — so two abutting frames sum back to the
+// same visual thickness as a single outer margin. Without this, internal
+// seams between stacked photos looked twice as thick as the outer margins.
+function frameInsets(p) {
+  const fw = (p.frame && p.frame.width) || 0;
+  if (!fw) return { top: 0, right: 0, bottom: 0, left: 0 };
+  const { axis, n } = getPhotoSplit(p);
+  // Halbierte Naht NUR, wenn das Foto exakt in seine Zelle gefittet ist
+  // (p.fitted === true). Sobald es frei verschoben/skaliert/gedreht wurde
+  // (p.fitted === false), bekommt jedes Foto auf allen vier Seiten denselben
+  // Rand — so wirken die Rahmen auch bei freier Anordnung einheitlich.
+  // Beim Drücken von „Fit" wird p.fitted wieder gesetzt, dann greift die
+  // Halbierung zwischen gestapelten Fotos erneut.
+  if (p.fitted && axis === 'row' && n > 1) {
+    const slot = Math.max(0, Math.min(n - 1, p.slot ?? 0));
+    return { top: slot === 0 ? fw : fw / 2, bottom: slot === n - 1 ? fw : fw / 2, left: fw, right: fw };
+  }
+  if (p.fitted && axis === 'col' && n > 1) {
+    const slot = Math.max(0, Math.min(n - 1, p.slot ?? 0));
+    return { left: slot === 0 ? fw : fw / 2, right: slot === n - 1 ? fw : fw / 2, top: fw, bottom: fw };
+  }
+  return { top: fw, right: fw, bottom: fw, left: fw };
+}
+
+function slideIndexOf(p) {
+  return Math.max(0, Math.min(slides.length - 1, Math.round((p.cx - W / 2) / W)));
+}
+
+// After cropping a photo to a row/column split ratio, auto-pick the first
+// row/column on its slide that isn't already taken by another matching photo —
+// instead of always defaulting back to slot 0 (top / left).
+function autoAssignSlot(p) {
+  const { axis, n } = getPhotoSplit(p);
+  if (!axis) return;
+  const slideIdx = slideIndexOf(p);
+  const occupied = new Set();
+  photos.forEach(other => {
+    if (other === p) return;
+    if (slideIndexOf(other) !== slideIdx) return;
+    const split2 = getPhotoSplit(other);
+    if (split2.axis === axis && split2.n === n) {
+      occupied.add(Math.max(0, Math.min(n - 1, other.slot ?? 0)));
+    }
+  });
+  let slot = 0;
+  while (slot < n && occupied.has(slot)) slot++;
+  p.slot = slot < n ? slot : 0;
+}
+
+// Tightens a photo's crop (never widens it) so its displayed aspect exactly
+// matches targetAspect — keeps the same crop center, trims the long side.
+function adjustCropToAspect(p, targetAspect) {
+  const c  = p.crop || { x: 0, y: 0, w: 1, h: 1 };
+  const nw = p.img.naturalWidth, nh = p.img.naturalHeight;
+  const curW = c.w * nw, curH = c.h * nh;
+  const curAspect = curW / curH;
+  let newW, newH;
+  if (curAspect > targetAspect) { newH = curH; newW = newH * targetAspect; }
+  else                           { newW = curW; newH = newW / targetAspect; }
+  const cx = c.x * nw + curW / 2;
+  const cy = c.y * nh + curH / 2;
+  let nx = Math.max(0, Math.min(nw - newW, cx - newW / 2));
+  let ny = Math.max(0, Math.min(nh - newH, cy - newH / 2));
+  return { x: nx / nw, y: ny / nh, w: newW / nw, h: newH / nh };
+}
+
+// Position stepper — picks which row (Landscape Span) or column (Side-by-Side)
+// of the current slide the selected photo's Fit should target.
+function syncSlotUI() {
+  const ctrl = document.getElementById('slotCtrl');
+  if (sel < 0 || sel >= photos.length) { ctrl.style.display = 'none'; return; }
+  const p = photos[sel];
+  const { n } = getPhotoSplit(p);
+  if (n <= 1) { ctrl.style.display = 'none'; return; }
+  ctrl.style.display = 'flex';
+  if (p.slot == null) p.slot = 0;
+  p.slot = Math.max(0, Math.min(n - 1, p.slot));
+  document.getElementById('slotLabel').textContent = `${p.slot + 1}/${n}`;
+}
+
+// Moves a photo to an adjacent row/column slot (dir = -1 up/left, +1 down/
+// right) and SWAPS it with whichever other photo already occupies that
+// slot in the same split group on the same slide — instead of just changing
+// a number that could collide with another photo's slot (causing both to
+// land on top of each other). Both photos are immediately re-fit so the
+// swap is visible right away, with no need to press Fit manually.
+function swapSlot(p, dir) {
+  if (p.kind === 'text') return;
+  const { axis, n } = getPhotoSplit(p);
+  if (n <= 1) return;
+  const slideIdx  = slideIndexOf(p);
+  const curSlot   = p.slot ?? 0;
+  const targetSlot = ((curSlot + dir) % n + n) % n;
+
+  const other = photos.find(o => {
+    if (o === p) return false;
+    if (slideIndexOf(o) !== slideIdx) return false;
+    const os = getPhotoSplit(o);
+    return os.axis === axis && os.n === n && (o.slot ?? 0) === targetSlot;
+  });
+
+  p.slot = targetSlot;
+  if (other) other.slot = curSlot;
+
+  fitPhoto(p);
+  if (other) fitPhoto(other);
+}
+
+document.getElementById('slotUp').addEventListener('click', () => {
+  if (sel < 0 || sel >= photos.length) return;
+  beginAction();
+  swapSlot(photos[sel], -1);
+  syncSlotUI();
+  redraw();
+  scheduleSave();
+});
+
+document.getElementById('slotDown').addEventListener('click', () => {
+  if (sel < 0 || sel >= photos.length) return;
+  beginAction();
+  swapSlot(photos[sel], 1);
+  syncSlotUI();
+  redraw();
+  scheduleSave();
+});
+
+// Instantly scales, un-rotates, and centers a photo so it perfectly fills its
+// cell — the whole slide by default, or just its row/column (per the
+// Position stepper) when the crop ratio implies a split, minus the frame
+// margin if one is set.
+function fitPhoto(p) {
+  // Foto sitzt jetzt exakt in seiner Zelle → halbierte Naht-Ränder dürfen
+  // greifen (siehe frameInsets). Muss VOR dem frameInsets()-Aufruf weiter
+  // unten gesetzt werden.
+  p.fitted = true;
+  const c0 = p.crop || { x: 0, y: 0, w: 1, h: 1 };
+  const imgAspect = (c0.w * p.img.naturalWidth) / (c0.h * p.img.naturalHeight);
+
+  // Slide-übergreifendes Breitbild: deckt das Foto (deutlich) mehr als eine
+  // Slide ab und ist kein Split, passt Fit es exakt über die betroffenen
+  // Slides ein — volle Höhe, sauber an den Slide-Grenzen.
+  const _sp = getPhotoSplit(p);
+  if (!_sp.axis && slides.length >= 2) {
+    // Welche Slides überlappt das Foto aktuell nennenswert (> 25 % Slide-Breite)?
+    let start = -1, end = -1;
+    for (let i = 0; i < slides.length; i++) {
+      const ov = Math.min(p.cx + p.w / 2, (i + 1) * W) - Math.max(p.cx - p.w / 2, i * W);
+      if (ov > W * 0.25) { if (start < 0) start = i; end = i; }
+    }
+    if (start >= 0 && end - start + 1 >= 2) {       // erstreckt sich über ≥ 2 Slides → exakt einpassen
+      const spanN = end - start + 1;
+      const ins0 = frameInsets(p);                  // ohne Split → rundum gleich
+      const iW = Math.max(20, spanN * W - ins0.left - ins0.right);
+      const iH = Math.max(20, H - ins0.top - ins0.bottom);
+      if (Math.abs(imgAspect - iW / iH) > 0.001) p.crop = adjustCropToAspect(p, iW / iH);
+      p.w = iW; p.h = iH; p.rot = 0;
+      p.cx = start * W + ins0.left + iW / 2;
+      p.cy = ins0.top + iH / 2;
+      return;
+    }
+  }
+
+  const { axis, n } = getPhotoSplit(p);
+
+  const slideIdx = slideIndexOf(p);
+  let cellX = slideIdx * W, cellY = 0, cellW = W, cellH = H;
+
+  if (axis === 'row') {
+    const slot = Math.max(0, Math.min(n - 1, p.slot ?? 0));
+    cellH = H / n;
+    cellY = slot * cellH;
+  } else if (axis === 'col') {
+    const slot = Math.max(0, Math.min(n - 1, p.slot ?? 0));
+    cellW = W / n;
+    cellX = slideIdx * W + slot * cellW;
+  }
+
+  // Per-side insets — halved on seams shared with a neighboring split photo,
+  // so the visible margin between stacked photos matches the outer margin.
+  const ins = frameInsets(p);
+  // Außenabstand (zeigt die Slide-Hintergrundfarbe) — NUR bei Einzel-Slide-Fit,
+  // ergibt zusammen mit der Border einen Doppelrahmen.
+  const m = (!axis) ? (p.margin || 0) : 0;
+
+  const innerW = Math.max(20, cellW - 2 * m - ins.left - ins.right);
+  const innerH = Math.max(20, cellH - 2 * m - ins.top - ins.bottom);
+  const innerAspect = innerW / innerH;
+
+  // Exact-fill both axes — so the frame (image + margin) lands flush with the
+  // cell on every side, with the same margin as a single un-split photo.
+  // Subtracting the frame insets changes the available aspect slightly, so
+  // the crop is tightened (never widened) to match it precisely.
+  if (Math.abs(imgAspect - innerAspect) > 0.001) {
+    p.crop = adjustCropToAspect(p, innerAspect);
+  }
+  p.w = innerW; p.h = innerH; p.rot = 0;
+  p.cx = cellX + m + ins.left + innerW / 2;
+  p.cy = cellY + m + ins.top + innerH / 2;
+}
+
+function fitSelectedPhoto() {
+  if (sel < 0 || sel >= photos.length || photos[sel].kind !== 'image') return;
+  beginAction();
+  fitPhoto(photos[sel]);
+  redraw();
+  scheduleSave();
+}
+
+document.getElementById('fitBtn').addEventListener('click', fitSelectedPhoto);
+
+// ═══════════════════════════════════════
+// CROP
+// ═══════════════════════════════════════
+
+let cropOpen  = false;
+let cropPhoto = null;
+let cropImgW = 0, cropImgH = 0;
+let cropRect  = null;   // { x, y, w, h } in crop-canvas px
+let cropDrag  = null;   // { mode, startX, startY, startRect }
+let lockRatio = null;   // null = free, otherwise target aspect ratio (w / h)
+let pendingSplit = null; // { axis, n } once a row/col preset is picked in the crop modal, else null
+
+const cropCanvas = document.getElementById('cropCanvas');
+const cropCtx     = cropCanvas.getContext('2d');
+
+document.getElementById('cropBtn').addEventListener('click', openCropOverlay);
+
+// ── Drehen über Regler (in Grad, rastet auf ganze Grad) ──
+function normDeg(d) { return ((Math.round(d) + 180) % 360 + 360) % 360 - 180; }
+document.getElementById('rotateBtn').addEventListener('click', () => {
+  if (sel < 0 || sel >= photos.length) return;
+  const rc = document.getElementById('rotateCtrl');
+  const show = (rc.style.display === 'none' || !rc.style.display);
+  rc.style.display = show ? 'flex' : 'none';
+  if (show) {
+    const deg = normDeg((photos[sel].rot || 0) * 180 / Math.PI);
+    document.getElementById('rotInput').value = deg;
+    document.getElementById('rotVal').textContent = deg + '°';
+  }
+  reserveForPanel(); // Panelhöhe änderte sich → Leinwand neu einpassen
+});
+document.getElementById('rotInput').addEventListener('input', function() {
+  if (sel < 0 || sel >= photos.length) return;
+  beginAction('rot');
+  const deg = parseInt(this.value, 10) || 0;
+  photos[sel].rot = deg * Math.PI / 180;
+  document.getElementById('rotVal').textContent = deg + '°';
+  redraw(); scheduleSave();
+});
+document.getElementById('rotReset').addEventListener('click', () => {
+  if (sel < 0 || sel >= photos.length) return;
+  beginAction();
+  photos[sel].rot = 0;
+  document.getElementById('rotInput').value = 0;
+  document.getElementById('rotVal').textContent = '0°';
+  redraw(); scheduleSave();
+});
+
+function openCropOverlay() {
+  if (sel < 0 || sel >= photos.length || photos[sel].kind !== 'image') return;
+  cropPhoto = photos[sel];
+  updateFormatPresets();   // Seitenverhältnisse passend zum aktiven Format
+
+  const natW = cropPhoto.img.naturalWidth, natH = cropPhoto.img.naturalHeight;
+  const stageW = window.innerWidth  * 0.9;
+  const stageH = window.innerHeight * 0.7;
+  const fit = Math.min(1, stageW / natW, stageH / natH);
+
+  cropImgW = natW * fit;
+  cropImgH = natH * fit;
+  cropCanvas.width        = cropImgW * DPR;
+  cropCanvas.height       = cropImgH * DPR;
+  cropCanvas.style.width  = cropImgW + 'px';
+  cropCanvas.style.height = cropImgH + 'px';
+  cropCtx.setTransform(DPR, 0, 0, DPR, 0, 0);
+
+  const c = cropPhoto.crop || { x: 0, y: 0, w: 1, h: 1 };
+  cropRect = { x: c.x * cropImgW, y: c.y * cropImgH, w: c.w * cropImgW, h: c.h * cropImgH };
+
+  // Re-select whichever preset (or Free) matches this photo's current split,
+  // so re-opening Crop doesn't silently wipe its row/column assignment.
+  const existingSplit = cropPhoto.split || null;
+  let matchBtn = null;
+  document.querySelectorAll('.ratio-btn').forEach(b => {
+    b.classList.remove('sel');
+    if (existingSplit && b.dataset.axis === existingSplit.axis && parseInt(b.dataset.n, 10) === existingSplit.n) {
+      matchBtn = b;
+    }
+  });
+  if (matchBtn) {
+    matchBtn.classList.add('sel');
+    lockRatio = splitRatio(existingSplit.axis, existingSplit.n);
+  } else {
+    document.querySelector('.ratio-btn[data-ratio="free"]').classList.add('sel');
+    lockRatio = null;
+  }
+  pendingSplit = existingSplit;
+
+  cropOpen = true;
+  document.getElementById('crop-overlay').classList.add('show');
+  drawCropCanvas();
+}
+
+function closeCropOverlay() {
+  cropOpen  = false;
+  cropPhoto = null;
+  cropDrag  = null;
+  document.getElementById('crop-overlay').classList.remove('show');
+}
+
+function getCropHandles(r) {
+  const handles = {
+    tl: { x: r.x,         y: r.y         }, tr: { x: r.x + r.w, y: r.y         },
+    bl: { x: r.x,         y: r.y + r.h   }, br: { x: r.x + r.w, y: r.y + r.h   }
+  };
+  // With a locked aspect ratio, only corner handles — edge handles would break the ratio
+  if (!lockRatio) {
+    handles.t = { x: r.x + r.w/2, y: r.y         };
+    handles.b = { x: r.x + r.w/2, y: r.y + r.h   };
+    handles.l = { x: r.x,         y: r.y + r.h/2 };
+    handles.r = { x: r.x + r.w,   y: r.y + r.h/2 };
+  }
+  return handles;
+}
+
+// ── Aspect ratio presets ──
+document.querySelectorAll('.ratio-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.ratio-btn').forEach(b => b.classList.remove('sel'));
+    btn.classList.add('sel');
+    const axis = btn.dataset.axis;
+    if (axis) {
+      // Row/column split — ratio is derived live from the active format's
+      // W/H, so it's automatically correct whether we're in Post or Story.
+      const n = parseInt(btn.dataset.n, 10);
+      lockRatio = splitRatio(axis, n);
+      applyPresetRatio(lockRatio);
+      pendingSplit = { axis, n };
+    } else {
+      const val = btn.dataset.ratio;
+      if (val === 'free') {
+        lockRatio = null;
+      } else if (val === 'canvas') {
+        // "Full Slide" — exactly the active format's own aspect ratio.
+        lockRatio = W / H;
+        applyPresetRatio(lockRatio);
+      } else {
+        lockRatio = parseFloat(val);
+        applyPresetRatio(lockRatio);
+      }
+      pendingSplit = null;
+    }
+    drawCropCanvas();
+  });
+});
+
+function applyPresetRatio(ratio) {
+  const cx = cropRect.x + cropRect.w / 2, cy = cropRect.y + cropRect.h / 2;
+  let w, h;
+  if (cropImgW / cropImgH > ratio) { h = cropImgH; w = h * ratio; }
+  else                              { w = cropImgW; h = w / ratio; }
+  const x = clampNum(cx - w / 2, 0, cropImgW - w);
+  const y = clampNum(cy - h / 2, 0, cropImgH - h);
+  cropRect = { x, y, w, h };
+}
+
+function drawCropCanvas() {
+  cropCtx.clearRect(0, 0, cropImgW, cropImgH);
+  cropCtx.drawImage(cropPhoto.img, 0, 0, cropImgW, cropImgH);
+
+  // Dim everything outside the crop rect
+  cropCtx.fillStyle = 'rgba(0,0,0,0.6)';
+  cropCtx.fillRect(0, 0, cropImgW, cropRect.y);
+  cropCtx.fillRect(0, cropRect.y + cropRect.h, cropImgW, cropImgH - cropRect.y - cropRect.h);
+  cropCtx.fillRect(0, cropRect.y, cropRect.x, cropRect.h);
+  cropCtx.fillRect(cropRect.x + cropRect.w, cropRect.y, cropImgW - cropRect.x - cropRect.w, cropRect.h);
+
+  // Rule-of-thirds guide lines
+  cropCtx.strokeStyle = 'rgba(255,255,255,0.45)';
+  cropCtx.lineWidth = 1;
+  for (let i = 1; i < 3; i++) {
+    const x = cropRect.x + cropRect.w * i / 3;
+    cropCtx.beginPath(); cropCtx.moveTo(x, cropRect.y); cropCtx.lineTo(x, cropRect.y + cropRect.h); cropCtx.stroke();
+    const y = cropRect.y + cropRect.h * i / 3;
+    cropCtx.beginPath(); cropCtx.moveTo(cropRect.x, y); cropCtx.lineTo(cropRect.x + cropRect.w, y); cropCtx.stroke();
+  }
+
+  // Crop border
+  cropCtx.strokeStyle = '#D10101';
+  cropCtx.lineWidth = 2;
+  cropCtx.strokeRect(cropRect.x, cropRect.y, cropRect.w, cropRect.h);
+
+  // Handles
+  const HS = 10;
+  cropCtx.fillStyle = '#D10101';
+  Object.values(getCropHandles(cropRect)).forEach(h => {
+    cropCtx.fillRect(h.x - HS / 2, h.y - HS / 2, HS, HS);
+  });
+}
+
+function cropPointer(clientX, clientY) {
+  const r = cropCanvas.getBoundingClientRect();
+  return { x: clientX - r.left, y: clientY - r.top };
+}
+
+function hitCropHandle(px, py) {
+  const HR = 14;
+  const handles = getCropHandles(cropRect);
+  for (const [mode, h] of Object.entries(handles)) {
+    if (Math.hypot(px - h.x, py - h.y) <= HR) return mode;
+  }
+  return null;
+}
+
+function cropPointInRect(px, py) {
+  return px >= cropRect.x && px <= cropRect.x + cropRect.w &&
+         py >= cropRect.y && py <= cropRect.y + cropRect.h;
+}
+
+const CROP_MIN = 30;
+function clampNum(v, min, max) { return Math.max(min, Math.min(max, v)); }
+
+function resizeCropRect(mode, dx, dy) {
+  const s = cropDrag.startRect;
+
+  // Locked aspect ratio: corner handles only, scaling proportionally from the opposite corner
+  if (lockRatio && mode !== 'move') {
+    let anchorX, anchorY;
+    switch (mode) {
+      case 'tl': anchorX = s.x + s.w; anchorY = s.y + s.h; break;
+      case 'tr': anchorX = s.x;       anchorY = s.y + s.h; break;
+      case 'bl': anchorX = s.x + s.w; anchorY = s.y;       break;
+      case 'br': anchorX = s.x;       anchorY = s.y;       break;
+      default:   anchorX = s.x;       anchorY = s.y;
+    }
+    const delta = (mode === 'tl' || mode === 'bl') ? -dx : dx;
+    const maxW  = Math.min(cropImgW, cropImgH * lockRatio);
+    const newW  = clampNum(s.w + delta, CROP_MIN, maxW);
+    const newH  = newW / lockRatio;
+
+    let x = (mode === 'tl' || mode === 'bl') ? anchorX - newW : anchorX;
+    let y = (mode === 'tl' || mode === 'tr') ? anchorY - newH : anchorY;
+    x = clampNum(x, 0, cropImgW - newW);
+    y = clampNum(y, 0, cropImgH - newH);
+
+    cropRect = { x, y, w: newW, h: newH };
+    return;
+  }
+
+  let r = { ...s };
+
+  switch (mode) {
+    case 'move':
+      r.x = clampNum(s.x + dx, 0, cropImgW - s.w);
+      r.y = clampNum(s.y + dy, 0, cropImgH - s.h);
+      break;
+    case 'tl':
+      r.x = clampNum(s.x + dx, 0, s.x + s.w - CROP_MIN);
+      r.y = clampNum(s.y + dy, 0, s.y + s.h - CROP_MIN);
+      r.w = s.x + s.w - r.x;
+      r.h = s.y + s.h - r.y;
+      break;
+    case 'tr':
+      r.y = clampNum(s.y + dy, 0, s.y + s.h - CROP_MIN);
+      r.w = clampNum(s.w + dx, CROP_MIN, cropImgW - s.x);
+      r.h = s.y + s.h - r.y;
+      break;
+    case 'bl':
+      r.x = clampNum(s.x + dx, 0, s.x + s.w - CROP_MIN);
+      r.w = s.x + s.w - r.x;
+      r.h = clampNum(s.h + dy, CROP_MIN, cropImgH - s.y);
+      break;
+    case 'br':
+      r.w = clampNum(s.w + dx, CROP_MIN, cropImgW - s.x);
+      r.h = clampNum(s.h + dy, CROP_MIN, cropImgH - s.y);
+      break;
+    case 't':
+      r.y = clampNum(s.y + dy, 0, s.y + s.h - CROP_MIN);
+      r.h = s.y + s.h - r.y;
+      break;
+    case 'b':
+      r.h = clampNum(s.h + dy, CROP_MIN, cropImgH - s.y);
+      break;
+    case 'l':
+      r.x = clampNum(s.x + dx, 0, s.x + s.w - CROP_MIN);
+      r.w = s.x + s.w - r.x;
+      break;
+    case 'r':
+      r.w = clampNum(s.w + dx, CROP_MIN, cropImgW - s.x);
+      break;
+  }
+  cropRect = r;
+}
+
+function cropDragStart(clientX, clientY) {
+  const { x, y } = cropPointer(clientX, clientY);
+  const handle = hitCropHandle(x, y);
+  if (handle) {
+    cropDrag = { mode: handle, startX: x, startY: y, startRect: { ...cropRect } };
+  } else if (cropPointInRect(x, y)) {
+    cropDrag = { mode: 'move', startX: x, startY: y, startRect: { ...cropRect } };
+  }
+}
+
+function cropDragMove(clientX, clientY) {
+  if (!cropDrag) return;
+  const { x, y } = cropPointer(clientX, clientY);
+  resizeCropRect(cropDrag.mode, x - cropDrag.startX, y - cropDrag.startY);
+  drawCropCanvas();
+}
+
+function cropDragEnd() { cropDrag = null; }
+
+cropCanvas.addEventListener('mousedown', e => cropDragStart(e.clientX, e.clientY));
+window.addEventListener('mousemove', e => { if (cropOpen) cropDragMove(e.clientX, e.clientY); });
+window.addEventListener('mouseup',   () => { if (cropOpen) cropDragEnd(); });
+
+cropCanvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  const t = e.touches[0];
+  cropDragStart(t.clientX, t.clientY);
+}, { passive: false });
+cropCanvas.addEventListener('touchmove', e => {
+  if (!cropOpen || !cropDrag) return;
+  e.preventDefault();
+  const t = e.touches[0];
+  cropDragMove(t.clientX, t.clientY);
+}, { passive: false });
+cropCanvas.addEventListener('touchend', () => cropDragEnd());
+
+document.getElementById('cropCancel').addEventListener('click', closeCropOverlay);
+
+document.getElementById('cropApply').addEventListener('click', () => {
+  if (!cropPhoto || !cropRect) return;
+  beginAction();
+  const norm = {
+    x: cropRect.x / cropImgW,
+    y: cropRect.y / cropImgH,
+    w: cropRect.w / cropImgW,
+    h: cropRect.h / cropImgH
+  };
+  cropPhoto.crop = norm;
+
+  // Displayed width stays the same, height adapts to the new crop aspect ratio
+  const cropPxW = norm.w * cropPhoto.img.naturalWidth;
+  const cropPxH = norm.h * cropPhoto.img.naturalHeight;
+  cropPhoto.h = cropPhoto.w * (cropPxH / cropPxW);
+
+  // Persist the chosen split explicitly (set by whichever preset button was
+  // clicked) — this is what Fit/slot logic reads, so it survives later crop
+  // tightening instead of being silently lost.
+  cropPhoto.split = pendingSplit;
+
+  // If this crop matches a row/column split, claim the next free slot on
+  // this slide instead of always defaulting back to the first one.
+  autoAssignSlot(cropPhoto);
+
+  // A row/column split crop has a fully-defined target cell (slide, axis, n,
+  // slot) — snap the photo into it right away instead of leaving it at
+  // whatever size/position it happened to have before cropping. Without
+  // this, several stacked photos could end up at uneven heights with
+  // ragged, inconsistent gaps until each one was individually re-fit by hand.
+  if (pendingSplit) {
+    fitPhoto(cropPhoto);
+  }
+
+  closeCropOverlay();
+  syncSlotUI();
+  redraw();
+  scheduleSave();
+});
+
+// ═══════════════════════════════════════
+// EXPORT
+// ═══════════════════════════════════════
+
+// ── Export dropdown toggle ──
+document.getElementById('exportBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  document.getElementById('exportMenu').classList.toggle('show');
+});
+document.addEventListener('click', () => {
+  document.getElementById('exportMenu').classList.remove('show');
+});
+
+// ── Export all slides ──
+document.getElementById('exportAllBtn').addEventListener('click', () => {
+  document.getElementById('exportMenu').classList.remove('show');
+  document.getElementById('promoInvite').classList.remove('hidden'); // Einladung bei neuem Export zeigen
+  runExport(slides.map((_, i) => i));
+});
+
+// ── Export single active slide ──
+document.getElementById('exportOneBtn').addEventListener('click', () => {
+  document.getElementById('exportMenu').classList.remove('show');
+  document.getElementById('promoInvite').classList.remove('hidden');
+  runExport([activeSlide]);
+});
+
+// ── Outro-Einladung: optionale Marken-Slide anhängen und Export neu erzeugen ──
+function addOutroAndReexport(dark) {
+  addOutroSlide(dark);
+  document.getElementById('promoInvite').classList.add('hidden'); // nicht doppelt anbieten
+  runExport(slides.map((_, i) => i));
+}
+document.getElementById('promoAddLight').addEventListener('click', () => addOutroAndReexport(false));
+document.getElementById('promoAddDark').addEventListener('click', () => addOutroAndReexport(true));
+
+let lastExportUrls = []; // [{ url, idx }] from the most recent export, used by "Download All"
+
+async function runExport(slideIndices) {
+  const prevSel = sel;
+  sel = -1;
+  document.getElementById('loading').classList.add('show');
+
+  // Alte Object-URLs des letzten Exports freigeben (Speicher), bevor neue
+  // erzeugt werden.
+  lastExportUrls.forEach(u => { try { URL.revokeObjectURL(u.url); } catch (e) {} });
+  lastExportUrls = [];
+
+  // Kurze Pause, damit der Lade-Overlay sichtbar gerendert wird.
+  await new Promise(r => setTimeout(r, 50));
+
+  const urls = [];
+  for (const i of slideIndices) {
+    const blob = await canvasToBlob(exportSlideCanvas(i));
+    urls.push({ url: URL.createObjectURL(blob), blob, idx: i });
+  }
+  lastExportUrls = urls;
+  document.getElementById('loading').classList.remove('show');
+
+  const list = document.getElementById('exp-list');
+  list.innerHTML = '';
+  urls.forEach(({ url, idx }) => {
+    const item = document.createElement('div');
+    item.className = 'exp-item';
+
+    const lbl = document.createElement('span');
+    lbl.textContent = `Slide ${idx + 1}${slideIndices.length > 1 ? ' / ' + slides.length : ''}`;
+
+    const img = document.createElement('img');
+    img.src = url;
+
+    item.appendChild(lbl);
+    item.appendChild(img);
+
+    if (!isIOS) {
+      const btn = document.createElement('button');
+      btn.className = 'dl-btn';
+      btn.textContent = '↓ Download';
+      btn.addEventListener('click', () => {
+        const a = document.createElement('a');
+        a.href = url; a.download = `carousel_${idx + 1}.png`; a.click();
+      });
+      item.appendChild(btn);
+    }
+
+    list.appendChild(item);
+  });
+
+  // "Download All" (.zip) only makes sense for non-iOS — iOS Safari
+  // doesn't reliably trigger blob-URL file downloads from a script.
+  // On iOS, "Save All to Photos" uses the native Web Share sheet
+  // instead, which can save multiple images straight into Photos
+  // in one tap (no zip/unzip detour needed).
+  const downloadAllBtn = document.getElementById('downloadAllBtn');
+  const shareAllBtn = document.getElementById('shareAllBtn');
+  const canShareFiles = isIOS && typeof navigator.canShare === 'function';
+  downloadAllBtn.classList.toggle('show', !isIOS && urls.length > 1);
+  shareAllBtn.classList.toggle('show', canShareFiles && urls.length > 1);
+
+  document.getElementById('exp-hint').textContent = isIOS
+    ? (canShareFiles ? 'Long-press image → Save Image, or tap "Save All to Photos" below' : 'Long-press image → Save Image')
+    : 'Download per slide, or all at once below';
+
+  document.getElementById('exp-overlay').classList.add('show');
+
+  sel = prevSel;
+  redraw();
+}
+
+// ── Download all exported slides at once, bundled into a single .zip ──
+document.getElementById('downloadAllBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('downloadAllBtn');
+  if (btn.disabled || lastExportUrls.length === 0) return;
+  btn.disabled = true;
+  const origText = btn.textContent;
+  btn.textContent = 'Zipping…';
+
+  try {
+    const zip = new JSZip();
+    for (const { blob, idx } of lastExportUrls) {
+      zip.file(`carousel_${idx + 1}.png`, blob); // Blob liegt schon vor (kein fetch nötig)
+    }
+    const zipBlob = await zip.generateAsync({ type: 'blob' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(zipBlob);
+    a.download = 'carousel_slides.zip';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  } catch (err) {
+    console.error('Zip download failed:', err);
+    alert('Could not create the zip file. Try downloading slides individually instead.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = origText;
+  }
+});
+
+// ── Save all exported slides directly to Photos via the native iOS share
+// sheet (Web Share API, level 2 file sharing). Sharing multiple images at
+// once surfaces a "Save Images" action that drops them straight into
+// Photos — no zip/unzip detour needed. ──
+document.getElementById('shareAllBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('shareAllBtn');
+  if (btn.disabled || lastExportUrls.length === 0) return;
+  btn.disabled = true;
+  const origText = btn.textContent;
+  btn.textContent = 'Preparing…';
+
+  try {
+    const files = lastExportUrls.map(({ blob, idx }) =>
+      new File([blob], `carousel_${idx + 1}.png`, { type: 'image/png' }));
+    if (navigator.canShare && navigator.canShare({ files })) {
+      await navigator.share({ files });
+    } else {
+      alert('Saving several images at once isn\'t supported on this device. Long-press each image above and choose "Save Image" instead.');
+    }
+  } catch (err) {
+    if (err.name !== 'AbortError') { // user cancelling the share sheet is not an error
+      console.error('Share failed:', err);
+      alert('Could not share the images. Try saving them individually instead.');
+    }
+  } finally {
+    btn.disabled = false;
+    btn.textContent = origText;
+  }
+});
+
+// Liefert die fertig gezeichnete Export-Leinwand (volle Auflösung, Original-
+// bilder). Die Umwandlung in einen Blob passiert asynchron in runExport.
+function exportSlideCanvas(i) {
+  const ec = document.createElement('canvas');
+  ec.width = W * EX; ec.height = H * EX;
+  const ectx = ec.getContext('2d');
+  ectx.imageSmoothingEnabled = true;
+  ectx.imageSmoothingQuality = 'high';
+
+  // Clip to slide bounds
+  ectx.save();
+  ectx.beginPath();
+  ectx.rect(0, 0, W * EX, H * EX);
+  ectx.clip();
+
+  // Background
+  ectx.fillStyle = slides[i].bg;
+  ectx.fillRect(0, 0, W * EX, H * EX);
+
+  // Photos + text items (offset so slide i starts at x=0)
+  photos.forEach(p => {
+    ectx.save();
+    ectx.translate((p.cx - i * W) * EX, p.cy * EX);
+    ectx.rotate(p.rot);
+    if (p.kind === 'text') {
+      drawTextContent(ectx, p, EX);
+      ectx.restore();
+      return;
+    }
+    if (p.kind === 'logo') { drawLogoItem(ectx, p, EX); ectx.restore(); return; }
+    if (p.kind === 'placeholder') { ectx.restore(); return; } // leere Platzhalter nicht exportieren
+    if (p.frame && p.frame.width > 0) {
+      const ins = frameInsets(p);
+      ectx.fillStyle = p.frame.color;
+      ectx.fillRect(-(p.w / 2 + ins.left) * EX, -(p.h / 2 + ins.top) * EX,
+                    (p.w + ins.left + ins.right) * EX, (p.h + ins.top + ins.bottom) * EX);
+    }
+    const c = p.crop || { x: 0, y: 0, w: 1, h: 1 };
+    const sx = c.x * p.img.naturalWidth,  sw = c.w * p.img.naturalWidth;
+    const sy = c.y * p.img.naturalHeight, sh = c.h * p.img.naturalHeight;
+    ectx.drawImage(p.img, sx, sy, sw, sh, -p.w / 2 * EX, -p.h / 2 * EX, p.w * EX, p.h * EX);
+    ectx.restore();
+  });
+
+  ectx.restore();
+  return ec;
+}
+
+// canvas.toBlob ist asynchron und speicherschonender als toDataURL
+// (kein riesiger Base64-String) — wichtig auf Mobilgeräten bei 3×-PNGs.
+function canvasToBlob(c) {
+  return new Promise(resolve => c.toBlob(resolve, 'image/png'));
+}
+
+document.getElementById('closeExp').addEventListener('click', () => {
+  document.getElementById('exp-overlay').classList.remove('show');
+  document.getElementById('exp-list').innerHTML = '';
+  document.getElementById('downloadAllBtn').classList.remove('show');
+  document.getElementById('shareAllBtn').classList.remove('show');
+  // Object-URLs freigeben, damit der Speicher der exportierten PNGs frei wird.
+  lastExportUrls.forEach(u => { try { URL.revokeObjectURL(u.url); } catch (e) {} });
+  lastExportUrls = [];
+});
+
+// Update active slide when user scrolls
+wrap.addEventListener('scroll', () => {
+  const i = Math.round(wrap.scrollLeft / (W * DSCALE));
+  if (i !== activeSlide && i >= 0 && i < slides.length) {
+    activeSlide = i;
+    syncBgButtons();
+    updateDots();
+  }
+});
+
+// ═══════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════
+
+document.getElementById('undoBtn').addEventListener('click', undo);
+document.getElementById('redoBtn').addEventListener('click', redo);
+document.getElementById('newBtn').addEventListener('click', () => {
+  if (hasContent() && !window.confirm('Start a new project? This clears all photos and slides.')) return;
+  beginAction(); // leeren ist per Undo umkehrbar
+  slides = [{ bg: '#F4F1EB' }];
+  photos = []; sel = -1; activeSlide = 0; guides = [];
+  resizeCanvas(); syncBgButtons(); updateDots(); updateDeleteBtn();
+  syncFrameButtons(); syncTextUI(); syncSlotUI();
+  redraw(); scheduleSave();
+});
+
+// Beim Start gespeicherten Zustand (IndexedDB) wiederherstellen, sonst der
+// Standard-Leerzustand. loadSaved() ist asynchron, weil die Bilder aus ihren
+// DataURLs neu dekodiert werden müssen.
+// Splash schließen (Einstieg in den Editor)
+document.getElementById('splashStart').addEventListener('click', () => {
+  document.getElementById('splash').classList.add('hidden');
+});
+
+// Browser-eigenes Pinch-Zoom (Safari-Gesten) und Doppeltipp-Zoom unterbinden —
+// die App bringt ihren eigenen Zoom mit. So „wackelt" das Fenster nicht.
+['gesturestart', 'gesturechange', 'gestureend'].forEach(ev =>
+  document.addEventListener(ev, e => e.preventDefault(), { passive: false }));
+
+// Bei Größen-/Orientierungsänderung neu einpassen.
+window.addEventListener('resize', reserveForPanel);
+
+(async function init() {
+  let restored = false;
+  try { restored = await loadSaved(); } catch (e) { /* still: bleibt Standardzustand */ }
+  computeScale();   // BASE_DSCALE an evtl. wiederhergestelltes Format (H) anpassen
+  resizeCanvas();
+  updateDots();
+  syncBgButtons();
+  syncModeButtons();
+  updateSplitButtonLabels();
+  syncFrameButtons();
+  syncTextUI();
+  syncSlotUI();
+  updateDeleteBtn();
+  syncUndoButtons();
+  redraw();
+  // Bestehendes Projekt mit Inhalt → direkt in den Editor, Splash überspringen.
+  if (restored && photos.length > 0) document.getElementById('splash').classList.add('hidden');
+})();
+</script>
+</body>
+</html>
