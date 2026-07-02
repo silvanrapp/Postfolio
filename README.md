@@ -25,3 +25,22 @@ Add slides, drop in photos or styled text boxes, and drag/zoom/rotate them into 
 ## Made by
 
 [Silvan Rapp](https://silvanrapp.de) — Photographer & Videographer, Mainz
+
+## Copyright & Lizenz
+
+© 2026 Silvan Rapp — All rights reserved.
+
+Dieser Quellcode ist urheberrechtlich geschützt und **nicht** Open Source.
+Die App darf frei genutzt werden. Jede Nutzung, Kopie, Veränderung oder
+Weiterverbreitung des Codes – ganz oder in Teilen – ist ohne ausdrückliche
+schriftliche Genehmigung untersagt.
+
+This code is proprietary, not open source. You may use the app freely,
+but no permission is granted to copy, modify, or redistribute the code.
+Contact: hello via [silvanrapp.de](https://silvanrapp.de)
+
+## Made by
+
+[Silvan Rapp](https://silvanrapp.de) — Photographer & Videographer, Mainz
+📸 Instagram: [@silvan.rapp](https://instagram.com/silvan.rapp)
+
