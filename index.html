@@ -3626,7 +3626,7 @@ function renderNow() {
       return;
     }
     if (p.kind === 'logo') { drawLogoItem(ctx, p, S); ctx.restore(); return; }
-    if (p.kind === 'placeholder') { drawPlaceholderItem(ctx, p, S); ctx.restore(); return; }
+    if (p.kind === 'placeholder') { ctx.restore(); return; }   // → scharfes UI-Overlay
     if (p.frame && p.frame.width > 0) {
       const ins = frameInsets(p);
       fillFrameRect(ctx, -(p.w / 2 + ins.left) * S, -(p.h / 2 + ins.top) * S,
@@ -3902,6 +3902,20 @@ function drawOverlayUI() {
     c.textAlign = 'center'; c.textBaseline = 'top';
     c.fillText('Tap to add a photo', Math.round(cxp / d2), Math.round((cyp + r) / d2) + 12);
     c.setTransform(1, 0, 0, 1, 0, 0);
+    c.restore();
+  });
+
+  // Frames-/Template-Platzhalter (gestrichelte Felder + „+") ebenfalls hier —
+  // auf der Haupt-Canvas würden sie bei vielen Slides unscharf.
+  photos.forEach(q => {
+    if (q.kind !== 'placeholder') return;
+    const qx = ox + q.cx * K, qy = oy + q.cy * K;
+    const rad = Math.max(q.w, q.h) * K;
+    if (qx < -rad || qx > uiOv.width + rad) return;   // außerhalb sichtbar
+    c.save();
+    c.translate(qx, qy);
+    c.rotate(q.rot || 0);
+    drawPlaceholderItem(c, q, K);
     c.restore();
   });
 
