@@ -300,6 +300,75 @@ details.hlp-sec[open] .hlp-chev { transform: rotate(180deg); }
 .hlp-foot em { font-family: 'Playfair Display', Georgia, serif; font-style: italic; font-size: 12.5px; }
 .hlp-foot a { color: var(--muted); text-decoration: none; border-bottom: 1px solid var(--line); padding-bottom: 1px; }
 .hlp-foot a:hover { color: var(--text); border-color: var(--muted); }
+/* ── Mediathek (Library) ── */
+#libOverlay {
+  display: none; position: fixed; inset: 0; z-index: 750;
+  background: rgba(42,40,38,0.45);
+  align-items: center; justify-content: center;
+  padding: calc(14px + env(safe-area-inset-top, 0px)) 14px calc(14px + env(safe-area-inset-bottom, 0px));
+}
+#libOverlay.show { display: flex; }
+#libCard {
+  position: relative; width: min(560px, 100%); max-height: 100%;
+  overflow-y: auto; -webkit-overflow-scrolling: touch;
+  background: var(--bg); border-radius: 18px;
+  padding: 24px 24px 16px;
+  box-shadow: 0 24px 70px rgba(0,0,0,0.35);
+}
+#libClose {
+  position: absolute; top: 12px; right: 12px;
+  width: 32px; height: 32px; border-radius: 50%; padding: 0;
+  background: var(--surface); color: var(--muted); border: 1px solid var(--line);
+  font-size: 14px; line-height: 1; display: inline-flex; align-items: center; justify-content: center;
+}
+#libTrash {
+  position: absolute; top: 52px; right: 12px; display: none;
+  width: 32px; height: 32px; border-radius: 50%; padding: 0;
+  background: var(--surface); color: var(--muted); border: 1px solid var(--line);
+  align-items: center; justify-content: center;
+}
+#libTrash.show { display: inline-flex; }
+#libTrash svg { width: 15px; height: 15px; }
+#libTrash:hover { color: var(--accent); border-color: var(--accent); }
+.lib-h { font-family: 'Playfair Display', Georgia, serif; font-size: 26px; font-weight: 600; color: var(--text); margin: 4px 0 12px; }
+/* Ordner-Schieber: Recent · eigene Ordner · + Folder */
+#libFolders { display: flex; gap: 7px; overflow-x: auto; padding-bottom: 10px; scrollbar-width: none; }
+#libFolders::-webkit-scrollbar { display: none; }
+.lib-chip {
+  flex: 0 0 auto; padding: 7px 13px; border-radius: 999px;
+  background: var(--surface); border: 1px solid var(--line); color: var(--text);
+  font-size: 12px; cursor: pointer;
+}
+.lib-chip.sel { background: var(--dark, #2A2826); color: var(--bg); border-color: var(--dark, #2A2826); }
+.lib-chip.add { color: var(--muted); border-style: dashed; }
+#libGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 8px; }
+.lib-cell { position: relative; aspect-ratio: 1; border-radius: 10px; overflow: hidden; background: var(--surface); border: 1px solid var(--line); cursor: pointer; }
+.lib-cell img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.lib-x, .lib-mv {
+  position: absolute; top: 4px; width: 22px; height: 22px; border-radius: 50%; padding: 0;
+  border: none; font-size: 10px; line-height: 1; display: inline-flex; align-items: center; justify-content: center;
+  background: rgba(42,40,38,0.55); color: #fff; cursor: pointer;
+}
+.lib-x { right: 4px; }
+.lib-mv { left: 4px; font-size: 12px; }
+.lib-cell.lib-add {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  background: transparent; border: 1.5px dashed var(--line); border-radius: 10px;
+  color: var(--muted); cursor: pointer; position: relative; overflow: visible;
+}
+.lib-cell.lib-add:hover { color: var(--text); border-color: var(--muted); }
+.lib-add-plus, .lib-add-trash {
+  background: transparent !important; border: none !important; box-shadow: none !important;
+  color: inherit; cursor: pointer; padding: 2px 6px; margin: 0;
+  width: auto; height: auto; min-width: 0; border-radius: 8px; line-height: 1;
+  display: inline-flex; align-items: center; justify-content: center; position: static;
+}
+.lib-add-plus { font-size: 26px; }
+.lib-add-trash svg { width: 15px; height: 15px; display: block; }
+.lib-add-trash:hover { color: var(--accent); }
+.lib-empty { grid-column: 1 / -1; font-size: 12.5px; color: var(--muted); padding: 22px 4px; text-align: center; line-height: 1.5; }
+.lib-hint { margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--line); font-size: 10.5px; color: var(--muted); text-align: center; }
+
 #settingsMenu {
   display: none; position: absolute; top: calc(100% + 8px); right: 0;
   background: var(--surface); border: 1px solid var(--line); z-index: 100;
@@ -760,6 +829,7 @@ canvas.picking-color { cursor: crosshair; }
   gap: 12px;
   background: var(--surface);
   border-top: 1px solid var(--line);
+  border-radius: 20px 20px 0 0;
   box-shadow: 0 -6px 24px rgba(0,0,0,0.08);
   /* Unten NICHT die volle Safe-Area addieren — der Home-Indicator darf über
      der Toolbar schweben (Unfold-Prinzip). Im Browser (env=0) bleiben 12px. */
@@ -873,12 +943,15 @@ canvas.picking-color { cursor: crosshair; }
    (mobile/iPhone bleibt das Bottom-Sheet). */
 @media (min-width: 820px) {
   #contextSheet {
-    left: auto; right: 0; top: 0; bottom: 0;
-    width: 330px; height: 100dvh; max-height: none;
-    border-top: none; border-left: 1px solid var(--line);
-    box-shadow: -6px 0 24px rgba(0,0,0,0.08);
-    padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px));
-    transform: translateX(110%);
+    /* Schwebende Karte im Apple-Stil: abgesetzt, runde Ecken, weicher Schatten.
+       top/bottom setzt reserveForPanel (Canvas-Oberkante bzw. Filmstrip). */
+    left: auto; right: 12px; top: 0; bottom: 0;
+    width: 330px; height: auto; max-height: none;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    box-shadow: 0 14px 44px rgba(0,0,0,0.12);
+    padding: 16px;
+    transform: translateX(calc(110% + 12px));
     justify-content: flex-start;   /* Bedienelemente von oben nach unten */
     overflow-y: auto;
   }
@@ -913,7 +986,7 @@ canvas.picking-color { cursor: crosshair; }
      Panel-Inhalts (JS setzt top passend zur Canvas-Oberkante), mit Luft. */
   #panelCloseBtn {
     display: flex; align-items: center; justify-content: center;
-    position: absolute; top: 18px; right: 14px; z-index: 5;
+    position: absolute; top: 12px; right: 12px; z-index: 5;
     width: 30px; height: 30px; padding: 0; border-radius: 50%;
     background: transparent; border: none; color: var(--muted); cursor: pointer;
     opacity: 0.75; transition: opacity 0.15s ease, background 0.15s ease;
@@ -1558,6 +1631,66 @@ canvas {
 @media (max-width: 600px) {
   .splash-wm { font-size: 40px; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   APPLE-GLAS-LOOK (Liquid-Glass-artig): halbtransparente Flächen mit
+   Blur + Sättigung, Haarlinien-Konturen, innere Lichtkante, einheitliche
+   weiche Schatten. Ein zentraler Override — gewinnt die Kaskade,
+   weil er als letzter Block im Stylesheet steht.
+   ═══════════════════════════════════════════════════════════════════ */
+:root {
+  --glass-bg: rgba(255,255,255,0.62);
+  --glass-bg-strong: rgba(255,255,255,0.78);
+  --glass-blur: saturate(1.6) blur(22px);
+  --hairline: rgba(42,40,38,0.10);
+  --edge-light: inset 0 0 0 1px rgba(255,255,255,0.40);
+  --shadow-card: 0 16px 44px rgba(0,0,0,0.12);
+  --shadow-ctl: 0 2px 10px rgba(0,0,0,0.07);
+}
+/* Toolbar (Desktop-Karte + Mobile-Sheet) */
+#contextSheet {
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  border-color: var(--hairline);
+  box-shadow: var(--shadow-card), var(--edge-light);
+}
+/* Header-Buttons (heller Satz — der dunkle Post-Chip und der rote Export bleiben) */
+#textToggle, #bgToggle, #helpBtn, #undoHdrBtn, #settingsBtn, #previewBtn {
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--hairline);
+  box-shadow: var(--shadow-ctl), var(--edge-light);
+}
+/* Dropdown-Menüs & Popover */
+#formatMenu, #textMenu, #bgMenu, #exportMenu, #settingsMenu {
+  background: var(--glass-bg-strong);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--hairline);
+  border-radius: 14px;
+  box-shadow: var(--shadow-card), var(--edge-light);
+}
+#exportMenu button, #settingsMenu .ov-item { background: transparent; }
+/* Zoom-Pille + Fertig-Haken-Umfeld auf dieselben Tokens */
+#zoomCtrl {
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--hairline);
+  box-shadow: var(--shadow-ctl), var(--edge-light);
+}
+/* Overlay-Karten (Help, Library) + Aktions-Sheet */
+#helpCard, #libCard, .sheet {
+  background: var(--glass-bg-strong);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--hairline);
+  box-shadow: var(--shadow-card), var(--edge-light);
+}
+/* Wiederöffnen-Tab & Panel-Schließen im selben Material */
+#panelOpenBtn.on {
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--hairline);
+  box-shadow: var(--shadow-ctl), var(--edge-light);
+}
 </style>
 </head>
 <body>
@@ -1675,6 +1808,10 @@ canvas {
           <span class="tm-ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="M21 16l-5-5L5 19"/></svg></span>
           <span class="tm-txt"><b>Photo</b><small>Place on the current slide</small></span>
         </label>
+        <button class="tm-cat" id="catLibrary" title="Reuse photos you already uploaded">
+          <span class="tm-ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="14" height="12" rx="2"/><path d="M7 7V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-2"/><circle cx="7.5" cy="11" r="1.2"/><path d="M17 17l-4-4-6 6"/></svg></span>
+          <span class="tm-txt"><b>Library</b><small>Reuse uploaded photos · folders</small></span>
+        </button>
         <button class="tm-cat" data-go="text" title="Text options">
           <span class="tm-ico" style="font-family:Georgia,serif;font-size:16px">T</span>
           <span class="tm-txt"><b>Text</b><small>Plain · Editorial · Magazine</small></span>
@@ -1808,6 +1945,10 @@ canvas {
     <button class="acc-chip tool-btn" data-sec="secLayer" data-ctx="both" title="Layer order">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg>
       <span>Layer</span>
+    </button>
+    <button class="acc-chip tool-btn" data-sec="secFRatio" data-ctx="img" title="Inset format (wide / square)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="11" height="10" rx="1"/><rect x="16" y="9" width="6" height="6" rx="1"/></svg>
+      <span>Format</span>
     </button>
 
     <span class="tool-div" aria-hidden="true"></span>
@@ -2017,6 +2158,16 @@ canvas {
     <!-- Ebenen-Liste der aktiven Slide: antippen wählt (auch verdeckte), Schloss sperrt -->
     <div id="layerList"></div>
   </div>
+
+  <!-- ▼ Format-Sektion (Frames-Inset): 1:1 · 2:3 · 3:2 -->
+  <div class="acc-sec" id="secFRatio" style="display:none">
+    <div class="row">
+      <button class="ol-mode-btn fr-ratio" data-fr="1" title="Square">1:1</button>
+      <button class="ol-mode-btn fr-ratio" data-fr="0.6667" title="Portrait">2:3</button>
+      <button class="ol-mode-btn fr-ratio" data-fr="1.5" title="Landscape">3:2</button>
+      <button class="ol-mode-btn fr-ratio" data-fr="free" title="Free — drag the red dot to shape the rectangle">Free</button>
+    </div>
+  </div><!-- /secFRatio -->
 
   <!-- ▼ Rotate-Sektion (Bild & Text) — Slider mit 0 in der Mitte (snappt auf 0°) -->
   <div class="acc-sec" id="secRotate" style="display:none">
@@ -2381,6 +2532,21 @@ canvas {
   </div>
 </div>
 
+<!-- Mediathek: bereits geladene Bilder wiederverwenden (lokal, mit Ordnern) -->
+<div id="libOverlay">
+  <div id="libCard">
+    <button id="libClose" aria-label="Close">✕</button>
+    <button id="libTrash" title="Diesen Ordner löschen" aria-label="Ordner löschen">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+    </button>
+    <div class="hlp-eyebrow">Postfolio · Library</div>
+    <h3 class="lib-h">Your uploads<span class="hlp-dot">.</span></h3>
+    <div id="libFolders"></div>
+    <div id="libGrid"></div>
+    <div class="lib-hint">Saved locally in this browser — clearing site data removes them. Tap a photo to place it.</div>
+  </div>
+</div>
+
 <!-- Kurzer Status-/Fehlerhinweis (z. B. beim Foto-Laden) -->
 <div id="toast"></div>
 
@@ -2486,6 +2652,11 @@ let groupStart = null;       // Startpositionen der Gruppenzellen beim Ziehen
 let photosLocked = false;    // Text-Modus: alle Fotos gesperrt (nur Text bewegbar)
 let _prevIsText = false;     // um beim Wechsel in Textbearbeitung automatisch zu sperren
 let frameGroupSeq = 0;      // fortlaufende ID je Frames-Layout (verbindet die Insets)
+// Nach dem Laden: Seq ÜBER alle vorhandenen Gruppen-IDs heben — sonst bekommen
+// neue Layouts dieselbe ID wie geladene und Border/Format wirken über Slides hinweg.
+function bumpFrameGroupSeq() {
+  photos.forEach(p => { const g = +p.frameGroup || 0; if (g > frameGroupSeq) frameGroupSeq = g; });
+}
 // Hält alle Insets einer Frames-Gruppe gleich groß: ändert sich eines, ziehen
 // die anderen in derselben Gruppe proportional mit.
 function syncFrameGroupInsets(p) {
@@ -2597,6 +2768,7 @@ function applySnapshot(st) {
   mode = st.mode; W = st.W; H = st.H;
   slides = st.slides.map(s => ({ ...s }));
   photos = st.photos.map(clonePhoto);
+  bumpFrameGroupSeq();
   sel = Math.min(st.sel, photos.length - 1);
   activeSlide = Math.min(st.activeSlide, slides.length - 1);
   computeScale();
@@ -2728,6 +2900,7 @@ async function restoreState(st) {
     im.onerror = () => resolve();
     im.src = p.src;
   })));
+  bumpFrameGroupSeq();
   photos = st.photos
     .filter(p => p.kind === 'text' || p.kind === 'logo' || p.kind === 'placeholder' || p.img)
     .map(p => { const o = { ...p }; delete o.src; return o; });
@@ -3123,6 +3296,7 @@ function addSlideAction() {
   // dann OHNE Smooth-Scroll (iOS-Scroll-Snap kämpft sonst gegen die Animation).
   if (typeof syncSnapPoints === 'function') try { syncSnapPoints(); } catch (e) {}
   setTimeout(() => centerActiveSlide(false), 30);
+  setTimeout(() => centerActiveSlide(false), 340);
 }
 // Aktive Slide duplizieren: Hintergrund, alle Elemente samt Border, Margin,
 // Farben, Blend, Text — 1:1 auf eine NEUE Slide direkt dahinter. Ist die
@@ -3158,6 +3332,7 @@ function duplicateSlideAction() {
   activeSlide = at;
   resizeCanvas(); syncBgButtons(); updateDots(); updateDeleteBtn(); redraw(); scheduleSave();
   setTimeout(() => centerActiveSlide(false), 30);
+  setTimeout(() => centerActiveSlide(false), 340);
   showToast('Slide duplicated — tap the photo, then Replace');
 }
 function deleteSlide(i) {
@@ -4221,6 +4396,12 @@ function drawOverlayUI() {
 function edgePad() {
   return 18 + (parseFloat(canvas.style.marginLeft) || 0);
 }
+// Zentrieren + nach dem Toolbar-Umbau (Panel auf/zu ändert die Canvas-Breite)
+// noch einmal exakt nachzentrieren — sonst sitzt die Slide daneben.
+function centerSlideNowAndAfterLayout() {
+  centerActiveSlide();
+  setTimeout(() => centerActiveSlide(false), 320);
+}
 function centerActiveSlide(smooth = true) {
   if (!wrap) return;
   const target = devSnap(edgePad() + (activeSlide * W + W / 2) * DSCALE - wrap.clientWidth / 2);
@@ -4349,6 +4530,15 @@ window.addEventListener('mousemove', e => {
   } else if (dragMode === 'resize') {
     const { lx, ly } = clientToLogical(e.clientX, e.clientY);
     const p = photos[sel];
+    if (p._freeRatio) {
+      // „Free": roter Punkt folgt dem Zeiger — Breite/Höhe unabhängig.
+      p.w = Math.max(20, Math.abs(lx - p.cx) * 2);
+      p.h = Math.max(20, Math.abs(ly - p.cy) * 2);
+      if (p.kind === 'image') p.crop = adjustCropToAspect(p, p.w / p.h);
+      syncFrameGroupInsets(p);
+      redraw();
+      return;
+    }
     const dist  = Math.hypot(lx - p.cx, ly - p.cy);
     let scale = Math.max(0.05, dist / dragStartDist);
     scale = applyResizeGuides(p, scale);
@@ -4398,7 +4588,7 @@ window.addEventListener('mouseup', e => {
       const si = Math.max(0, Math.min(slides.length - 1, Math.floor(photos[sel].cx / W)));
       if (si !== activeSlide) { activeSlide = si; syncBgButtons(); updateDots(); }
     }
-    centerActiveSlide();
+    centerSlideNowAndAfterLayout();
   }
   redraw();
 });
@@ -4646,6 +4836,15 @@ canvas.addEventListener('touchmove', e => {
       const t = e.touches[0];
       const { lx, ly } = clientToLogical(t.clientX, t.clientY);
       const p = photos[sel];
+    if (p._freeRatio) {
+      // „Free": roter Punkt folgt dem Zeiger — Breite/Höhe unabhängig.
+      p.w = Math.max(20, Math.abs(lx - p.cx) * 2);
+      p.h = Math.max(20, Math.abs(ly - p.cy) * 2);
+      if (p.kind === 'image') p.crop = adjustCropToAspect(p, p.w / p.h);
+      syncFrameGroupInsets(p);
+      redraw();
+      return;
+    }
       const dist  = Math.hypot(lx - p.cx, ly - p.cy);
       let scale = Math.max(0.05, dist / dragStartDist);
       scale = applyResizeGuides(p, scale);
@@ -4722,7 +4921,7 @@ canvas.addEventListener('touchend', e => {
         _dblTapT = Date.now(); _dblTapSel = sel;   // zweiter Tipp kurz danach = Crop
         syncBgButtons(); updateDots(); updateDeleteBtn(); redraw();
         if (photos[idx].kind === 'placeholder') { fillPlaceholder(idx); return; }
-        centerActiveSlide();
+        centerSlideNowAndAfterLayout();
         return;
       }
     }
@@ -4881,6 +5080,12 @@ function readImageFile(file, cb) {
 function loadPhotoIntoPlaceholder(file, idx) {
   readImageFile(file, img => {
     if (!img) return;
+    saveToMediaLib(file, img);
+    fillPlaceholderImg(img, idx);
+  });
+}
+// Kern (auch aus der Mediathek nutzbar): Bild in einen Platzhalter einsetzen.
+function fillPlaceholderImg(img, idx) {
     const ph = photos[idx];
     if (!ph || ph.kind !== 'placeholder') return;
     beginAction();
@@ -4926,7 +5131,6 @@ function loadPhotoIntoPlaceholder(file, idx) {
       }
     }
     updateDeleteBtn(); forceRedraw(); scheduleSave();
-  });
 }
 
 // Ersetzt das Bild eines vorhandenen Fotos; Position/Größe/Rahmen bleiben,
@@ -4934,6 +5138,7 @@ function loadPhotoIntoPlaceholder(file, idx) {
 function replacePhotoImage(file, idx) {
   readImageFile(file, img => {
     if (!img) return;
+    saveToMediaLib(file, img);
     const p = photos[idx];
     if (!p || p.kind !== 'image') return;
     beginAction();
@@ -4956,6 +5161,12 @@ function loadPhoto(file, targetCX, targetCY, quiet) {
   // verschieben (sonst springt die Ansicht bei jedem asynchron fertigen Bild).
   readImageFile(file, img => {
     if (!img) return;
+    saveToMediaLib(file, img);
+    insertPhotoImg(img, targetCX, targetCY, quiet);
+  });
+}
+// Kern (auch aus der Mediathek nutzbar): Bild frei auf einer Slide platzieren.
+function insertPhotoImg(img, targetCX, targetCY, quiet) {
     try {
       const maxW = W * 0.85, maxH = H * 0.85;
       let w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
@@ -4970,12 +5181,182 @@ function loadPhoto(file, targetCX, targetCY, quiet) {
       updateDeleteBtn();
       forceRedraw();
       scheduleSave();
-      if (!quiet) setTimeout(() => centerActiveSlide(false), 20);
+      if (!quiet) { setTimeout(() => centerActiveSlide(false), 20); setTimeout(() => centerActiveSlide(false), 340); }
     } catch (e) {
       showToast('Fehler beim Einfügen', { err: true, ms: 5000 });
     }
+}
+
+// ═══════════════════════════════════════
+// MEDIATHEK (Library): bereits geladene Bilder wiederverwenden.
+// Lokal in IndexedDB (wie die Projekte) — verkleinerte Kopien (max 2048 px).
+// Ordner sind frei anlegbar (Hochzeit, Food, Travel, …).
+// ═══════════════════════════════════════
+function _dsDataURL(img, maxDim, q) {
+  const w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+  const f = Math.min(1, maxDim / Math.max(w, h));
+  const c = document.createElement('canvas');
+  c.width = Math.max(1, Math.round(w * f)); c.height = Math.max(1, Math.round(h * f));
+  c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+  return c.toDataURL('image/jpeg', q);
+}
+const MEDIA_MAX = 60;   // die letzten 60 Bilder behalten
+async function saveToMediaLib(file, img, folder) {
+  try {
+    if (!img) return;
+    const sig = file ? (file.name + ':' + file.size + ':' + file.lastModified)
+                     : ('px' + (img.naturalWidth || 0) + 'x' + (img.naturalHeight || 0));
+    let idx = (await idbGetK('mediaIndex')) || [];
+    if (idx.some(m => m.sig === sig)) return;              // schon drin
+    const id = 'm' + Date.now() + Math.random().toString(36).slice(2, 6);
+    await idbPut('media:' + id, { id, data: _dsDataURL(img, 2048, 0.82) });
+    idx.unshift({ id, ts: Date.now(), sig, folder: folder || '', thumb: _dsDataURL(img, 144, 0.6) });
+    const drop = idx.length > MEDIA_MAX ? idx.splice(MEDIA_MAX) : [];
+    for (const d of drop) { try { await idbDelK('media:' + d.id); } catch (e) {} }
+    await idbPut('mediaIndex', idx);
+  } catch (e) { /* Mediathek ist Komfort — nie den Foto-Flow stören */ }
+}
+let libFolderSel = '';   // '' = Recent (alle)
+// „+ add"-Kachel: eigener Picker — lädt Fotos direkt in die Mediathek
+// (in den gerade offenen Ordner), ohne sie auf eine Slide zu legen.
+const libInput = document.createElement('input');
+libInput.type = 'file'; libInput.accept = 'image/*'; libInput.multiple = true;
+libInput.style.cssText = 'position:fixed;left:0;top:0;width:1px;height:1px;opacity:0;pointer-events:none;z-index:-1;';
+document.body.appendChild(libInput);
+libInput.addEventListener('change', () => {
+  const files = Array.from(libInput.files || []).filter(x => x.type.startsWith('image/'));
+  libInput.value = '';
+  if (!files.length) return;
+  const folder = libFolderSel;
+  let done = 0;
+  files.forEach(fl => readImageFile(fl, async img => {
+    if (img) await saveToMediaLib(fl, img, folder);
+    if (++done === files.length) renderMediaLib();
+  }));
+});
+async function openMediaLib() {
+  document.getElementById('libOverlay').classList.add('show');
+  await renderMediaLib();
+}
+function closeMediaLib() { document.getElementById('libOverlay').classList.remove('show'); }
+async function renderMediaLib() {
+  const idx = (await idbGetK('mediaIndex')) || [];
+  const folders = (await idbGetK('mediaFolders')) || [];
+  const fEl = document.getElementById('libFolders');
+  fEl.innerHTML = '';
+  const chip = (label, val, cls) => {
+    const b = document.createElement('button');
+    b.className = 'lib-chip' + (libFolderSel === val ? ' sel' : '') + (cls ? ' ' + cls : '');
+    b.textContent = label;
+    b.addEventListener('click', async () => {
+      if (val === '+') {
+        const name = (prompt('Neuer Ordner:') || '').trim();
+        if (!name) return;
+        if (!folders.includes(name)) { folders.push(name); await idbPut('mediaFolders', folders); }
+        libFolderSel = name;
+      } else libFolderSel = val;
+      renderMediaLib();
+    });
+    return b;
+  };
+  chipRow: {
+    fEl.appendChild(chip('Recent', ''));
+    folders.forEach(fn => fEl.appendChild(chip(fn, fn)));
+    fEl.appendChild(chip('+ Folder', '+', 'add'));
+  }
+  // Ordner-Mülleimer (oben rechts, unter dem ✕): nur bei eigenen Ordnern.
+  const _lt = document.getElementById('libTrash');
+  if (_lt) _lt.classList.toggle('show', !!libFolderSel);
+  const g = document.getElementById('libGrid');
+  g.innerHTML = '';
+  const addCell = document.createElement('div');
+  addCell.className = 'lib-cell lib-add';
+  addCell.title = libFolderSel ? ('Fotos in \u201E' + libFolderSel + '\u201C laden') : 'Fotos in Recent laden';
+  const plusBtn = document.createElement('button');
+  plusBtn.type = 'button'; plusBtn.className = 'lib-add-plus'; plusBtn.textContent = '＋';
+  plusBtn.addEventListener('click', (e) => { e.stopPropagation(); libInput.click(); });
+  addCell.appendChild(plusBtn);
+  addCell.addEventListener('click', () => libInput.click());
+  g.appendChild(addCell);
+  const list = idx.filter(m => !libFolderSel || m.folder === libFolderSel);
+  if (!list.length) {
+    const empty = document.createElement('div');
+    empty.className = 'lib-empty';
+    empty.textContent = libFolderSel
+      ? 'Noch nichts in diesem Ordner — über \u201E⇢\u201C auf einem Bild einsortieren.'
+      : 'Noch keine Bilder — alles, was du in die App lädst, landet automatisch hier.';
+    g.appendChild(empty);
+    return;
+  }
+  list.forEach(m => {
+    const cell = document.createElement('div'); cell.className = 'lib-cell';
+    const im = document.createElement('img'); im.src = m.thumb; im.alt = '';
+    im.addEventListener('click', () => insertFromLibrary(m.id));
+    const del = document.createElement('button'); del.className = 'lib-x'; del.textContent = '✕';
+    del.title = 'Aus der Mediathek entfernen';
+    del.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const idx2 = ((await idbGetK('mediaIndex')) || []).filter(x => x.id !== m.id);
+      await idbPut('mediaIndex', idx2);
+      try { await idbDelK('media:' + m.id); } catch (err) {}
+      renderMediaLib();
+    });
+    const mv = document.createElement('button'); mv.className = 'lib-mv'; mv.textContent = '⇢';
+    mv.title = 'In Ordner einsortieren';
+    mv.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const fl = (await idbGetK('mediaFolders')) || [];
+      const name = (prompt('Ordner (' + (fl.join(', ') || 'noch keine') + ') — Name eingeben, leer = Recent:', m.folder || '') || '').trim();
+      const idx2 = (await idbGetK('mediaIndex')) || [];
+      const rec = idx2.find(x => x.id === m.id);
+      if (rec) {
+        rec.folder = name;
+        if (name && !fl.includes(name)) { fl.push(name); await idbPut('mediaFolders', fl); }
+        await idbPut('mediaIndex', idx2);
+      }
+      renderMediaLib();
+    });
+    cell.appendChild(im); cell.appendChild(del); cell.appendChild(mv);
+    g.appendChild(cell);
   });
 }
+// Bild aus der Mediathek einsetzen: in den ausgewählten leeren Platzhalter,
+// sonst mittig auf die aktive Slide.
+function insertFromLibrary(id) {
+  idbGetK('media:' + id).then(rec => {
+    if (!rec || !rec.data) { showToast('Bild nicht mehr vorhanden', { err: true }); return; }
+    const img = new Image();
+    img.onload = () => {
+      closeMediaLib();
+      if (sel >= 0 && photos[sel] && photos[sel].kind === 'placeholder') {
+        beginAction();
+        fillPlaceholderImg(img, sel);
+      } else {
+        insertPhotoImg(img, activeSlide * W + W / 2, H / 2, false);
+      }
+    };
+    img.onerror = () => showToast('Bild ließ sich nicht laden', { err: true });
+    img.src = rec.data;
+  });
+}
+document.getElementById('libClose').addEventListener('click', closeMediaLib);
+// Ordner löschen (Recent ist nicht löschbar — dort ist der Button ausgeblendet).
+document.getElementById('libTrash').addEventListener('click', async () => {
+  if (!libFolderSel) return;
+  if (!confirm('Ordner \u201E' + libFolderSel + '\u201C wirklich löschen?\nDie Bilder bleiben erhalten und wandern zu Recent.')) return;
+  const fl = ((await idbGetK('mediaFolders')) || []).filter(n => n !== libFolderSel);
+  await idbPut('mediaFolders', fl);
+  const idx2 = (await idbGetK('mediaIndex')) || [];
+  idx2.forEach(m => { if (m.folder === libFolderSel) m.folder = ''; });
+  await idbPut('mediaIndex', idx2);
+  libFolderSel = '';
+  renderMediaLib();
+});
+document.getElementById('libOverlay').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeMediaLib(); });
+document.getElementById('catLibrary').addEventListener('click', () => {
+  _textMenu.classList.remove('show');
+  openMediaLib();
+});
 
 // Desktop: Cmd/Ctrl+V fügt ein Bild aus der Zwischenablage ein.
 document.addEventListener('paste', (e) => {
@@ -5156,6 +5537,36 @@ function addOutroSlide(dark) {
 // (Outro wird nicht mehr über das Add-Menü angeboten, sondern als Einladung
 //  auf der Export-Seite — siehe addOutroAndReexport.)
 
+// ── Frames-Inset-Format: 1:1 · 2:3 · 3:2 (gilt für ALLE Insets der Gruppe) ──
+function setFrameInsetRatio(r) {   // r = w/h ODER 'free'
+  if (sel < 0 || sel >= photos.length) return;
+  const p = photos[sel];
+  if (!p.frameGroup || p.role !== 'inset' || p.tmplN) return;
+  beginAction();
+  const free = (r === 'free');
+  const newH = free ? p.h : Math.round(p.w / r);
+  photos.forEach(o => {
+    if (o.frameGroup === p.frameGroup && o.role === 'inset') {
+      o._freeRatio = free;
+      if (!free) {
+        o.w = p.w; o.h = newH;
+        if (o.kind === 'image') o.crop = adjustCropToAspect(o, o.w / o.h);
+      }
+    }
+  });
+  syncFRatioUI(); redraw(); scheduleSave();
+}
+function syncFRatioUI() {
+  const p = (sel >= 0 && sel < photos.length) ? photos[sel] : null;
+  const cur = p ? p.w / p.h : 1;
+  document.querySelectorAll('.fr-ratio').forEach(b => {
+    if (b.dataset.fr === 'free') b.classList.toggle('sel', !!p && !!p._freeRatio);
+    else b.classList.toggle('sel', !!p && !p._freeRatio && Math.abs(cur - parseFloat(b.dataset.fr)) < 0.08);
+  });
+}
+document.querySelectorAll('.fr-ratio').forEach(b =>
+  b.addEventListener('click', () => setFrameInsetRatio(b.dataset.fr === 'free' ? 'free' : parseFloat(b.dataset.fr))));
+
 // ── Frames-Layout (Hintergrundfoto + gerahmtes Inset, n gestapelte Bänder) ──
 function fillPlaceholder(idx) {
   pendingReplaceIdx = idx;
@@ -5174,15 +5585,16 @@ function addFramesLayout(n) {
   }
   const cxBase = idx * W;
   const bandH = H / n;
-  const frameW = n >= 3 ? 14 : 22;       // Inset-Rahmenbreite
   const gid = ++frameGroupSeq;           // verbindet die Insets dieser Gruppe (gleiche Größe)
-  const insetW = W * 0.52;
-  const insetH = Math.min(bandH * 0.62, insetW * 1.25);
+  // Inset: kompakt und quadratisch als Start (Format-Tool schaltet 1:1/2:3/3:2)
+  const insetW = Math.min(W * 0.36, bandH * 0.72);
+  const insetH = insetW;
   const firstIdx = photos.length;
   for (let i = 0; i < n; i++) {
     const bandCY = i * bandH + bandH / 2;
     photos.push({ kind: 'placeholder', role: 'bg', frameGroup: gid, cx: cxBase + W / 2, cy: bandCY, w: W, h: bandH, rot: 0, frame: null });
-    photos.push({ kind: 'placeholder', role: 'inset', frameGroup: gid, cx: cxBase + W / 2, cy: bandCY, w: insetW, h: insetH, rot: 0, frame: { width: frameW, color: '#ffffff' } });
+    // Inset startet OHNE Border — der weiße Rahmen kommt bewusst über das Border-Tool.
+    photos.push({ kind: 'placeholder', role: 'inset', frameGroup: gid, cx: cxBase + W / 2, cy: bandCY, w: insetW, h: insetH, rot: 0, frame: null });
   }
   // Neues Layout: sofort auf die Slide springen, ersten Platzhalter auswählen,
   // Toolbar öffnen — und NACH dem Panel-Umbau erneut zentrieren (sonst überlagert).
@@ -5841,6 +6253,9 @@ function updateDeleteBtn() {
   setSectionAvail('secMargin',  isImage && !photos[sel].frameGroup);   // kein Margin in Frames/Templates
   setSectionAvail('secBlend',   isImage);   // Blend jetzt auch in Frames/Templates verfügbar
   setSectionAvail('secRatio',   isTpl);
+  // Frames-Inset (Platzhalter ODER gefüllt): Format-Umschalter Quer ↔ 1:1
+  const isFrInset = hasSel && !!photos[sel].frameGroup && photos[sel].role === 'inset' && !photos[sel].tmplN;
+  setSectionAvail('secFRatio', isFrInset);
   const moveBtn = document.getElementById('moveAllBtn');
   moveBtn.style.display = isTpl ? '' : 'none';
   if (!isTpl) { moveGroupMode = false; moveBtn.classList.remove('sel'); }
@@ -5940,6 +6355,7 @@ function renderAccordion() {
       document.getElementById('rotVal').textContent = deg + '°';
     }
     if (openSec === 'secTPos' && sel >= 0 && sel < photos.length) syncTPosUI();
+    if (openSec === 'secFRatio' && sel >= 0 && sel < photos.length) syncFRatioUI();
   } else {
     // Übersicht: alle Symbole.
     top.style.display = '';
@@ -6186,31 +6602,30 @@ function reserveForPanel() {
     const stripH = strip ? strip.offsetHeight : 0;   // fixer Filmstrip unten
     const topBar = document.getElementById('topBar');
     if (desktop) {
-      // Seitenleiste rechts → Platz seitlich reservieren (Höhe bleibt voll).
-      const reserve = (hasSel && !panelHidden) ? sheet.offsetWidth : 0;
+      // Schwebende Karte rechts → Platz seitlich reservieren (inkl. 12px Randabstand).
+      const reserve = (hasSel && !panelHidden) ? sheet.offsetWidth + 12 : 0;
       wrap.style.alignSelf    = 'stretch';   // füllt die Breite, damit margin sie reduziert
       wrap.style.width        = 'auto';
       wrap.style.marginRight  = reserve + 'px';
       wrap.style.marginBottom = '';
-      sheet.style.bottom = stripH + 'px';
       strip.style.bottom = '0px';
       zoom.style.right  = (reserve ? reserve + 14 : 14) + 'px';
       // Pille vertikal in der Filmstrip-Zeile zentrieren (gleiche Höhe wie links)
       const zoomHd = zoom.offsetHeight || 40;
-      zoom.style.bottom = Math.max(6, Math.round((stripH - zoomHd) / 2)) + 'px';
+      const zoomB  = Math.max(6, Math.round((stripH - zoomHd) / 2));
+      zoom.style.bottom = zoomB + 'px';
+      // Karte endet auf einer Linie mit der Unterkante der Pille daneben.
+      sheet.style.bottom = zoomB + 'px';
       positionDoneBtn(zoom);
       // Export-Bereich immer ganz rechts; bei offener Seitenleiste nach links rücken.
       topBar.style.paddingRight = (reserve ? reserve + 16 : 0) + 'px';
-      // Panel-Inhalt (Zurück-Pfeil, Tool-Chip) beginnt auf Höhe der
-      // Canvas-Oberkante links — der Einklapp-Chevron rückt auf dieselbe
-      // Höhe (statt einsam ganz oben zu schweben).
-      const _padTop = Math.max(16, Math.round(wrap.getBoundingClientRect().top));
-      sheet.style.paddingTop = _padTop + 'px';
-      const _pcb = document.getElementById('panelCloseBtn');
-      if (_pcb) _pcb.style.top = (_padTop + 4) + 'px';
+      // Karten-OBERKANTE auf Höhe der Canvas-Oberkante links.
+      sheet.style.top = Math.max(12, Math.round(wrap.getBoundingClientRect().top)) + 'px';
+      sheet.style.paddingTop = '';
     } else {
       topBar.style.paddingRight = '';
       sheet.style.paddingTop = '';
+      sheet.style.top = '';   // Mobile: Bottom-Sheet (top kommt aus dem CSS)
       const sheetH = (hasSel && !panelHidden) ? sheet.offsetHeight : 0;
       wrap.style.alignSelf    = '';
       wrap.style.width        = '';
