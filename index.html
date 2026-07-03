@@ -956,7 +956,12 @@ canvas {
 /* Auswahl-UI-Overlay: eigene Ebene ÜBER der Zeichenfläche. Immer in voller
    Retina-Schärfe (unabhängig von der Slide-Anzahl) und die Griffe dürfen
    über den Canvas-Rand hinausragen, statt dort abgeschnitten zu werden. */
-#uiOverlay { position: fixed; left: 0; top: 0; pointer-events: none; z-index: 30; }
+#uiOverlay {
+  position: fixed; left: 0; top: 0; pointer-events: none; z-index: 30;
+  /* Die generische canvas-Regel (Schatten + Ecken) darf hier NICHT greifen —
+     sonst malt der Overlay-Schatten einen eckigen Rahmen um die Leinwand. */
+  box-shadow: none !important; border-radius: 0 !important; background: transparent !important;
+}
 /* Always-visible horizontal scrollbar (WebKit/Chromium) */
 /* ── Mobile-Paging (Unfold-Gefühl): ein Slide rastet immer mittig ein ──
    Rastpunkte sind unsichtbare Marker an jeder Slide-Mitte; scroll-snap-stop
@@ -1395,11 +1400,15 @@ canvas {
 .home-folder-sub { font-size: 11.5px; color: var(--muted); }
 
 /* Aktions-Sheet (langer Druck auf eine Kachel) */
-.sheet-ov { position: fixed; inset: 0; z-index: 700; background: rgba(0,0,0,0.35); display: flex; align-items: flex-end; justify-content: center; }
+.sheet-ov {
+  position: fixed; inset: 0; z-index: 700; background: rgba(0,0,0,0.35);
+  display: flex; align-items: flex-end; justify-content: center;
+  padding: 0 12px calc(12px + env(safe-area-inset-bottom, 0px));
+}
 .sheet {
   width: 100%; max-width: 420px; background: var(--surface);
-  border-radius: 16px 16px 0 0; box-shadow: 0 -8px 30px rgba(0,0,0,0.2);
-  padding: 10px 12px calc(14px + env(safe-area-inset-bottom, 0px));
+  border-radius: 16px; box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+  padding: 10px 12px 14px;
   display: flex; flex-direction: column; gap: 6px;
 }
 .sheet-title { font-size: 12px; color: var(--muted); text-align: center; padding: 8px 0 6px; font-weight: 600; }
@@ -1688,6 +1697,10 @@ canvas {
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 20 12 4l7 16"/><path d="M8 14h8"/></svg>
       <span>Font</span>
     </button>
+    <button class="acc-chip tool-btn" data-sec="secTPos" data-ctx="txt" title="Position (X/Y)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v20"/><path d="M2 12h20"/><path d="M9 5l3-3 3 3"/><path d="M9 19l3 3 3-3"/><path d="M5 9l-3 3 3 3"/><path d="M19 9l3 3-3 3"/><circle cx="12" cy="12" r="2.5"/></svg>
+      <span>Position</span>
+    </button>
     <button class="acc-chip tool-btn" data-sec="secStyle" data-ctx="txt" title="Style">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4h7a4 4 0 0 1 0 8H6z"/><path d="M6 12h8a4 4 0 0 1 0 8H6z"/></svg>
       <span>Style</span>
@@ -1699,10 +1712,6 @@ canvas {
     <button class="acc-chip tool-btn" data-sec="secOutline" data-ctx="txt" title="Outline">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 20 12 4l7 16"/></svg>
       <span>Outline</span>
-    </button>
-    <button class="acc-chip tool-btn" data-sec="secTPos" data-ctx="txt" title="Position (X/Y)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v20"/><path d="M2 12h20"/><path d="M9 5l3-3 3 3"/><path d="M9 19l3 3 3-3"/><path d="M5 9l-3 3 3 3"/><path d="M19 9l3 3-3 3"/><circle cx="12" cy="12" r="2.5"/></svg>
-      <span>Position</span>
     </button>
     <button class="acc-chip tool-btn" data-sec="secRotate" data-ctx="both" title="Rotate">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg>
@@ -4098,8 +4107,9 @@ window.addEventListener('mouseup', e => {
     fillPlaceholder(sel);
     return;
   }
-  // Erneuter Tipp auf ein gefülltes Frames-Foto → großes Crop-Overlay (Ausschnitt).
-  if (dragMode === 'move' && tapAlreadySelected && sel >= 0 && photos[sel] && photos[sel].kind === 'image' && photos[sel].frameGroup
+  // Erneuter Klick auf ein bereits gewähltes Foto → großes Crop-Overlay
+  // (neu croppen ODER Bildausschnitt im Rahmen verschieben).
+  if (dragMode === 'move' && tapAlreadySelected && sel >= 0 && photos[sel] && photos[sel].kind === 'image'
       && Math.hypot(e.clientX - dragStartMX, e.clientY - dragStartMY) < 6) {
     dragMode = null; guides = []; armUndo = false;
     openCropOverlay();
@@ -4403,8 +4413,9 @@ canvas.addEventListener('touchend', e => {
       fillPlaceholder(sel);
       return;
     }
-    // Erneuter Tipp auf ein gefülltes Frames-Foto → großes Crop-Overlay.
-    if (dragMode === 'move' && tapAlreadySelected && sel >= 0 && photos[sel] && photos[sel].kind === 'image' && photos[sel].frameGroup
+    // Erneuter Tipp auf ein bereits gewähltes Foto → großes Crop-Overlay
+    // (neu croppen ODER Bildausschnitt im Rahmen verschieben).
+    if (dragMode === 'move' && tapAlreadySelected && sel >= 0 && photos[sel] && photos[sel].kind === 'image'
         && ct0 && Math.hypot(ct0.clientX - dragStartMX, ct0.clientY - dragStartMY) < 8) {
       dragMode = null; guides = []; armUndo = false; addCandidate = null;
       openCropOverlay();
@@ -7669,6 +7680,7 @@ function openCardMenu(entry) {
     sheet.innerHTML = '';
     sheet.appendChild(title(entry.name));
     sheet.appendChild(btn('In Ordner verschieben', '', showFolders));
+    sheet.appendChild(btn('Duplizieren', '', async () => { closeCardMenu(); await duplicateEntry(entry); }));
     sheet.appendChild(btn('Löschen', 'danger', async () => { closeCardMenu(); await deleteEntry(entry); }));
     sheet.appendChild(btn('Abbrechen', 'cancel', closeCardMenu));
   };
@@ -7690,6 +7702,18 @@ function openCardMenu(entry) {
   showRoot();
   ov.appendChild(sheet);
   document.body.appendChild(ov);
+}
+// Projekt duplizieren: kompletten Zustand kopieren, als „… Kopie" oben einsortieren.
+async function duplicateEntry(entry) {
+  const rec = await idbGetK('proj:' + entry.id);
+  if (!rec) return;
+  const id = 'p' + Date.now();
+  const name = (entry.name || 'Carousel') + ' Kopie';
+  await idbPut('proj:' + id, { id, name, ts: Date.now(), state: rec.state });
+  const idx = (await idbGetK('projIndex')) || [];
+  idx.unshift({ id, name, ts: Date.now(), thumb: entry.thumb || '', slides: entry.slides || 0, folder: entry.folder || '' });
+  await idbPut('projIndex', idx);
+  await renderHome();
 }
 async function deleteEntry(entry) {
   if (!confirm('Delete “' + entry.name + '”?')) return;
