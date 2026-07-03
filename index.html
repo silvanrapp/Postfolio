@@ -403,6 +403,15 @@ details.hlp-sec[open] .hlp-chev { transform: rotate(180deg); }
 .range-ticks { position: absolute; left: 0; right: 0; top: 50%; height: 0; pointer-events: none; }
 .range-ticks i { position: absolute; top: -5px; width: 1px; height: 10px; border-radius: 1px; background: var(--muted); opacity: 0.6; }
 .px-val { font-size: 11px; color: var(--muted); min-width: 28px; text-align: right; }
+/* pt-Eingabefeld hinter Dicke-Reglern: Zahl direkt eintippbar (Border/Margin/Outline) */
+.pt-in {
+  width: 46px; height: 26px; padding: 2px 6px; flex: 0 0 auto;
+  text-align: right; font-size: 11px; color: var(--text);
+  background: var(--surface); border: 1px solid var(--line); border-radius: 7px;
+  -moz-appearance: textfield; appearance: textfield;
+}
+.pt-in::-webkit-outer-spin-button, .pt-in::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.pt-in:focus { border-color: var(--accent); outline: none; }
 #marginCtrl { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; }
 #marginCtrl::-webkit-scrollbar { height: 0; }
 #fitBtn { background: var(--dark); color: var(--bg); height: 32px; font-size: 11px; padding: 0 10px; }
@@ -1867,7 +1876,7 @@ canvas {
       <input type="range" id="frameRange" min="0" max="120" step="1" value="0" title="Border width (px) — rastet an den Standard-Stärken ein">
       <div class="range-ticks" aria-hidden="true"></div>
     </div>
-    <span class="px-val" id="frameRangeVal">0</span>
+    <input type="number" class="px-val pt-in" id="frameRangeVal" min="0" max="120" step="1" value="0" inputmode="numeric" title="Border width in pt — type a value">
     <button id="fitBtn" title="Fit photo into slide / border (Enter)">Fit ⏎</button>
   </div>
 
@@ -1897,7 +1906,7 @@ canvas {
       <input type="range" id="marginRange" min="0" max="120" step="1" value="0" title="Margin width (px) — rastet an den Standard-Stärken ein">
       <div class="range-ticks" aria-hidden="true"></div>
     </div>
-    <span class="px-val" id="marginRangeVal">0</span>
+    <input type="number" class="px-val pt-in" id="marginRangeVal" min="0" max="120" step="1" value="0" inputmode="numeric" title="Margin in pt — type a value">
   </div>
   <!-- Farbe des Rands = Slide-Hintergrund -->
   <div class="row">
@@ -2061,7 +2070,7 @@ canvas {
       <div class="tc-row">
         <span class="tc-track-ico">Outline</span>
         <input type="range" id="outlineInput" min="0" max="10" step="1" value="0" title="Outline thickness (pt)">
-        <span id="outlineVal">0</span>
+        <input type="number" class="pt-in" id="outlineVal" min="0" max="10" step="1" value="0" inputmode="numeric" title="Outline thickness in pt — type a value">
         <button class="ol-dir-btn" data-oldir="left"  title="Left">←</button>
         <button class="ol-dir-btn" data-oldir="down"  title="Down">↓</button>
         <button class="ol-dir-btn sel" data-oldir="right" title="Right">→</button>
@@ -5386,7 +5395,7 @@ document.getElementById('outlineInput').addEventListener('input', function() {
   if (sel < 0 || sel >= photos.length || photos[sel].kind !== 'text') return;
   beginAction('outline');
   photos[sel].outline = parseInt(this.value, 10) || 0;
-  document.getElementById('outlineVal').textContent = photos[sel].outline;
+  document.getElementById('outlineVal').value = photos[sel].outline;
   redraw(); scheduleSave();
 });
 document.querySelectorAll('.ol-mode-btn').forEach(btn => {
@@ -5445,7 +5454,8 @@ function syncOutlineUI() {
   const ow = p.outline || 0, mode = p.outlineMode || 'full', dir = p.outlineDir || 'right', col = (p.outlineColor || '#000000').toLowerCase();
   const oi = document.getElementById('outlineInput');
   if (document.activeElement !== oi) oi.value = ow;
-  document.getElementById('outlineVal').textContent = ow;
+  const ov = document.getElementById('outlineVal');
+  if (document.activeElement !== ov) ov.value = ow;
   document.querySelectorAll('.ol-mode-btn').forEach(b => b.classList.toggle('sel', b.dataset.olmode === mode));
   document.querySelectorAll('.ol-dir-btn').forEach(b => b.classList.toggle('sel', b.dataset.oldir === dir));
   document.getElementById('outlineColorPick').value = toHex6(col);
@@ -6283,7 +6293,7 @@ function syncMarginButtons() {
   document.querySelectorAll('.margin-btn').forEach(b => b.classList.toggle('sel', parseInt(b.dataset.margin, 10) === m));
   const r = document.getElementById('marginRange'), v = document.getElementById('marginRangeVal');
   if (r) r.value = m;
-  if (v) v.textContent = m;
+  if (v && document.activeElement !== v) v.value = m;
 }
 
 // ── Stufenlose Regler für Border & Margin (die Stufen-Buttons bleiben) ──
@@ -6363,11 +6373,44 @@ _marginRange.addEventListener('input', () => {
 });
 _marginRange.addEventListener('change', () => scheduleSave());
 
+// ── Direkte pt-Eingabe über Tastatur (Felder hinter den Reglern) ──
+function wireRangeNumber(numEl, rangeEl, maxV, apply) {
+  if (!numEl) return;
+  const commit = () => {
+    const v = Math.max(0, Math.min(maxV, parseInt(numEl.value, 10) || 0));
+    numEl.value = v;
+    if (rangeEl) rangeEl.value = v;
+    apply(v);
+    scheduleSave();
+  };
+  numEl.addEventListener('change', commit);
+  numEl.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); commit(); numEl.blur(); } });
+}
+wireRangeNumber(document.getElementById('frameRangeVal'), _frameRange, 120, v => {
+  beginAction('frameRange');
+  applyFrameWidthUI(v);
+});
+wireRangeNumber(document.getElementById('marginRangeVal'), _marginRange, 120, v => {
+  if (sel < 0 || sel >= photos.length || photos[sel].kind !== 'image') return;
+  beginAction('marginRange');
+  const p = photos[sel];
+  p.margin = v;
+  fitPhoto(p);
+  syncMarginButtons();
+  redraw();
+});
+wireRangeNumber(document.getElementById('outlineVal'), document.getElementById('outlineInput'), 10, v => {
+  if (sel < 0 || sel >= photos.length || photos[sel].kind !== 'text') return;
+  beginAction('outline');
+  photos[sel].outline = v;
+  redraw();
+});
+
 const FRAME_KEYS = ['none', 's1', 's2', 's3', 's4', 's5'];
 function _syncFrameRange(w) {
   const r = document.getElementById('frameRange'), v = document.getElementById('frameRangeVal');
   if (r) r.value = w;
-  if (v) v.textContent = Math.round(w);
+  if (v && document.activeElement !== v) v.value = Math.round(w);
 }
 function syncFrameButtons() {
   const p = (sel >= 0 && sel < photos.length) ? photos[sel] : null;
