@@ -4342,14 +4342,8 @@ window.addEventListener('mouseup', e => {
     fillPlaceholder(sel);
     return;
   }
-  // Erneuter Klick auf ein bereits gewähltes Foto → großes Crop-Overlay
-  // (neu croppen ODER Bildausschnitt im Rahmen verschieben).
-  if (dragMode === 'move' && tapAlreadySelected && sel >= 0 && photos[sel] && photos[sel].kind === 'image'
-      && Math.hypot(e.clientX - dragStartMX, e.clientY - dragStartMY) < 6) {
-    dragMode = null; guides = []; armUndo = false;
-    openCropOverlay();
-    return;
-  }
+  // (Crop öffnet auf dem Desktop per DOPPELKLICK — siehe dblclick-Handler.
+  //  Einfacher Klick wählt nur aus und zentriert die Slide.)
   // Doppeltipp auf ein Textfeld → Font-Sektion + Eingabefeld zum Tippen.
   if (dragMode === 'move' && tapAlreadySelected && sel >= 0 && photos[sel] && photos[sel].kind === 'text'
       && Math.hypot(e.clientX - dragStartMX, e.clientY - dragStartMY) < 6) {
@@ -4368,8 +4362,15 @@ window.addEventListener('mouseup', e => {
     addCandidate = null;
   }
   if (wasDragging) scheduleSave();
-  // Tap (kaum Bewegung) → aktive Slide in die Mitte holen.
-  if (Math.hypot(e.clientX - pressX, e.clientY - pressY) < 8) centerActiveSlide();
+  // Klick (kaum Bewegung): Wurde ein Foto angeklickt, dessen Slide zur aktiven
+  // machen und mittig in den Bildschirm holen (Toolbar öffnet ohnehin).
+  if (Math.hypot(e.clientX - pressX, e.clientY - pressY) < 8) {
+    if (sel >= 0 && photos[sel]) {
+      const si = Math.max(0, Math.min(slides.length - 1, Math.floor(photos[sel].cx / W)));
+      if (si !== activeSlide) { activeSlide = si; syncBgButtons(); updateDots(); }
+    }
+    centerActiveSlide();
+  }
   redraw();
 });
 
@@ -4648,13 +4649,18 @@ canvas.addEventListener('touchend', e => {
       fillPlaceholder(sel);
       return;
     }
-    // Erneuter Tipp auf ein bereits gewähltes Foto → großes Crop-Overlay
-    // (neu croppen ODER Bildausschnitt im Rahmen verschieben).
-    if (dragMode === 'move' && tapAlreadySelected && sel >= 0 && photos[sel] && photos[sel].kind === 'image'
+    // DOPPELTIPP (zwei Tipps < 320 ms) auf ein Foto → großes Crop-Overlay.
+    // Ein einfacher Tipp wählt nur aus (auch wenn das Foto schon gewählt war).
+    if (dragMode === 'move' && sel >= 0 && photos[sel] && photos[sel].kind === 'image'
         && ct0 && Math.hypot(ct0.clientX - dragStartMX, ct0.clientY - dragStartMY) < 8) {
-      dragMode = null; guides = []; armUndo = false; addCandidate = null;
-      openCropOverlay();
-      return;
+      const _now = Date.now();
+      if (sel === _dblTapSel && _now - _dblTapT < 320) {
+        _dblTapT = 0; _dblTapSel = -1;
+        dragMode = null; guides = []; armUndo = false; addCandidate = null;
+        openCropOverlay();
+        return;
+      }
+      _dblTapT = _now; _dblTapSel = sel;
     }
     // Doppeltipp auf ein Textfeld → Font-Sektion + Eingabefeld zum Tippen.
     if (dragMode === 'move' && tapAlreadySelected && sel >= 0 && photos[sel] && photos[sel].kind === 'text'
@@ -5089,6 +5095,7 @@ function addOutroSlide(dark) {
   resizeCanvas(); syncBgButtons(); updateDots(); updateDeleteBtn();
   redraw(); scheduleSave();
   setTimeout(() => centerActiveSlide(false), 30);
+  setTimeout(() => centerActiveSlide(false), 220);
 }
 // (Outro wird nicht mehr über das Add-Menü angeboten, sondern als Einladung
 //  auf der Export-Seite — siehe addOutroAndReexport.)
@@ -5115,15 +5122,19 @@ function addFramesLayout(n) {
   const gid = ++frameGroupSeq;           // verbindet die Insets dieser Gruppe (gleiche Größe)
   const insetW = W * 0.52;
   const insetH = Math.min(bandH * 0.62, insetW * 1.25);
+  const firstIdx = photos.length;
   for (let i = 0; i < n; i++) {
     const bandCY = i * bandH + bandH / 2;
     photos.push({ kind: 'placeholder', role: 'bg', frameGroup: gid, cx: cxBase + W / 2, cy: bandCY, w: W, h: bandH, rot: 0, frame: null });
     photos.push({ kind: 'placeholder', role: 'inset', frameGroup: gid, cx: cxBase + W / 2, cy: bandCY, w: insetW, h: insetH, rot: 0, frame: { width: frameW, color: '#ffffff' } });
   }
-  activeSlide = idx; sel = -1;
+  // Neues Layout: sofort auf die Slide springen, ersten Platzhalter auswählen,
+  // Toolbar öffnen — und NACH dem Panel-Umbau erneut zentrieren (sonst überlagert).
+  activeSlide = idx; sel = firstIdx; panelHidden = false;
   resizeCanvas(); syncBgButtons(); updateDots(); updateDeleteBtn();
   redraw(); scheduleSave();
   setTimeout(() => centerActiveSlide(false), 30);
+  setTimeout(() => centerActiveSlide(false), 220);
 }
 document.getElementById('frames1Btn').addEventListener('click', () => addFramesLayout(1));
 document.getElementById('frames2Btn').addEventListener('click', () => addFramesLayout(2));
@@ -5202,6 +5213,7 @@ function addTemplate(n, orient) {
   const gid = ++frameGroupSeq;
   const B = Math.round(W * TPL_BORDERS[2]);       // Stufe 2 als Standard-Rand
   const g = templateGeom(n, orient, B);
+  const firstIdx = photos.length;
   for (let i = 0; i < n; i++) {
     photos.push({
       kind: 'placeholder', role: 'inset', frameGroup: gid,
@@ -5209,10 +5221,13 @@ function addTemplate(n, orient) {
       cx: cxBase + W / 2, cy: g.cys[i], w: g.w, h: g.h, rot: 0, frame: null
     });
   }
-  activeSlide = idx; sel = -1;
+  // Neues Layout: Slide zentrieren, erste Zelle auswählen, Toolbar öffnen —
+  // nach dem Panel-Umbau erneut zentrieren (sonst Überlagerung).
+  activeSlide = idx; sel = firstIdx; panelHidden = false;
   resizeCanvas(); syncBgButtons(); updateDots(); updateDeleteBtn();
   redraw(); scheduleSave();
   setTimeout(() => centerActiveSlide(false), 30);
+  setTimeout(() => centerActiveSlide(false), 220);
 }
 document.getElementById('tpl1Btn').addEventListener('click', () => addTemplate(1));
 document.getElementById('tpl2Btn').addEventListener('click', () => addTemplate(2));
@@ -5892,11 +5907,16 @@ function openTextEdit() {
   const inp = document.getElementById('textContentInput');
   if (inp) { inp.value = photos[sel].text || ''; setTimeout(() => { try { inp.focus(); inp.select(); } catch (e) {} }, 40); }
 }
-// Desktop: Doppelklick auf ein Textfeld → gleiches Verhalten.
+// Doppeltipp-Erkennung (Touch) für Crop
+let _dblTapT = 0, _dblTapSel = -1;
+// Desktop: Doppelklick → Text: Eingabe öffnen · Foto: Crop-Overlay öffnen.
 canvas.addEventListener('dblclick', e => {
   const { lx, ly } = clientToLogical(e.clientX, e.clientY);
   const hit = hitPhoto(lx, ly);
-  if (hit >= 0 && photos[hit].kind === 'text') { sel = hit; panelHidden = false; updateDeleteBtn(); openTextEdit(); }
+  if (hit < 0) return;
+  sel = hit; panelHidden = false; updateDeleteBtn();
+  if (photos[hit].kind === 'text') openTextEdit();
+  else if (photos[hit].kind === 'image') openCropOverlay();
 });
 document.getElementById('editBack').addEventListener('click', backToTools);
 document.getElementById('editBackArrow').addEventListener('click', backToTools);
@@ -6233,25 +6253,14 @@ const FRAME_COLOR   = '#ffffff';
 // wächst/schrumpft um die Randdifferenz — Position/Drehung bleiben.
 function applyFrameToPhoto(p, newFw, color) {
   if (!p || p.kind !== 'image') return;
-  const oldFw = (p.frame && p.frame.width) || 0;
   p.frame = newFw > 0 ? { width: newFw, color: color || (p.frame && p.frame.color) || FRAME_COLOR } : null;
-
+  // Der Rahmen wächst nach AUSSEN. Foto-Box und Ausschnitt (crop) bleiben
+  // UNANGETASTET — das Bild darf sich durch Border-Änderungen nie verändern
+  // (nur durch bewusstes Croppen oder „Fit").
   const { axis, n } = getPhotoSplit(p);
   if (p.fitted && axis && n > 1) {
+    // Eingepasste Split-Fotos: exakte Passung beibehalten.
     fitPhoto(p);
-    return;
-  }
-  const delta = oldFw - newFw;
-  if (delta !== 0) {
-    const newW = Math.max(20, p.w + 2 * delta);
-    const newH = Math.max(20, p.h + 2 * delta);
-    if (newW <= p.w && newH <= p.h) {
-      const newAspect = newW / newH;
-      const c = p.crop || { x: 0, y: 0, w: 1, h: 1 };
-      const curAspect = (c.w * p.img.naturalWidth) / (c.h * p.img.naturalHeight);
-      if (Math.abs(curAspect - newAspect) > 0.001) p.crop = adjustCropToAspect(p, newAspect);
-    }
-    p.w = newW; p.h = newH;
   }
 }
 
@@ -7797,6 +7806,8 @@ function seamBoundaries() {
 function updateSeamBtn() {
   const btn = document.getElementById('seamBtn');
   if (!btn) return;
+  // Nur Mobile — auf dem Desktop reichen Trackpad/Zoom, der Knopf stört dort.
+  if (!isMobileLayout()) { btn.classList.remove('show'); return; }
   const sp = (typeof slideSpanAt === 'function') ? slideSpanAt(activeSlide) : null;
   if (!sp) { btn.classList.remove('show'); return; }
   const rect = wrap.getBoundingClientRect();
