@@ -678,7 +678,9 @@ canvas.picking-color { cursor: crosshair; }
   background: var(--surface);
   border-top: 1px solid var(--line);
   box-shadow: 0 -6px 24px rgba(0,0,0,0.08);
-  padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+  /* Unten NICHT die volle Safe-Area addieren — der Home-Indicator darf über
+     der Toolbar schweben (Unfold-Prinzip). Im Browser (env=0) bleiben 12px. */
+  padding: 12px 16px max(12px, calc(env(safe-area-inset-bottom, 0px) - 16px));
   max-height: 42vh;
   overflow-y: auto;
   transform: translateY(110%);
@@ -859,8 +861,10 @@ canvas.picking-color { cursor: crosshair; }
    Unten liefert der Home-Balken-Inset schon genug Luft — eigenes Polster
    der Toolbar deshalb reduzieren, sonst wirkt es doppelt. */
 @media (display-mode: standalone) {
-  #contextSheet { padding-bottom: calc(4px + env(safe-area-inset-bottom, 0px)); gap: 10px; }
-  body { padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px)); }
+  /* Home-Screen-App: Toolbar reicht bis zur Bildschirmkante, der Home-
+     Indicator schwebt darüber — nur ein kleines Rest-Polster. */
+  #contextSheet { padding-bottom: max(8px, calc(env(safe-area-inset-bottom, 0px) - 18px)); gap: 10px; }
+  body { padding-bottom: 0; }
 }
 
 @media (max-width: 600px) {
@@ -2743,7 +2747,10 @@ function attachTileReorder(tile, i) {
       _suppressTileClick = true; setTimeout(() => { _suppressTileClick = false; }, 350);
       reorderSlides(i, tileTargetFromX(curX));
     } else if (!scrolling) {
-      activeSlide = i; syncBgButtons(); updateDots(); centerActiveSlide(); redraw();
+      activeSlide = i; syncBgButtons(); updateDots();
+      // Panorama-Slide angeklickt → rauszoomen; 1er-Slide → Zoom zurück.
+      if (!autoZoomForSlide()) centerActiveSlide();
+      redraw();
     }
     scrolling = false;
   }
@@ -6758,7 +6765,11 @@ document.getElementById('cropApply').addEventListener('click', () => {
       pendingPano = null;
       setTimeout(() => {
         const fitZ = zoom * (wrap.clientWidth * 0.92) / (_span * W * DSCALE);
-        if (fitZ < zoom) setZoom(Math.max(ZOOM_MIN, fitZ));
+        if (fitZ < zoom) {
+          if (_autoZoomPrev === null) _autoZoomPrev = zoom;
+          setZoom(Math.max(ZOOM_MIN, fitZ));
+          _autoZoomApplied = zoom;
+        }
         _snapping = true;
         clearTimeout(_snapClearTimer);
         wrap.scrollTo({ left: Math.max(0, edgePad() + (_start * W + _span * W / 2) * DSCALE - wrap.clientWidth / 2), behavior: 'smooth' });
@@ -7176,6 +7187,54 @@ let _gestStart = null;             // Ausgangs-Slide der laufenden Wischgeste
 const SNAP_TH = 0.22;              // 22% Versatz = Umschaltpunkt
 function slideCenterScroll(i) { return edgePad() + (i * W + W / 2) * DSCALE - wrap.clientWidth / 2; }
 
+// ── Auto-Zoom je Slide: Panorama-Slides rausgezoomt, 1er-Slides voll ──
+// Merkt sich den Zoom VOR dem automatischen Rauszoomen (_autoZoomPrev) und
+// den gesetzten Fit-Zoom (_autoZoomApplied). Landet man wieder auf einer
+// normalen Slide, wird der alte Zoom wiederhergestellt und mittig gesnappt —
+// aber nur, wenn der Nutzer den Zoom nicht inzwischen selbst geändert hat.
+let _autoZoomPrev = null, _autoZoomApplied = null;
+function slideSpanAt(i) {
+  let best = null;
+  for (const p of photos) {
+    if (p.kind !== 'image' || Math.abs(p.rot || 0) > 0.09) continue;
+    const span = Math.round(p.w / W);
+    if (span < 2) continue;
+    const start = Math.round((p.cx - p.w / 2) / W);
+    if (i >= start && i < start + span && (!best || span > best.span)) best = { start, span };
+  }
+  return best;
+}
+function autoZoomForSlide() {
+  const sp = slideSpanAt(activeSlide);
+  if (sp) {
+    // Auf einer Panorama-Slide: so weit rauszoomen, dass alle Teile sichtbar sind.
+    const fitZ = zoom * (wrap.clientWidth * 0.92) / (sp.span * W * DSCALE);
+    if (fitZ < zoom - 0.01) {
+      if (_autoZoomPrev === null) _autoZoomPrev = zoom;
+      setZoom(Math.max(ZOOM_MIN, fitZ));
+      _autoZoomApplied = zoom;
+      _snapping = true; clearTimeout(_snapClearTimer);
+      wrap.scrollTo({ left: Math.max(0, edgePad() + (sp.start * W + sp.span * W / 2) * DSCALE - wrap.clientWidth / 2), behavior: 'smooth' });
+      _snapClearTimer = setTimeout(() => { _snapping = false; }, 500);
+      return true;
+    }
+  } else if (_autoZoomPrev !== null) {
+    // Zurück auf einer normalen Slide: alten Zoom wiederherstellen + snappen —
+    // außer der Nutzer hat seit dem Auto-Zoom selbst am Zoom gedreht.
+    const prev = _autoZoomPrev; _autoZoomPrev = null;
+    const untouched = _autoZoomApplied !== null && Math.abs(zoom - _autoZoomApplied) < 0.02;
+    _autoZoomApplied = null;
+    if (untouched) {
+      setZoom(prev);
+      _snapping = true; clearTimeout(_snapClearTimer);
+      wrap.scrollTo({ left: Math.max(0, slideCenterScroll(activeSlide)), behavior: 'smooth' });
+      _snapClearTimer = setTimeout(() => { _snapping = false; }, 500);
+      return true;
+    }
+  }
+  return false;
+}
+
 wrap.addEventListener('scroll', () => {
   if (_snapping) { updateSlideNum(); updateSeamBtn(); return; }   // programmatisches Zentrieren nicht erneut auslösen
   // Manuelles Wischen beendet den Naht-Modus.
@@ -7200,6 +7259,8 @@ wrap.addEventListener('scroll', () => {
   clearTimeout(_snapTimer);
   _snapTimer = setTimeout(() => {
     _gestStart = null;
+    // Panorama-Slide → automatisch rauszoomen; 1er-Slide → Zoom zurück + Snap.
+    if (autoZoomForSlide()) return;
     if (!isMobileLayout()) centerActiveSlide(true);
   }, 160);
 });
