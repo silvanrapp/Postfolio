@@ -1278,6 +1278,14 @@ canvas {
   border: 1px solid rgba(255,255,255,0.28); border-radius: 7px;
   font-size: 10px; padding: 5px 10px; height: auto; white-space: nowrap;
 }
+/* iPhone: gestapelt & zentriert — Signatur, darunter Angebot + Buttons.
+   Kein Trennstrich, kein wildes Umbrechen. */
+@media (max-width: 600px) {
+  #promoInvite { flex-direction: column; align-items: center; gap: 10px; padding: 14px 16px 0; }
+  .pi-sig { align-items: center; gap: 4px; }
+  .pi-div { display: none; }
+  .pi-offer { margin-bottom: 0; flex-direction: column; gap: 8px; }
+}
 #promoInvite button:hover { border-color: rgba(255,255,255,0.7); }
 
 /* Crop overlay */
@@ -2706,7 +2714,10 @@ async function loadSaved() {
 // (DSCALE) bleibt unverändert — nur die Pixel-Dichte sinkt minimal bei sehr
 // vielen Slides. Der Export ist davon NICHT betroffen (eigene Leinwand, eine
 // Slide, EX=3 → 3240×4050, klar unter dem Limit).
-const MAX_CANVAS_DIM  = 4096;
+// iOS-Safari begrenzt real die FLÄCHE eines Canvas (16,7 MP) — die Kante darf
+// bis 32767 px gehen. Das alte 4096er-Kantenlimit hat breite Multi-Slide-
+// Canvases unnötig auf ~1,3× runtergerechnet (unscharfe Fotos/Linien).
+const MAX_CANVAS_DIM  = 16384;
 const MAX_CANVAS_AREA  = 16e6;
 function resizeCanvas() {
   const n = slides.length;
@@ -4018,17 +4029,21 @@ function drawOverlayUI() {
   if (!uiOv) return;
   const wr = wrap.getBoundingClientRect();
   const d2 = Math.max(1, window.devicePixelRatio || 1);
-  const bw = Math.max(1, Math.round(wr.width * d2)), bh = Math.max(1, Math.round(wr.height * d2));
+  // WICHTIG: Position UND Größe auf ganze CSS-Pixel runden. Auf Subpixel-
+  // Koordinaten resampelt iOS die ganze Ebene → alles wird weich.
+  const cl = Math.round(wr.left), ct = Math.round(wr.top);
+  const cw = Math.max(1, Math.round(wr.width)), chh = Math.max(1, Math.round(wr.height));
+  const bw = Math.round(cw * d2), bh = Math.round(chh * d2);
   if (uiOv.width !== bw || uiOv.height !== bh) { uiOv.width = bw; uiOv.height = bh; }
-  if (uiOv._l !== wr.left || uiOv._t !== wr.top || uiOv._w !== wr.width || uiOv._h !== wr.height) {
-    uiOv.style.left = wr.left + 'px'; uiOv.style.top = wr.top + 'px';
-    uiOv.style.width = wr.width + 'px'; uiOv.style.height = wr.height + 'px';
-    uiOv._l = wr.left; uiOv._t = wr.top; uiOv._w = wr.width; uiOv._h = wr.height;
+  if (uiOv._l !== cl || uiOv._t !== ct || uiOv._w !== cw || uiOv._h !== chh) {
+    uiOv.style.left = cl + 'px'; uiOv.style.top = ct + 'px';
+    uiOv.style.width = cw + 'px'; uiOv.style.height = chh + 'px';
+    uiOv._l = cl; uiOv._t = ct; uiOv._w = cw; uiOv._h = chh;
   }
   uiCtx.clearRect(0, 0, uiOv.width, uiOv.height);
   const cr = canvas.getBoundingClientRect();
   const K  = DSCALE * d2;                       // logische Einheit → Overlay-Pixel
-  const ox = (cr.left - wr.left) * d2, oy = (cr.top - wr.top) * d2;
+  const ox = (cr.left - cl) * d2, oy = (cr.top - ct) * d2;
   const c  = uiCtx;
 
   // „+"-Hinweis mittig auf jeder LEEREN Slide — knackscharf in voller DPR,
