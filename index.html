@@ -814,7 +814,13 @@ canvas.picking-color { cursor: crosshair; }
   #editHead { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: 8px; padding: 2px 0; width: 100%; }
   #editBackArrow { position: static; }
   #editHeadTop { flex: 1 1 auto; justify-content: flex-start; }
-  #blendMaskMini { flex: 1 1 100%; flex-direction: row; justify-content: flex-start; gap: 10px; margin-top: 4px; padding-left: 27px; }
+  /* Mask-Toggle rechts in der Kopfzeile: kompakt einzeilig (◐ Mask [Schalter]),
+     mit Abstand zum Schließen-Pfeil des Panels. */
+  #blendMaskMini { flex: 0 0 auto; flex-direction: row; align-items: center; gap: 7px; margin: 0 34px 0 auto; padding-left: 0; }
+  #blendMaskMini .mask-mini-btn { flex-direction: row; align-items: center; gap: 5px; }
+  #blendMaskMini .mask-mini-btn svg { width: 14px; height: 14px; }
+  #blendMaskMini .mask-mini-btn span { font-size: 11px; }
+  #blendMaskMini .set-switch { transform: scale(0.78); }
   /* Toolbar schließen (nur Desktop): dezenter Chevron oben rechts im Panel */
   #panelCloseBtn {
     display: flex; align-items: center; justify-content: center;
