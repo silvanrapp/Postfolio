@@ -507,6 +507,9 @@ button {
   font-family: ui-monospace, Menlo, monospace; font-size: 12px; letter-spacing: 0.02em;
 }
 .hex-input:focus { outline: none; border-color: var(--text); }
+/* Hex-Tippfelder ausgeblendet: Der native Farbwähler (Quadrat am Zeilenende)
+   bringt auf iOS/macOS eine eigene Hex-Eingabe mit — das Extra-Feld ist doppelt. */
+.hex-input, .ol-hex { display: none !important; }
 
 /* Slider: monochrome Spur, Griff in Postfolio-Rot */
 input[type=range] {
@@ -861,7 +864,12 @@ canvas.picking-color { cursor: crosshair; }
 }
 
 @media (max-width: 600px) {
-  body { padding: 10px; padding-top: calc(10px + env(safe-area-inset-top, 0px)); padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)); gap: 10px; }
+  /* Unten kein Body-Polster: Filmstrip + Toolbar sind fixed und reichen
+     selbst bis an den Bildschirmrand (Unfold-Prinzip). */
+  body { padding: 10px; padding-top: calc(10px + env(safe-area-inset-top, 0px)); padding-bottom: 0; gap: 10px; }
+  #contextSheet { padding-top: 8px; gap: 8px; }
+  #sheetHandle { margin: 0 auto 4px; }
+  #slideStrip { padding: 4px 12px; }
   #logoMark { width: 34px; height: 34px; }
   /* Alles in EINER Zeile: P-Logo · Format · Add · … · ••• · Export.
      Die Wortmarke „Postfolio" wird auf dem iPhone ausgeblendet (spart Breite);
@@ -940,6 +948,9 @@ canvas {
   box-shadow: 0 2px 10px rgba(0,0,0,0.14);
 }
 #seamBtn.show { display: flex; }
+/* Deaktiviert: statt Naht-Button zoomt die Ansicht beim Split-Panorama
+   automatisch heraus, bis alle Slides sichtbar sind (siehe cropApply). */
+#seamBtn { display: none !important; }
 #seamBtn.on { background: var(--accent); border-color: var(--accent); color: #fff; }
 #seamBtn svg { width: 18px; height: 18px; }
 #canvas-wrap::-webkit-scrollbar { height: 8px; }
@@ -1023,6 +1034,20 @@ canvas {
 #preview-dots { position: absolute; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); left: 0; right: 0; display: flex; gap: 7px; justify-content: center; z-index: 2; }
 #preview-dots .pvd { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,0.35); }
 #preview-dots .pvd.on { background: #fff; }
+/* Überblick-Button hinter den Punkten */
+#pvOverview {
+  width: 26px; height: 26px; border-radius: 50%; margin-left: 10px;
+  background: rgba(255,255,255,0.16); color: #fff; border: none;
+  display: inline-flex; align-items: center; justify-content: center; padding: 0; cursor: pointer;
+}
+#pvOverview.on { background: #fff; color: #111; }
+#pvOverview svg { width: 14px; height: 14px; }
+/* Überblick-Modus: alle Slides als nahtloser Streifen, mittig */
+#preview.overview #preview-track { scroll-snap-type: none; align-items: center; }
+#preview.overview .pv-panel { flex: 0 0 auto; padding: 0; height: auto; }
+#preview.overview .pv-panel:first-child { margin-left: auto; }
+#preview.overview .pv-panel:last-child { margin-right: auto; }
+#preview.overview .pv-panel img { width: 100%; height: auto; max-height: none; border-radius: 0; box-shadow: none; }
 
 /* Slide-Filmstrip: Mini-Vorschau jeder Slide (Carousel-Übersicht) */
 /* Filmstrip: transparent & luftig, fix — sitzt ÜBER der unteren Toolbar (per JS). */
@@ -1096,7 +1121,8 @@ canvas {
   position: sticky; top: 0; width: 100%;
   background: rgba(0,0,0,0.96);
   display: flex; justify-content: space-between; align-items: center;
-  padding: 12px 18px; z-index: 5;
+  /* Vollbild-Overlay: eigenes Safe-Area-Polster (liegt über dem Body) */
+  padding: calc(12px + env(safe-area-inset-top, 0px)) 18px 12px; z-index: 5;
   flex-wrap: wrap; gap: 8px;
 }
 #exp-hint { font-size: 10px; color: rgba(255,255,255,0.55); letter-spacing: .1em; text-transform: uppercase; flex: 1 1 auto; min-width: 0; }
@@ -1139,11 +1165,13 @@ canvas {
   display: none; position: fixed; inset: 0;
   background: rgba(0,0,0,0.94); z-index: 300;
   flex-direction: column; align-items: center;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 #crop-overlay.show { display: flex; }
 #crop-header {
   width: 100%; display: flex; justify-content: space-between; align-items: center;
-  padding: 12px 18px; gap: 10px;
+  /* Vollbild-Overlay: eigenes Safe-Area-Polster (liegt über dem Body) */
+  padding: calc(12px + env(safe-area-inset-top, 0px)) 18px 12px; gap: 10px;
 }
 #crop-title { font-size: 11px; letter-spacing: 0.15em; color: rgba(255,255,255,0.7); text-transform: uppercase; }
 #crop-actions { display: flex; gap: 8px; }
@@ -1948,6 +1976,10 @@ canvas {
   <button id="preview-close" aria-label="Close preview">✕</button>
   <div id="preview-track"></div>
   <div id="preview-dots"></div>
+  <!-- Überblick: alle Slides als durchgehender Streifen (Panorama-Kontrolle) -->
+  <button id="pvOverview" title="Alle Slides im Überblick" aria-label="Overview">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="8" width="5.5" height="8"/><rect x="9.25" y="8" width="5.5" height="8"/><rect x="16.5" y="8" width="5.5" height="8"/></svg>
+  </button>
 </div>
 
 <div id="exp-overlay">
@@ -5032,6 +5064,9 @@ async function openPreview() {
     img.src = url; panel.appendChild(img); track.appendChild(panel);
     const d = document.createElement('div'); d.className = 'pvd' + (i === activeSlide ? ' on' : ''); dots.appendChild(d);
   }
+  // Überblick-Button hinter die Punkte hängen (Container wurde geleert)
+  dots.appendChild(document.getElementById('pvOverview'));
+  setPvOverview(false);
   document.getElementById('preview').classList.add('show');
   requestAnimationFrame(() => { track.scrollLeft = activeSlide * track.clientWidth; });
 }
@@ -5043,8 +5078,32 @@ function closePreview() {
 }
 document.getElementById('previewBtn').addEventListener('click', openPreview);
 document.getElementById('preview-close').addEventListener('click', closePreview);
+
+// ── Überblick im Vollbild: alle Slides als nahtloser Streifen ──
+let pvOverviewOn = false;
+const _pvOv = document.getElementById('pvOverview');
+function setPvOverview(on) {
+  pvOverviewOn = on;
+  const pv = document.getElementById('preview');
+  const track = document.getElementById('preview-track');
+  pv.classList.toggle('overview', on);
+  _pvOv.classList.toggle('on', on);
+  const panels = track.querySelectorAll('.pv-panel');
+  if (on) {
+    // Breite so, dass ALLE Slides nebeneinander in den Screen passen
+    const n = Math.max(1, panels.length);
+    const wpx = Math.floor(Math.min((window.innerWidth - 36) / n, window.innerHeight * 0.6 * (W / H)));
+    panels.forEach(p => { p.style.width = wpx + 'px'; });
+    track.scrollLeft = 0;
+  } else {
+    panels.forEach(p => { p.style.width = ''; });
+    requestAnimationFrame(() => { track.scrollLeft = activeSlide * track.clientWidth; });
+  }
+}
+_pvOv.addEventListener('click', () => setPvOverview(!pvOverviewOn));
 // aktive Punkt-Anzeige beim Wischen
 document.getElementById('preview-track').addEventListener('scroll', () => {
+  if (pvOverviewOn) return;   // im Überblick keine Punkt-Logik
   const track = document.getElementById('preview-track');
   const i = Math.round(track.scrollLeft / track.clientWidth);
   document.querySelectorAll('#preview-dots .pvd').forEach((d, k) => d.classList.toggle('on', k === i));
@@ -5263,6 +5322,7 @@ function renderAccordion() {
     editBar.style.display = 'none';
   }
   document.querySelectorAll('.acc-chip').forEach(c => c.classList.toggle('sel', c.dataset.sec === openSec));
+  if (typeof syncSlotUI === 'function') syncSlotUI();   // Position-Wechsler folgt dem offenen Menü
   reserveForPanel();
 }
 document.querySelectorAll('.acc-chip').forEach(c => {
@@ -5508,10 +5568,10 @@ function reserveForPanel() {
       // Toolbar ganz unten, Filmstrip DARÜBER, Canvas über beidem.
       sheet.style.bottom = '0px';
       strip.style.bottom = sheetH + 'px';
-      wrap.style.marginBottom = (stripH + sheetH + 10) + 'px';
-      // Zoom/Fullscreen-Pille auf gleicher Höhe wie der Filmstrip (vertikal zentriert)
-      const zoomH = zoom.offsetHeight || 40;
-      zoom.style.bottom = (sheetH + Math.max(6, Math.round((stripH - zoomH) / 2))) + 'px';
+      // Enger gepackt: Canvas bekommt maximale Höhe (Unfold-Prinzip)
+      wrap.style.marginBottom = (stripH + sheetH + 4) + 'px';
+      // Mobile: Pille ein Stück ÜBER dem Filmstrip (nicht in seiner Zeile)
+      zoom.style.bottom = (stripH + sheetH + 8) + 'px';
       zoom.style.right  = '14px';
     }
     relayout();
@@ -6112,6 +6172,9 @@ function adjustCropToAspect(p, targetAspect) {
 function syncSlotUI() {
   const ctrl = document.getElementById('slotCtrl');
   if (sel < 0 || sel >= photos.length) { ctrl.style.display = 'none'; return; }
+  // Position-Wechsler nur im Layer-Untermenü zeigen — nicht in der
+  // Werkzeug-Übersicht (dort war er Störfläche).
+  if (openSec !== 'secLayer') { ctrl.style.display = 'none'; return; }
   const p = photos[sel];
   const { n } = getPhotoSplit(p);
   if (n <= 1) { ctrl.style.display = 'none'; return; }
@@ -6654,7 +6717,18 @@ document.getElementById('cropApply').addEventListener('click', () => {
       cropPhoto.cx = startIdx * W + (pendingPano * W) / 2;
       cropPhoto.cy = H / 2;
       fitPhoto(cropPhoto);           // Mehr-Slide-Fit übernimmt die exakte Passung
+      // Ansicht automatisch herauszoomen, bis ALLE Panorama-Slides komplett
+      // sichtbar sind, und mittig auf das Paar/Trio zentrieren.
+      const _span = pendingPano, _start = startIdx;
       pendingPano = null;
+      setTimeout(() => {
+        const fitZ = zoom * (wrap.clientWidth * 0.92) / (_span * W * DSCALE);
+        if (fitZ < zoom) setZoom(Math.max(ZOOM_MIN, fitZ));
+        _snapping = true;
+        clearTimeout(_snapClearTimer);
+        wrap.scrollTo({ left: Math.max(0, edgePad() + (_start * W + _span * W / 2) * DSCALE - wrap.clientWidth / 2), behavior: 'smooth' });
+        _snapClearTimer = setTimeout(() => { _snapping = false; }, 500);
+      }, 60);
     }
   }
 
@@ -6982,7 +7056,9 @@ function rebuildSnapPoints() {
   if (!cont) return;
   cont.innerHTML = '';
   if (!isMobileLayout()) { wrap.classList.remove('snap'); return; }
-  wrap.classList.toggle('snap', seamAt < 0);
+  // Snap nur, solange ein Slide (annähernd) den Viewport füllt — ist weit
+  // herausgezoomt (z. B. Panorama-Ansicht), stört das Mitten-Einrasten nur.
+  wrap.classList.toggle('snap', seamAt < 0 && W * DSCALE > wrap.clientWidth * 0.66);
   for (let i = 0; i < slides.length; i++) {
     const d = document.createElement('div');
     d.className = 'snap-pt';
