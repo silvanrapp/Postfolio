@@ -322,6 +322,12 @@ details.hlp-sec[open] .hlp-chev { transform: rotate(180deg); }
   display: inline-flex; align-items: center;
 }
 #ldManage:hover { color: var(--text); }
+#ldAdd {
+  width: 26px; height: 26px; border-radius: 50%; padding: 0;
+  background: var(--glass-bg); border: 1px solid var(--hairline); color: var(--muted);
+  display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto;
+}
+#ldAdd:hover { color: var(--text); }
 #ldClose {
   width: 26px; height: 26px; border-radius: 50%; padding: 0; font-size: 12px; line-height: 1;
   background: var(--glass-bg); border: 1px solid var(--hairline); color: var(--muted);
@@ -370,6 +376,13 @@ details.hlp-sec[open] .hlp-chev { transform: rotate(180deg); }
   background: var(--surface); color: var(--muted); border: 1px solid var(--line);
   font-size: 14px; line-height: 1; display: inline-flex; align-items: center; justify-content: center;
 }
+#libAdd {
+  position: absolute; top: 12px; right: 52px;
+  width: 32px; height: 32px; border-radius: 50%; padding: 0; font-size: 16px; line-height: 1;
+  background: var(--surface); color: var(--muted); border: 1px solid var(--line);
+  display: inline-flex; align-items: center; justify-content: center;
+}
+#libAdd:hover { color: var(--text); }
 #libTrash {
   position: absolute; top: 52px; right: 12px; display: none;
   width: 32px; height: 32px; border-radius: 50%; padding: 0;
@@ -1395,7 +1408,11 @@ canvas {
 #shareAllBtn.show { display: inline-flex; }
 #shareAllBtn svg { width: 18px; height: 18px; display: block; }
 #shareAllBtn:disabled { opacity: 0.5; cursor: default; }
-#closeExp { background: rgba(255,255,255,0.16); color: #F4F1EB; width: 34px; height: 34px; padding: 0; font-size: 20px; line-height: 1; border-radius: 50%; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; }
+#closeExp {
+  background: rgba(255,255,255,0.16); color: #F4F1EB; width: 34px; height: 34px;
+  padding: 0 0 2px; font-size: 19px; line-height: 0; border-radius: 50%; flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center; text-align: center;
+}
 #closeExp:hover { background: rgba(255,255,255,0.28); color: #FFFFFF; }
 #exp-list { display: flex; flex-direction: column; align-items: center; gap: 24px; padding: 24px 16px; width: 100%; }
 .exp-item { display: flex; flex-direction: column; align-items: center; gap: 8px; }
@@ -2645,6 +2662,7 @@ canvas {
 <div id="libOverlay">
   <div id="libCard">
     <button id="libClose" aria-label="Close">✕</button>
+    <button id="libAdd" title="Fotos in diesen Ordner laden" aria-label="Fotos laden">＋</button>
     <button id="libTrash" title="Diesen Ordner löschen" aria-label="Ordner löschen">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
     </button>
@@ -2660,6 +2678,9 @@ canvas {
 <div id="libDrawer">
   <div class="ld-head">
     <span class="ld-title">Library</span>
+    <button id="ldAdd" type="button" title="Aus der Galerie wählen" aria-label="Aus der Galerie">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 4h-5L7.5 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3.5z"/><circle cx="12" cy="13" r="3.5"/></svg>
+    </button>
     <button id="ldManage" type="button" title="Ordner verwalten, Fotos laden">Manage</button>
     <button id="ldClose" type="button" aria-label="Close">✕</button>
   </div>
@@ -5392,15 +5413,6 @@ async function renderMediaLib() {
   if (_lt) _lt.classList.toggle('show', !!libFolderSel);
   const g = document.getElementById('libGrid');
   g.innerHTML = '';
-  const addCell = document.createElement('div');
-  addCell.className = 'lib-cell lib-add';
-  addCell.title = libFolderSel ? ('Fotos in \u201E' + libFolderSel + '\u201C laden') : 'Fotos in Recent laden';
-  const plusBtn = document.createElement('button');
-  plusBtn.type = 'button'; plusBtn.className = 'lib-add-plus'; plusBtn.textContent = '＋';
-  plusBtn.addEventListener('click', (e) => { e.stopPropagation(); libInput.click(); });
-  addCell.appendChild(plusBtn);
-  addCell.addEventListener('click', () => libInput.click());
-  g.appendChild(addCell);
   const list = idx.filter(m => !libFolderSel || m.folder === libFolderSel);
   if (!list.length) {
     const empty = document.createElement('div');
@@ -5464,6 +5476,7 @@ function insertFromLibrary(id) {
 }
 document.getElementById('libClose').addEventListener('click', closeMediaLib);
 // Ordner löschen (Recent ist nicht löschbar — dort ist der Button ausgeblendet).
+document.getElementById('libAdd').addEventListener('click', () => libInput.click());
 document.getElementById('libTrash').addEventListener('click', async () => {
   if (!libFolderSel) return;
   if (!confirm('Ordner \u201E' + libFolderSel + '\u201C wirklich löschen?\nDie Bilder bleiben erhalten und wandern zu Recent.')) return;
@@ -5507,18 +5520,6 @@ async function renderLibDrawer() {
   folders.forEach(fn => fEl.appendChild(chip(fn, fn)));
   const g = document.getElementById('ldGrid');
   g.innerHTML = '';
-  // Erste Kachel: Galerie/Datei-Picker — der gewohnte Weg bleibt einen Tipp entfernt.
-  const gal = document.createElement('button');
-  gal.type = 'button'; gal.className = 'ld-cell ld-gal'; gal.title = 'Aus der Galerie wählen';
-  gal.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 4h-5L7.5 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3.5z"/><circle cx="12" cy="13" r="3.5"/></svg>';
-  gal.addEventListener('click', () => {
-    closeLibDrawer();
-    if (sel >= 0 && photos[sel] && photos[sel].kind === 'placeholder') { fillPlaceholder(sel); return; }
-    pendingReplaceImg = -1; pendingReplaceIdx = -1;
-    pendingAddPos = { cx: activeSlide * W + W / 2, cy: H / 2 };
-    openFilePicker();
-  });
-  g.appendChild(gal);
   const list = idx.filter(m => !ldFolderSel || m.folder === ldFolderSel);
   if (!list.length) {
     const e = document.createElement('div');
@@ -5577,6 +5578,13 @@ function libDrawerPick(id) {
   });
 }
 document.getElementById('libraryBtn').addEventListener('click', openLibDrawer);
+document.getElementById('ldAdd').addEventListener('click', () => {
+  closeLibDrawer();
+  if (sel >= 0 && photos[sel] && photos[sel].kind === 'placeholder') { fillPlaceholder(sel, true); return; }
+  pendingReplaceImg = -1; pendingReplaceIdx = -1;
+  pendingAddPos = { cx: activeSlide * W + W / 2, cy: H / 2 };
+  openFilePicker();
+});
 document.getElementById('ldClose').addEventListener('click', closeLibDrawer);
 document.getElementById('ldManage').addEventListener('click', () => { closeLibDrawer(); openMediaLib(); });
 
@@ -5801,9 +5809,16 @@ document.querySelectorAll('.fr-ratio').forEach(b =>
   b.addEventListener('click', () => setFrameInsetRatio(b.dataset.fr === 'free' ? 'free' : parseFloat(b.dataset.fr))));
 
 // ── Frames-Layout (Hintergrundfoto + gerahmtes Inset, n gestapelte Bänder) ──
-function fillPlaceholder(idx) {
+function fillPlaceholder(idx, forceNative) {
   pendingReplaceIdx = idx;
   pendingAddPos = null;
+  // Mediathek gefüllt → Library-Drawer (Galerie ist dort einen Tipp entfernt).
+  if (!forceNative && typeof _libHasItems !== 'undefined' && _libHasItems) {
+    sel = idx; panelHidden = false;
+    updateDeleteBtn(); redraw();
+    openLibDrawer();
+    return;
+  }
   openFilePicker();
 }
 function framesSlideOccupied(idx) {
