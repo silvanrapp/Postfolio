@@ -563,8 +563,11 @@ input[type=range]::-moz-range-thumb {
   background: var(--surface); border: 1px solid var(--line); z-index: 200;
   border-radius: 12px; padding: 12px; box-shadow: 0 10px 28px rgba(0,0,0,0.1);
 }
-#bgMenu.show { display: block; }
+/* Alles in EINER Zeile (Farbkreise + Pipette + Farbwähler) — positionMenu
+   schiebt das Menü automatisch nach links, wenn rechts der Platz fehlt. */
+#bgMenu.show { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; }
 .bg-menu-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+#bgMenu .bg-menu-row { margin-bottom: 0; }
 
 .clr-btn {
   width: 24px; height: 24px; min-width: 24px; box-sizing: border-box;
@@ -688,8 +691,8 @@ canvas.picking-color { cursor: crosshair; }
 }
 #contextSheet.show { transform: translateY(0); }
 #contextSheet .row { flex-wrap: wrap; }
-/* Toolbar-Schließen/-Öffnen: nur im Desktop-Layout sichtbar (siehe Media-Query) */
-#panelCloseBtn, #panelOpenBtn { display: none; }
+/* Toolbar-Schließen/-Öffnen + Signatur: nur im Desktop-Layout (siehe Media-Query) */
+#panelCloseBtn, #panelOpenBtn, #sheetCredit { display: none; }
 
 /* Akkordeon: Chip-Leiste + einklappbare Sektionen (immer nur eine offen) */
 /* Chips sind jetzt Icon-Tool-Buttons (siehe .tool-btn). Optik kommt von dort. */
@@ -826,15 +829,29 @@ canvas.picking-color { cursor: crosshair; }
   #blendMaskMini .mask-mini-btn svg { width: 14px; height: 14px; }
   #blendMaskMini .mask-mini-btn span { font-size: 11px; }
   #blendMaskMini .set-switch { transform: scale(0.78); }
-  /* Toolbar schließen (nur Desktop): dezenter Chevron oben rechts im Panel */
+  /* Toolbar schließen (nur Desktop): dezenter Chevron — sitzt auf Höhe des
+     Panel-Inhalts (JS setzt top passend zur Canvas-Oberkante), mit Luft. */
   #panelCloseBtn {
     display: flex; align-items: center; justify-content: center;
-    position: absolute; top: 10px; right: 10px; z-index: 5;
-    width: 28px; height: 28px; padding: 0;
+    position: absolute; top: 18px; right: 14px; z-index: 5;
+    width: 30px; height: 30px; padding: 0; border-radius: 50%;
     background: transparent; border: none; color: var(--muted); cursor: pointer;
+    opacity: 0.75; transition: opacity 0.15s ease, background 0.15s ease;
   }
-  #panelCloseBtn:hover { color: var(--text); }
-  #panelCloseBtn svg { width: 16px; height: 16px; }
+  #panelCloseBtn:hover { opacity: 1; color: var(--text); background: var(--bg); }
+  #panelCloseBtn svg { width: 15px; height: 15px; }
+  /* Signatur unten in der Seitenleiste — klein, ruhig, mit Instagram-Link. */
+  #sheetCredit {
+    display: flex; flex-direction: column; align-items: flex-end; gap: 3px;
+    margin-top: auto; padding: 18px 0 2px;
+    font-size: 10.5px; letter-spacing: 0.04em; color: var(--muted);
+    text-align: right;
+  }
+  #sheetCredit a {
+    color: var(--muted); font-size: 9.5px; text-decoration: none;
+    border-bottom: 1px solid var(--line); padding-bottom: 1px;
+  }
+  #sheetCredit a:hover { color: var(--text); border-color: var(--muted); }
   /* Wiederöffnen-Tab am rechten Rand (nur sichtbar, wenn Toolbar geschlossen) */
   #panelOpenBtn.on {
     display: flex; align-items: center; justify-content: center;
@@ -918,6 +935,9 @@ canvas.picking-color { cursor: crosshair; }
   background: #EDE8DF;
   padding: 18px;
   border-radius: 18px;
+  /* Safari clippt gescrollten Inhalt nicht zuverlässig an border-radius —
+     clip-path erzwingt die runden Ecken auch für die weiße Slide-Fläche. */
+  clip-path: inset(0 round 18px);
   -webkit-overflow-scrolling: touch;
   /* Nur horizontales Panen (zwischen Slides). Pinch-Zoom des Browsers ist
      deaktiviert; das Zwei-Finger-Resize/Rotate eines Fotos ruft beim Ziehen
@@ -1154,6 +1174,11 @@ canvas {
 #exp-list { display: flex; flex-direction: column; align-items: center; gap: 24px; padding: 24px 16px; width: 100%; }
 .exp-item { display: flex; flex-direction: column; align-items: center; gap: 8px; }
 .exp-item img { max-width: min(90vw, 280px); box-shadow: 0 4px 24px rgba(0,0,0,0.5); }
+/* Desktop: Slides chronologisch NEBENEINANDER (wie der spätere Feed-Swipe) */
+@media (min-width: 820px) {
+  #exp-list { flex-direction: row; flex-wrap: wrap; justify-content: center; align-items: flex-start; gap: 28px 22px; }
+  .exp-item img { max-width: min(22vw, 300px); }
+}
 .exp-item span { font-size: 10px; color: rgba(255,255,255,0.45); letter-spacing: .1em; text-transform: uppercase; }
 .dl-btn { background: #D10101; color: white; font-size: 10px; padding: 8px 14px; }
 
@@ -1675,6 +1700,10 @@ canvas {
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 20 12 4l7 16"/></svg>
       <span>Outline</span>
     </button>
+    <button class="acc-chip tool-btn" data-sec="secTPos" data-ctx="txt" title="Position (X/Y)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v20"/><path d="M2 12h20"/><path d="M9 5l3-3 3 3"/><path d="M9 19l3 3 3-3"/><path d="M5 9l-3 3 3 3"/><path d="M19 9l3 3-3 3"/><circle cx="12" cy="12" r="2.5"/></svg>
+      <span>Position</span>
+    </button>
     <button class="acc-chip tool-btn" data-sec="secRotate" data-ctx="both" title="Rotate">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg>
       <span>Rotate</span>
@@ -1938,6 +1967,20 @@ canvas {
       </div>
     </div>
     </div><!-- /secOutline -->
+
+    <!-- ▼ Position-Sektion (nur Text): X/Y-Regler für exaktes Platzieren -->
+    <div class="acc-sec" id="secTPos" style="display:none">
+      <div class="row">
+        <span class="label">X</span>
+        <input type="range" id="tposX" min="0" max="1080" step="1" value="540">
+        <span id="tposXVal" style="min-width:38px; text-align:right; font-size:11px; color:var(--muted);">50%</span>
+      </div>
+      <div class="row">
+        <span class="label">Y</span>
+        <input type="range" id="tposY" min="0" max="1350" step="1" value="675">
+        <span id="tposYVal" style="min-width:38px; text-align:right; font-size:11px; color:var(--muted);">50%</span>
+      </div>
+    </div><!-- /secTPos -->
   </div>
     </div><!-- /editBody -->
   </div><!-- /editBar -->
@@ -1947,6 +1990,12 @@ canvas {
     <button class="icon-btn slot-btn" id="slotUp"   title="Previous row / column">▲</button>
     <span id="slotLabel">1/1</span>
     <button class="icon-btn slot-btn" id="slotDown" title="Next row / column">▼</button>
+  </div>
+
+  <!-- Signatur unten in der Seitenleiste (nur Desktop, siehe CSS) -->
+  <div id="sheetCredit">
+    <span>by photographers, for photo lovers ♥</span>
+    <a href="https://instagram.com/silvan.rapp" target="_blank" rel="noopener">by @silvan.rapp</a>
   </div>
 </div>
 
@@ -2598,29 +2647,38 @@ document.querySelectorAll('.mode-btn').forEach(btn => {
 // von der horizontal scrollenden Toolbar abgeschnitten wird).
 function positionMenu(menu, toggle) {
   const r = toggle.getBoundingClientRect();
-  // Breite messen (auch wenn noch unsichtbar), damit das Menü nicht rechts aus
-  // dem Bildschirm läuft.
-  const prevDisp = menu.style.display;
-  menu.style.visibility = 'hidden'; menu.style.display = 'block';
+  // Im ECHTEN Anzeige-Layout messen (.show — z. B. einzeiliges Flex-bgMenu),
+  // sonst stimmen Breite/Höhe nicht und das Menü läuft rechts aus dem Bild.
+  const hadShow = menu.classList.contains('show');
+  menu.style.visibility = 'hidden';
+  if (!hadShow) menu.classList.add('show');
   const mw = menu.offsetWidth || 200;
-  menu.style.display = prevDisp; menu.style.visibility = '';
+  const mh = menu.offsetHeight || 160;
+  if (!hadShow) menu.classList.remove('show');
+  menu.style.visibility = '';
   const margin = 8;
+  // Nach links erweitern, wenn rechts der Platz fehlt.
   let left = Math.min(r.left, window.innerWidth - mw - margin);
   if (left < margin) left = margin;
   menu.style.left = Math.round(left) + 'px';
-  // Höhe messen; wenn unten kein Platz (z. B. Leiste am unteren Rand), nach oben klappen.
-  const prevD = menu.style.display;
-  menu.style.visibility = 'hidden'; menu.style.display = 'block';
-  const mh = menu.offsetHeight || 160;
-  menu.style.display = prevD; menu.style.visibility = '';
+  // Wenn unten kein Platz (z. B. Leiste am unteren Rand), nach oben klappen.
   let top = r.bottom + 6;
   if (top + mh > window.innerHeight - margin) top = Math.max(margin, r.top - mh - 6);
   menu.style.top = Math.round(top) + 'px';
+}
+// Nur EIN Dropdown gleichzeitig: Öffnet sich eines, schließen die anderen.
+function closeMenusExcept(keepId) {
+  ['formatMenu', 'textMenu', 'bgMenu', 'exportMenu'].forEach(id => {
+    if (id === keepId) return;
+    const m = document.getElementById(id);
+    if (m) m.classList.remove('show');
+  });
 }
 
 // Format-Klappmenü öffnen/schließen
 document.getElementById('formatToggle').addEventListener('click', (e) => {
   e.stopPropagation();
+  closeMenusExcept('formatMenu');
   const menu = document.getElementById('formatMenu');
   if (!menu.classList.contains('show')) positionMenu(menu, e.currentTarget);
   menu.classList.toggle('show');
@@ -3538,34 +3596,8 @@ function renderNow() {
     ctx.restore();
   });
 
-  // „+"-Platzhalter mittig auf jeder LEEREN Slide — antippen lädt ein Foto
-  // (die normale Tippen-auf-leere-Fläche-Logik öffnet den Dateidialog). Ersetzt
-  // den früheren „+ Photo"-Button.
-  const occupied = new Set();
-  photos.forEach(p => occupied.add(slideIndexOf(p)));
-  slides.forEach((slide, i) => {
-    if (occupied.has(i)) return;
-    const cxp = (i * W + W / 2) * S, cyp = (H / 2) * S;
-    const r = 36 * S;
-    const onDark = (typeof slide.bg === 'string') && /^#(0|1|2|3|4|5)/i.test(slide.bg);
-    const tint = onDark ? 'rgba(255,255,255,0.5)' : 'rgba(42,40,38,0.32)';
-    ctx.save();
-    ctx.strokeStyle = tint; ctx.fillStyle = tint;
-    ctx.lineWidth = 1 * DPR;
-    ctx.setLineDash([5 * DPR, 5 * DPR]);
-    ctx.beginPath(); ctx.arc(cxp, cyp, r, 0, Math.PI * 2); ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.lineWidth = 1.5 * DPR;
-    const pl = 15 * S;
-    ctx.beginPath();
-    ctx.moveTo(cxp - pl, cyp); ctx.lineTo(cxp + pl, cyp);
-    ctx.moveTo(cxp, cyp - pl); ctx.lineTo(cxp, cyp + pl);
-    ctx.stroke();
-    ctx.font = `${Math.round(13 * DPR)}px Helvetica Neue, sans-serif`;
-    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-    ctx.fillText('Tap to add a photo', cxp, cyp + r + 12 * DPR);
-    ctx.restore();
-  });
+  // „+"-Platzhalter auf leeren Slides: liegt jetzt auf dem scharfen
+  // UI-Overlay (siehe drawOverlayUI) — hier auf der Haupt-Canvas nichts mehr.
 
   // Photos + text items — no clipping for seamless spanning
   photos.forEach(p => {
@@ -3818,12 +3850,43 @@ function drawOverlayUI() {
     uiOv._l = wr.left; uiOv._t = wr.top; uiOv._w = wr.width; uiOv._h = wr.height;
   }
   uiCtx.clearRect(0, 0, uiOv.width, uiOv.height);
-  if (sel < 0 || sel >= photos.length) return;
-  const p  = photos[sel];
   const cr = canvas.getBoundingClientRect();
   const K  = DSCALE * d2;                       // logische Einheit → Overlay-Pixel
   const ox = (cr.left - wr.left) * d2, oy = (cr.top - wr.top) * d2;
   const c  = uiCtx;
+
+  // „+"-Hinweis mittig auf jeder LEEREN Slide — knackscharf in voller DPR,
+  // mit ruhiger, leicht gesperrter Typo.
+  const _occ = new Set();
+  photos.forEach(q => _occ.add(slideIndexOf(q)));
+  slides.forEach((slide, i) => {
+    if (_occ.has(i)) return;
+    const cxp = ox + (i * W + W / 2) * K, cyp = oy + (H / 2) * K;
+    if (cxp < -80 * d2 || cxp > uiOv.width + 80 * d2) return;   // außerhalb sichtbar? sparen
+    const r = 36 * K;
+    const onDark = (typeof slide.bg === 'string') && /^#(0|1|2|3|4|5)/i.test(slide.bg);
+    const tint = onDark ? 'rgba(255,255,255,0.5)' : 'rgba(42,40,38,0.34)';
+    c.save();
+    c.strokeStyle = tint; c.fillStyle = tint;
+    c.lineWidth = 1 * d2;
+    c.setLineDash([5 * d2, 5 * d2]);
+    c.beginPath(); c.arc(cxp, cyp, r, 0, Math.PI * 2); c.stroke();
+    c.setLineDash([]);
+    c.lineWidth = 1.5 * d2;
+    const pl = 15 * K;
+    c.beginPath();
+    c.moveTo(cxp - pl, cyp); c.lineTo(cxp + pl, cyp);
+    c.moveTo(cxp, cyp - pl); c.lineTo(cxp, cyp + pl);
+    c.stroke();
+    c.font = `${Math.round(13 * d2)}px 'Helvetica Neue', -apple-system, sans-serif`;
+    try { c.letterSpacing = (0.4 * d2) + 'px'; } catch (e) {}
+    c.textAlign = 'center'; c.textBaseline = 'top';
+    c.fillText('Tap to add a photo', cxp, cyp + r + 12 * d2);
+    c.restore();
+  });
+
+  if (sel < 0 || sel >= photos.length) return;
+  const p  = photos[sel];
   const hw = p.w / 2 * K, hh = p.h / 2 * K, HR = 9 * d2;
 
   c.save();
@@ -3956,6 +4019,7 @@ canvas.addEventListener('mousedown', e => {
   if (hit >= 0) {
     tapAlreadySelected = (sel === hit);
     sel          = hit;
+    panelHidden  = false;   // aktiver Klick aufs Foto → Toolbar aufklappen
     dragMode     = 'move';
     armUndo      = true;
     dragStartMX  = e.clientX;
@@ -4208,6 +4272,7 @@ canvas.addEventListener('touchstart', e => {
       e.preventDefault();
       tapAlreadySelected = (sel === hit);
       sel         = hit;
+      panelHidden = false;   // aktiver Tipp aufs Foto → Toolbar aufklappen
       dragMode    = 'move';
       armUndo     = true;
       dragStartMX = t.clientX;
@@ -4597,8 +4662,23 @@ const TEXT_FONTS = ['Bodoni Moda', 'Playfair Display', 'DM Serif Display', 'Bric
 // generic geometry code (hit-testing, drag/rotate/resize, snapping, layer
 // ordering) works on it unchanged — only rendering and the toolbar panel
 // branch on `kind === 'text'`.
+// Text bearbeitet man im 1er-Slide-Zoom: Ist die Ansicht gerade rausgezoomt
+// (Split-Panorama-Überblick), zoomt sie beim Einfügen von Text automatisch
+// zurück auf die volle Canvas-Fläche und snappt die aktive Slide mittig.
+function ensureSingleSlideView() {
+  let z = null;
+  if (_autoZoomPrev !== null) { z = _autoZoomPrev; _autoZoomPrev = null; _autoZoomApplied = null; }
+  else if (zoom < 0.999) z = 1;
+  if (z !== null) {
+    setZoom(z);
+    _snapping = true; clearTimeout(_snapClearTimer);
+    wrap.scrollTo({ left: Math.max(0, slideCenterScroll(activeSlide)), behavior: 'smooth' });
+    _snapClearTimer = setTimeout(() => { _snapping = false; }, 500);
+  }
+}
 function addTextItem() {
   beginAction();
+  ensureSingleSlideView();
   const fontSize = 64; // logical px, single line, before any resizing
   const w = 480, h = fontSize / 0.78; // matches drawTextContent's size formula
   photos.push({
@@ -4613,6 +4693,38 @@ function addTextItem() {
 }
 
 document.getElementById('addTextBtn').addEventListener('click', addTextItem);
+
+// ── Position-Sektion (Text): X/Y-Regler — bewegen das Feld INNERHALB seiner
+//    Slide. Anzeige in Prozent (50% = mittig). ──
+function syncTPosUI() {
+  if (sel < 0 || sel >= photos.length) return;
+  const p = photos[sel];
+  const slideIdx = Math.floor(p.cx / W);
+  const xIn = document.getElementById('tposX'), yIn = document.getElementById('tposY');
+  if (!xIn || !yIn) return;
+  xIn.max = W; yIn.max = H;
+  xIn.value = Math.round(p.cx - slideIdx * W);
+  yIn.value = Math.round(p.cy);
+  document.getElementById('tposXVal').textContent = Math.round((p.cx - slideIdx * W) / W * 100) + '%';
+  document.getElementById('tposYVal').textContent = Math.round(p.cy / H * 100) + '%';
+}
+document.getElementById('tposX').addEventListener('input', function () {
+  if (sel < 0 || sel >= photos.length) return;
+  beginAction('tposX');
+  const p = photos[sel];
+  const slideIdx = Math.floor(p.cx / W);
+  p.cx = slideIdx * W + Math.max(0, Math.min(W, +this.value));
+  document.getElementById('tposXVal').textContent = Math.round((+this.value) / W * 100) + '%';
+  redraw(); scheduleSave();
+});
+document.getElementById('tposY').addEventListener('input', function () {
+  if (sel < 0 || sel >= photos.length) return;
+  beginAction('tposY');
+  const p = photos[sel];
+  p.cy = Math.max(0, Math.min(H, +this.value));
+  document.getElementById('tposYVal').textContent = Math.round((+this.value) / H * 100) + '%';
+  redraw(); scheduleSave();
+});
 
 // Erzeugt ein Text-Item mit sinnvoller Box-Größe aus einer Wunsch-Schriftgröße.
 function makeTextItem(text, fontFamily, opts = {}) {
@@ -4632,6 +4744,7 @@ function makeTextItem(text, fontFamily, opts = {}) {
 // danach frei editier-/verschiebbar.
 function addTextPair(kind) {
   beginAction();
+  ensureSingleSlideView();
   const cx = activeSlide * W + W / 2, cy = H / 2;
   let sub, head;
   if (kind === 'magazin') {
@@ -4914,6 +5027,7 @@ function showTextLevel(lvl) {
 }
 _textToggleBtn.addEventListener('click', (e) => {
   e.stopPropagation();
+  closeMenusExcept('textMenu');
   if (!_textMenu.classList.contains('show')) { positionMenu(_textMenu, _textToggleBtn); showTextLevel('root'); }
   _textMenu.classList.toggle('show');
 });
@@ -5332,6 +5446,7 @@ document.getElementById('bgHexInput').addEventListener('keydown', (e) => { if (e
 // von der scrollenden Toolbar abgeschnitten wird).
 document.getElementById('bgToggle').addEventListener('click', (e) => {
   e.stopPropagation();
+  closeMenusExcept('bgMenu');
   const menu = document.getElementById('bgMenu');
   if (!menu.classList.contains('show')) positionMenu(menu, e.currentTarget);
   menu.classList.toggle('show');
@@ -5384,13 +5499,14 @@ function updateDeleteBtn() {
   setSectionAvail('secStyle',   isText);
   setSectionAvail('secSpacing', isText);
   setSectionAvail('secOutline', isText);
+  setSectionAvail('secTPos',    isText);
   const sheet = document.getElementById('contextSheet');
   sheet.classList.toggle('show', hasSel && !panelHidden);
   document.getElementById('panelOpenBtn').classList.toggle('on', hasSel && panelHidden);
   if (!hasSel) openSec = null;
   // Text gewählt → standardmäßig die Font-Sektion zeigen (dort ist die Eingabe),
   // außer es ist bereits eine andere Text-/Rotate-Sektion offen.
-  if (isText && !['secFont','secStyle','secSpacing','secOutline','secRotate'].includes(openSec)) openSec = 'secFont';
+  if (isText && !['secFont','secStyle','secSpacing','secOutline','secRotate','secTPos'].includes(openSec)) openSec = 'secFont';
   syncFrameButtons();
   syncMarginButtons();
   syncSlotUI();
@@ -5470,6 +5586,7 @@ function renderAccordion() {
       document.getElementById('rotInput').value = deg;
       document.getElementById('rotVal').textContent = deg + '°';
     }
+    if (openSec === 'secTPos' && sel >= 0 && sel < photos.length) syncTPosUI();
   } else {
     // Übersicht: alle Symbole.
     top.style.display = '';
@@ -5500,13 +5617,14 @@ function openTextEdit() {
 canvas.addEventListener('dblclick', e => {
   const { lx, ly } = clientToLogical(e.clientX, e.clientY);
   const hit = hitPhoto(lx, ly);
-  if (hit >= 0 && photos[hit].kind === 'text') { sel = hit; updateDeleteBtn(); openTextEdit(); }
+  if (hit >= 0 && photos[hit].kind === 'text') { sel = hit; panelHidden = false; updateDeleteBtn(); openTextEdit(); }
 });
 document.getElementById('editBack').addEventListener('click', backToTools);
 document.getElementById('editBackArrow').addEventListener('click', backToTools);
-// ── Desktop: Toolbar schließen / wieder öffnen ──
-// panelHidden = Nutzer-Wunsch; bleibt bestehen, bis er die Toolbar wieder öffnet.
-var panelHidden = false;   // var: gehoisted, damit frühe updateDeleteBtn()-Aufrufe nicht crashen
+// ── Toolbar schließen / wieder öffnen ──
+// panelHidden = Nutzer-Wunsch. Start: VERSTECKT — die Toolbar klappt erst auf,
+// wenn der Nutzer aktiv auf ein Foto/Element tippt (nicht schon beim Laden).
+var panelHidden = true;    // var: gehoisted, damit frühe updateDeleteBtn()-Aufrufe nicht crashen
 document.getElementById('panelCloseBtn').addEventListener('click', (e) => {
   e.stopPropagation();
   panelHidden = true;
@@ -5700,7 +5818,7 @@ function reserveForPanel() {
     const topBar = document.getElementById('topBar');
     if (desktop) {
       // Seitenleiste rechts → Platz seitlich reservieren (Höhe bleibt voll).
-      const reserve = hasSel ? sheet.offsetWidth : 0;
+      const reserve = (hasSel && !panelHidden) ? sheet.offsetWidth : 0;
       wrap.style.alignSelf    = 'stretch';   // füllt die Breite, damit margin sie reduziert
       wrap.style.width        = 'auto';
       wrap.style.marginRight  = reserve + 'px';
@@ -5714,12 +5832,16 @@ function reserveForPanel() {
       // Export-Bereich immer ganz rechts; bei offener Seitenleiste nach links rücken.
       topBar.style.paddingRight = (reserve ? reserve + 16 : 0) + 'px';
       // Panel-Inhalt (Zurück-Pfeil, Tool-Chip) beginnt auf Höhe der
-      // Canvas-Oberkante links — Einklapp-Chevron bleibt oben rechts.
-      sheet.style.paddingTop = Math.max(16, Math.round(wrap.getBoundingClientRect().top)) + 'px';
+      // Canvas-Oberkante links — der Einklapp-Chevron rückt auf dieselbe
+      // Höhe (statt einsam ganz oben zu schweben).
+      const _padTop = Math.max(16, Math.round(wrap.getBoundingClientRect().top));
+      sheet.style.paddingTop = _padTop + 'px';
+      const _pcb = document.getElementById('panelCloseBtn');
+      if (_pcb) _pcb.style.top = (_padTop + 4) + 'px';
     } else {
       topBar.style.paddingRight = '';
       sheet.style.paddingTop = '';
-      const sheetH = hasSel ? sheet.offsetHeight : 0;
+      const sheetH = (hasSel && !panelHidden) ? sheet.offsetHeight : 0;
       wrap.style.alignSelf    = '';
       wrap.style.width        = '';
       wrap.style.marginRight  = '';
@@ -6921,6 +7043,7 @@ document.getElementById('cropApply').addEventListener('click', () => {
 // ── Export dropdown toggle ──
 document.getElementById('exportBtn').addEventListener('click', (e) => {
   e.stopPropagation();
+  closeMenusExcept('exportMenu');
   document.getElementById('exportMenu').classList.toggle('show');
 });
 document.addEventListener('click', () => {
