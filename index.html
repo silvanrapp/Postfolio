@@ -1691,6 +1691,52 @@ canvas {
   border: 1px solid var(--hairline);
   box-shadow: var(--shadow-ctl), var(--edge-light);
 }
+/* ── Konsistenz-Durchgang über die ganze Seite ── */
+/* Canvas-Bühne: Haarlinie als Innenkante (clip-path schluckt Außenschatten) */
+#canvas-wrap { box-shadow: inset 0 0 0 1px var(--hairline); }
+/* Filmstrip-Kacheln + Slide-Nummern-Chip */
+.sl-tile { border-color: var(--hairline); box-shadow: var(--shadow-ctl); }
+#lockBtn:not(.locked) {
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--hairline); box-shadow: var(--shadow-ctl), var(--edge-light);
+}
+/* Toast: dunkles Glas */
+#toast {
+  background: rgba(42,40,38,0.82);
+  -webkit-backdrop-filter: blur(18px) saturate(1.3); backdrop-filter: blur(18px) saturate(1.3);
+  border: 1px solid rgba(255,255,255,0.12);
+}
+/* Startseite: Segmented Control, Karten, Ordner — gleiche Material-Sprache */
+.home-tabs {
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--hairline); box-shadow: var(--shadow-ctl), var(--edge-light);
+}
+.hc-card, .hf-card {
+  background: var(--glass-bg-strong);
+  border: 1px solid var(--hairline);
+  box-shadow: var(--shadow-ctl), var(--edge-light);
+}
+/* Dunkle Overlays (Fullscreen, Export, Crop): dunkles Glas für die Bedienelemente */
+#preview-close, #pvOverview:not(.on), #closeExp, #shareAllBtn, #promoInvite button,
+#cropCancel, #cropFmtToggle:not(.open) {
+  background: rgba(255,255,255,0.14);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4); backdrop-filter: blur(16px) saturate(1.4);
+  border: 1px solid rgba(255,255,255,0.18);
+}
+#crop-presets {
+  -webkit-backdrop-filter: blur(16px) saturate(1.3); backdrop-filter: blur(16px) saturate(1.3);
+  border-color: rgba(255,255,255,0.14);
+}
+/* Library-Innenleben auf die Tokens */
+.lib-chip:not(.sel) { background: var(--glass-bg); border-color: var(--hairline); }
+.lib-cell { border-color: var(--hairline); box-shadow: var(--shadow-ctl); }
+#libClose, #libTrash, #helpClose { border-color: var(--hairline); box-shadow: var(--shadow-ctl); }
+/* pt-Eingabefelder & Selects in der Glas-Toolbar: leicht transparent */
+.pt-in, #blendSelect, #fontSelect, #weightSelect {
+  background: rgba(255,255,255,0.55); border-color: var(--hairline);
+}
 </style>
 </head>
 <body>
