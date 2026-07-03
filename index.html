@@ -17,7 +17,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Postfolio">
-<meta name="theme-color" content="#F4F1EB">
+<meta name="theme-color" id="themeColorMeta" content="#F4F1EB">
 <!-- App-Icon für „Zum Home-Bildschirm" (inline, damit die App eine einzige Datei bleibt) -->
 <link rel="apple-touch-icon" href="data:image/png;base64,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">
 <link rel="apple-touch-icon" sizes="180x180" href="data:image/png;base64,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">
@@ -933,6 +933,10 @@ canvas {
   border-radius: 2px;
   box-shadow: 0 18px 50px rgba(0,0,0,0.1);
 }
+/* Auswahl-UI-Overlay: eigene Ebene ÜBER der Zeichenfläche. Immer in voller
+   Retina-Schärfe (unabhängig von der Slide-Anzahl) und die Griffe dürfen
+   über den Canvas-Rand hinausragen, statt dort abgeschnitten zu werden. */
+#uiOverlay { position: fixed; left: 0; top: 0; pointer-events: none; z-index: 30; }
 /* Always-visible horizontal scrollbar (WebKit/Chromium) */
 /* ── Mobile-Paging (Unfold-Gefühl): ein Slide rastet immer mittig ein ──
    Rastpunkte sind unsichtbare Marker an jeder Slide-Mitte; scroll-snap-stop
@@ -1008,7 +1012,7 @@ canvas {
 #zoomCtrl .icon-btn svg { display: block; }
 #zoomCtrl .icon-btn:hover { color: var(--text); }
 #zoomLabel { font-size: 11px; color: var(--muted); min-width: 34px; text-align: center; cursor: pointer; user-select: none; padding: 2px 2px; }
-#zoomToggle svg { width: 15px; height: 15px; }
+#dupSlideBtn svg { width: 15px; height: 15px; }
 /* Eingeklappt: nur das Lupen-Icon. Controls (−/%/+/⊡) erst nach Tippen. */
 #zoomCtrl:not(.expanded) #zoomOut,
 #zoomCtrl:not(.expanded) #zoomIn,
@@ -1965,8 +1969,8 @@ canvas {
   <button class="icon-btn" id="previewBtn" title="Fullscreen preview" aria-label="Fullscreen preview">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M21 16v3a2 2 0 0 1-2 2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/></svg>
   </button>
-  <button class="icon-btn" id="zoomToggle" title="Zoom" aria-label="Zoom">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+  <button class="icon-btn" id="dupSlideBtn" title="Duplicate slide (style, borders & colors)" aria-label="Duplicate slide">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M15 5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2"/></svg>
   </button>
   <button class="icon-btn" id="zoomOut" title="Zoom out">−</button>
   <span id="zoomLabel" title="Hide zoom controls">100%</span>
@@ -2112,6 +2116,9 @@ canvas {
 
 <!-- Kurzer Status-/Fehlerhinweis (z. B. beim Foto-Laden) -->
 <div id="toast"></div>
+
+<!-- Auswahl-UI-Overlay (Rahmen, roter Skalier-Punkt, Lösch-/Lock-Griff) -->
+<canvas id="uiOverlay"></canvas>
 
 <!-- Native „Tap to add"-Fläche: echtes <label for="fileInput"> über der Mitte der
      leeren aktiven Slide. Tippen öffnet den Dateidialog NATIV (zuverlässig auf iOS,
@@ -2835,6 +2842,42 @@ function addSlideAction() {
   resizeCanvas(); syncBgButtons(); updateDots(); redraw(); scheduleSave();
   setTimeout(centerActiveSlide, 30);
 }
+// Aktive Slide duplizieren: Hintergrund, alle Elemente samt Border, Margin,
+// Farben, Blend, Text — 1:1 auf eine NEUE Slide direkt dahinter. Ist die
+// aktive Slide leer, wird stattdessen die vorherige (gefüllte) kopiert.
+// Danach nur noch das Foto per Replace tauschen.
+function duplicateSlideAction() {
+  if (slides.length >= 20) { showToast('Maximum of 20 slides'); return; }
+  const hasContent = i => photos.some(p => Math.floor(p.cx / W) === i);
+  let src = activeSlide;
+  if (!hasContent(src) && src > 0 && hasContent(src - 1)) src -= 1;
+  beginAction();
+  const at = activeSlide + 1;              // neue Slide direkt nach der aktiven
+  slides.splice(at, 0, { bg: slides[src].bg });
+  photos.forEach(p => { if (Math.floor(p.cx / W) >= at) p.cx += W; });
+  const gidMap = {};
+  const srcPhotos = photos.filter(p => Math.floor(p.cx / W) === src
+    // Panorama-Fotos, die über mehrere Slides laufen, nicht mitkopieren.
+    && !(p.kind === 'image' && Math.round(p.w / W) >= 2));
+  srcPhotos.forEach(p => {
+    const q = Object.assign({}, p);
+    ['crop', 'frame', 'split'].forEach(k => {
+      if (q[k] && typeof q[k] === 'object') q[k] = JSON.parse(JSON.stringify(q[k]));
+    });
+    // Frames-/Template-Gruppen entkoppeln: Kopie bekommt eigene Gruppen-ID.
+    if (q.frameGroup) {
+      if (!gidMap[q.frameGroup]) gidMap[q.frameGroup] = ++frameGroupSeq;
+      q.frameGroup = gidMap[q.frameGroup];
+    }
+    q.cx += (at - src) * W;
+    photos.push(q);
+  });
+  sel = -1;
+  activeSlide = at;
+  resizeCanvas(); syncBgButtons(); updateDots(); updateDeleteBtn(); redraw(); scheduleSave();
+  setTimeout(() => centerActiveSlide(false), 30);
+  showToast('Slide duplicated — tap the photo, then Replace');
+}
 function deleteSlide(i) {
   if (slides.length <= 1) return;
   // Sicherheitsabfrage — verhindert versehentliches Löschen im Filmstreifen.
@@ -2906,7 +2949,7 @@ function hitRotHandle(p, lx, ly) {
   return Math.hypot(lx - hx, ly - hy) <= HANDLE_R;
 }
 
-const CORNER_HANDLE_R = 26; // hit radius for corner resize dots (logical) — generous for touch
+const CORNER_HANDLE_R = 36; // hit radius for corner resize dots (logical) — generous for touch
 
 // The 4 corner-dot positions in canvas space, accounting for rotation.
 function cornerHandlePositions(p) {
@@ -3666,13 +3709,9 @@ function renderNow() {
     ctx.restore();
   }
 
-  // Selection handles
-  if (sel >= 0 && sel < photos.length) {
-    drawSelection(photos[sel]);
-  }
-
-  // Lock-Badges zuletzt → liegen über allem (nur Bildschirm, nicht Export)
-  drawLockBadges();
+  // Auswahl-UI (Rahmen, Griffe, Lock) liegt auf dem Overlay über der Canvas:
+  // volle Retina-Schärfe + Griffe ragen über den Canvas-Rand hinaus.
+  drawOverlayUI();
   // „Tap to add"-Fläche stets synchronisieren (nur auf wirklich leeren Slides),
   // damit sie NIE über vorhandenem Bild/Text liegt und Tipps abfängt.
   if (typeof positionEmptyAddBtn === 'function') positionEmptyAddBtn();
@@ -3711,7 +3750,7 @@ function drawHBracket(y, x1, x2, tick) {
 function drawSelection(p) {
   const hw = p.w / 2 * S;
   const hh = p.h / 2 * S;
-  const HR = 6 * DPR;  // corner handle radius (canvas px) — dezenter
+  const HR = 9 * DPR;  // corner handle radius (canvas px) — Markenzeichen, gut treffbar
   const RO = ROT_OFFSET * S; // rotation handle offset (canvas px)
 
   ctx.save();
@@ -3759,6 +3798,83 @@ function drawSelection(p) {
   ctx.stroke();
 
   ctx.restore();
+}
+
+// ── Auswahl-UI-Overlay: zeichnet Rahmen, Skalier-Punkt, Lösch- und Lock-Griff
+//    des ausgewählten Elements auf #uiOverlay (fixed über #canvas-wrap).
+//    Immer mit VOLLEM devicePixelRatio (scharf, egal wie viele Slides) und
+//    ohne Canvas-Clipping — Griffe ragen über den Slide-Rand hinaus. ──
+const uiOv  = document.getElementById('uiOverlay');
+const uiCtx = uiOv.getContext('2d');
+function drawOverlayUI() {
+  if (!uiOv) return;
+  const wr = wrap.getBoundingClientRect();
+  const d2 = Math.max(1, window.devicePixelRatio || 1);
+  const bw = Math.max(1, Math.round(wr.width * d2)), bh = Math.max(1, Math.round(wr.height * d2));
+  if (uiOv.width !== bw || uiOv.height !== bh) { uiOv.width = bw; uiOv.height = bh; }
+  if (uiOv._l !== wr.left || uiOv._t !== wr.top || uiOv._w !== wr.width || uiOv._h !== wr.height) {
+    uiOv.style.left = wr.left + 'px'; uiOv.style.top = wr.top + 'px';
+    uiOv.style.width = wr.width + 'px'; uiOv.style.height = wr.height + 'px';
+    uiOv._l = wr.left; uiOv._t = wr.top; uiOv._w = wr.width; uiOv._h = wr.height;
+  }
+  uiCtx.clearRect(0, 0, uiOv.width, uiOv.height);
+  if (sel < 0 || sel >= photos.length) return;
+  const p  = photos[sel];
+  const cr = canvas.getBoundingClientRect();
+  const K  = DSCALE * d2;                       // logische Einheit → Overlay-Pixel
+  const ox = (cr.left - wr.left) * d2, oy = (cr.top - wr.top) * d2;
+  const c  = uiCtx;
+  const hw = p.w / 2 * K, hh = p.h / 2 * K, HR = 9 * d2;
+
+  c.save();
+  c.translate(ox + p.cx * K, oy + p.cy * K);
+  c.rotate(p.rot || 0);
+
+  // Dashed bounding box — filigran
+  c.strokeStyle = '#D10101';
+  c.lineWidth   = 1 * d2;
+  c.setLineDash([5 * d2, 4 * d2]);
+  c.strokeRect(-hw, -hh, hw * 2, hh * 2);
+  c.setLineDash([]);
+
+  // Skalier-Punkt unten rechts — das Markenzeichen, immer voll sichtbar.
+  c.beginPath();
+  c.arc(hw, hh, HR, 0, Math.PI * 2);
+  c.fillStyle = '#D10101';
+  c.fill();
+
+  // Lösch-Griff: roter Kreis mit Mülleimer, diagonal außerhalb oben links.
+  const DK = (DEL_OFFSET / Math.SQRT2) * K;
+  const dxh = -hw - DK, dyh = -hh - DK;
+  const r = HR * 1.5;
+  c.beginPath();
+  c.arc(dxh, dyh, r, 0, Math.PI * 2);
+  c.fillStyle = '#D10101';
+  c.fill();
+  c.strokeStyle = 'white';
+  c.lineWidth = 1.5 * d2;
+  c.lineCap = 'round';
+  c.lineJoin = 'round';
+  const u = r * 0.42;
+  const topY = dyh - u * 0.7, botY = dyh + u * 1.05;
+  c.beginPath(); c.moveTo(dxh - u, topY); c.lineTo(dxh + u, topY); c.stroke();            // Deckel
+  c.beginPath();                                                                           // Griff
+  c.moveTo(dxh - u * 0.34, topY); c.lineTo(dxh - u * 0.34, topY - u * 0.36);
+  c.lineTo(dxh + u * 0.34, topY - u * 0.36); c.lineTo(dxh + u * 0.34, topY); c.stroke();
+  c.beginPath();                                                                           // Korpus
+  c.moveTo(dxh - u * 0.78, topY); c.lineTo(dxh - u * 0.6, botY);
+  c.lineTo(dxh + u * 0.6, botY); c.lineTo(dxh + u * 0.78, topY); c.stroke();
+  c.beginPath();                                                                           // Innenstriche
+  c.moveTo(dxh - u * 0.22, topY + u * 0.3); c.lineTo(dxh - u * 0.18, botY - u * 0.24);
+  c.moveTo(dxh + u * 0.22, topY + u * 0.3); c.lineTo(dxh + u * 0.18, botY - u * 0.24);
+  c.stroke();
+  c.restore();
+
+  // Lock-Badge oben rechts (nur am ausgewählten Element, nicht im Export).
+  if (lockableItem(p)) {
+    const b = lockBadgePos(p);
+    drawLockGlyph(c, ox + b.x * K, oy + b.y * K, LOCK_BADGE_R * K, !!p.locked);
+  }
 }
 
 // ═══════════════════════════════════════
@@ -5027,11 +5143,11 @@ document.getElementById('rmSlide').addEventListener('click', () => {
 // ZOOM CONTROLS
 // ═══════════════════════════════════════
 
-// Lupen-Icon öffnet die Zoom-Regler; Tippen auf die %-Anzeige (oder daneben)
-// klappt sie wieder ein. So ist im Ruhezustand nur das kleine Icon zu sehen.
-document.getElementById('zoomToggle').addEventListener('click', (e) => {
+// Duplizieren-Button in der Pille: aktive Slide 1:1 kopieren (Style, Border,
+// Farben, Layout) — danach nur noch das Foto per Replace tauschen.
+document.getElementById('dupSlideBtn').addEventListener('click', (e) => {
   e.stopPropagation();
-  document.getElementById('zoomCtrl').classList.add('expanded');
+  duplicateSlideAction();
 });
 document.getElementById('zoomLabel').addEventListener('click', () => {
   document.getElementById('zoomCtrl').classList.remove('expanded');
@@ -5615,6 +5731,11 @@ function reserveForPanel() {
       // Mobile: Pille ein Stück ÜBER dem Filmstrip (nicht in seiner Zeile)
       zoom.style.bottom = (stripH + sheetH + 8) + 'px';
       zoom.style.right  = '14px';
+      // Safari färbt seine (eingeklappte) Adressleisten-Zone unter der Seite
+      // mit theme-color: an die unterste Leiste angleichen, damit die Toolbar
+      // optisch bis zur Bildschirmkante durchläuft.
+      const tc = document.getElementById('themeColorMeta');
+      if (tc) tc.setAttribute('content', hasSel ? '#FFFFFF' : '#F4F1EB');
     }
     relayout();
   });
@@ -7236,6 +7357,7 @@ function autoZoomForSlide() {
 }
 
 wrap.addEventListener('scroll', () => {
+  drawOverlayUI();   // Auswahl-Overlay folgt der Canvas unter ihm
   if (_snapping) { updateSlideNum(); updateSeamBtn(); return; }   // programmatisches Zentrieren nicht erneut auslösen
   // Manuelles Wischen beendet den Naht-Modus.
   if (seamAt >= 0) { seamAt = -1; syncSnapPoints(); }
