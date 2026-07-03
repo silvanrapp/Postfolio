@@ -2350,7 +2350,7 @@ canvas {
     <div class="hlp-foot">
       <span>Found a bug or have an idea? DM <a href="https://instagram.com/postfolio.app" target="_blank" rel="noopener">@postfolio.app</a></span>
       <em>by photographers, for photo lovers ♥ · <a href="https://instagram.com/silvan.rapp" target="_blank" rel="noopener">by @silvan.rapp</a></em>
-      <button id="pfDiag" type="button" style="background:transparent; border:none; color:var(--line); font-size:9px; letter-spacing:0.12em; text-transform:uppercase; cursor:pointer; padding:4px;">display check · v3.8-pixelsnap</button>
+      <button id="pfDiag" type="button" style="background:transparent; border:none; color:var(--line); font-size:9px; letter-spacing:0.12em; text-transform:uppercase; cursor:pointer; padding:4px;">display check · v3.9-testmuster</button>
     </div>
   </div>
 </div>
@@ -4052,6 +4052,16 @@ function drawOverlayUI() {
     uiOv._l = cl; uiOv._t = ct; uiOv._w = cw; uiOv._h = chh;
   }
   uiCtx.clearRect(0, 0, uiOv.width, uiOv.height);
+  // Schärfe-Testmuster (Display-Check): 1-GERÄTEPIXEL-Streifen. Erscheinen sie
+  // als klare Schwarz-Weiß-Linien → Ebene wird 1:1 angezeigt (Problem läge im
+  // Zeichnen). Erscheinen sie als graues Mus → der Compositor skaliert die
+  // Canvas-Ebene, und wir wissen endlich, wo es klemmt.
+  if (typeof _diagPatternAt !== 'undefined' && Date.now() - _diagPatternAt < 15000) {
+    const dc = uiCtx;
+    for (let i = 0; i < 90; i++) { dc.fillStyle = i % 2 ? '#000' : '#fff'; dc.fillRect(24 + i, 24, 1, 120); }
+    for (let i = 0; i < 60; i++) { dc.fillStyle = i % 2 ? '#000' : '#fff'; dc.fillRect(24, 170 + i, 120, 1); }
+    dc.fillStyle = '#D10101'; dc.fillRect(24, 250, 60, 60);   // Referenz: rotes Quadrat, harte Kante
+  }
   const cr = canvas.getBoundingClientRect();
   const K  = DSCALE * d2;                       // logische Einheit → Overlay-Pixel
   // Ursprung auf GANZE Backing-Pixel runden: die Scroll-Position ist auf iOS
@@ -7445,7 +7455,11 @@ document.getElementById('helpMenuBtn').addEventListener('click', openHelp);
 document.getElementById('helpClose').addEventListener('click', closeHelp);
 document.getElementById('helpOverlay').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeHelp(); });
 // Diagnose: zeigt die echten Render-Werte des Geräts (Schärfe-Analyse).
+let _diagPatternAt = 0;   // Testmuster 15 s lang ins Overlay zeichnen
 document.getElementById('pfDiag').addEventListener('click', () => {
+  _diagPatternAt = Date.now();
+  closeHelp();
+  drawOverlayUI();
   const vv = window.visualViewport;
   const rdpr = Math.round((S / DSCALE) * 100) / 100;
   showToast(
@@ -7786,7 +7800,7 @@ function updateSeamBtn() {
   const gx = edgePad() + (sp.start * W + sp.span * W / 2) * DSCALE - wrap.scrollLeft + rect.left;
   if (gx < rect.left + 24 || gx > rect.right - 24) { btn.classList.remove('show'); return; }
   btn.style.left = Math.round(gx - 17) + 'px';
-  btn.style.top  = Math.round(rect.bottom - 52) + 'px';
+  btn.style.top  = Math.round(rect.top + 14) + 'px';   // oben — unten kollidiert er mit der Pille
   // Überblick = die ganze Gruppe passt in den Viewport → Aktion: Einzelansicht.
   const overview = sp.span * W * DSCALE <= wrap.clientWidth * 0.98;
   btn.classList.toggle('toSingle', overview);
