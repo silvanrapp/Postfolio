@@ -235,13 +235,14 @@ button {
 }
 #settingsBtn:hover { opacity: 1; color: var(--text); }
 #settingsBtn svg { width: 18px; height: 18px; display: block; }
-/* Help: ?-Button (Desktop) + Overlay im App-Stil */
-#helpBtn {
+/* Help: ?-Button (Desktop) + sichtbarer Undo-Button + Overlay im App-Stil */
+#helpBtn, #undoHdrBtn {
   color: var(--muted); opacity: 0.7; border: 1px solid var(--line); background: transparent;
   border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; line-height: 0;
 }
-#helpBtn:hover { opacity: 1; color: var(--text); }
-#helpBtn svg { width: 18px; height: 18px; display: block; }
+#helpBtn:hover, #undoHdrBtn:hover:not(:disabled) { opacity: 1; color: var(--text); }
+#helpBtn svg, #undoHdrBtn svg { width: 18px; height: 18px; display: block; }
+#undoHdrBtn:disabled { opacity: 0.25; cursor: default; }
 @media (max-width: 600px) { #helpBtn { display: none; } }  /* iPhone: über ••• → Help & tips */
 #helpOverlay {
   display: none; position: fixed; inset: 0; z-index: 750;
@@ -1569,6 +1570,9 @@ canvas {
     <h1>Postfolio</h1>
   </div>
   <div id="headerActions">
+    <button class="icon-btn" id="undoHdrBtn" title="Undo (⌘/Ctrl+Z)" aria-label="Undo" disabled>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>
+    </button>
     <button class="icon-btn" id="helpBtn" title="Help & tips" aria-label="Help">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 4.86.83c0 1.67-2.36 2.17-2.36 3.42"/><circle cx="12" cy="16.6" r="0.4" fill="currentColor"/></svg>
     </button>
@@ -2618,6 +2622,9 @@ function syncUndoButtons() {
   const u = document.getElementById('undoBtn'), r = document.getElementById('redoBtn');
   if (u) u.disabled = undoStack.length === 0;
   if (r) r.disabled = redoStack.length === 0;
+  // Sichtbarer Undo im Header (Tester-Feedback: Undo war unauffindbar)
+  const uh = document.getElementById('undoHdrBtn');
+  if (uh) uh.disabled = undoStack.length === 0;
 }
 
 // ═══════════════════════════════════════
@@ -3302,7 +3309,8 @@ function drawLockBadges() {
 function hitPhoto(lx, ly) {
   for (let i = photos.length - 1; i >= 0; i--) {
     const p = photos[i];
-    if (p.locked) continue;                          // gesperrte Ebene: nicht anfassbar
+    // Gesperrte Ebenen sind AUSWÄHLBAR (Toolbar, Schloss, Crop) — nur das
+    // Verschieben/Skalieren wird in den Gesten-Handlern blockiert.
     if (photosLocked && p.kind !== 'text') continue; // Text-Modus: nur Text bewegbar
     const dx = lx - p.cx, dy = ly - p.cy;
     const cos = Math.cos(-p.rot), sin = Math.sin(-p.rot);
@@ -4243,14 +4251,7 @@ canvas.addEventListener('mousedown', e => {
 
   // Lösch-Griff (× am Foto) zuerst prüfen.
   if (sel >= 0 && hitDeleteHandle(photos[sel], lx, ly)) { deleteSelected(); return; }
-  // Gesperrtes ausgewähltes Feld: keine Größen-/Dreh-/Verschiebe-Griffe.
-  if (sel >= 0 && photos[sel] && photos[sel].locked) {
-    const hitL = hitPhoto(lx, ly);
-    if (hitL < 0) { sel = -1; syncBgButtons(); updateDots(); updateDeleteBtn(); redraw(); }
-    return;
-  }
-
-  if (sel >= 0 && hitCornerHandle(photos[sel], lx, ly)) {
+  if (sel >= 0 && photos[sel] && !photos[sel].locked && hitCornerHandle(photos[sel], lx, ly)) {
     dragMode      = 'resize';
     armUndo       = true;
     dragStartDist = Math.hypot(lx - photos[sel].cx, ly - photos[sel].cy);
@@ -4264,16 +4265,27 @@ canvas.addEventListener('mousedown', e => {
     tapAlreadySelected = (sel === hit);
     sel          = hit;
     panelHidden  = false;   // aktiver Klick aufs Foto → Toolbar aufklappen
-    dragMode     = 'move';
-    armUndo      = true;
-    dragStartMX  = e.clientX;
-    dragStartMY  = e.clientY;
-    dragStartCX  = photos[sel].cx;
-    dragStartCY  = photos[sel].cy;
-    groupStart   = (moveGroupMode && photos[sel].tmplN)
-      ? photos.filter(x => x.frameGroup === photos[sel].frameGroup && x.tmplN).map(c => ({ c, cx: c.cx, cy: c.cy }))
-      : null;
     activeSlide  = Math.max(0, Math.min(slides.length - 1, Math.floor(photos[sel].cx / W)));
+    if (photos[hit].locked) {
+      // Gesperrt (z. B. Frames-Feld): auswählen ja, verschieben nein.
+      // Leerer gesperrter Platzhalter → direkt den Foto-Picker öffnen.
+      dragMode = null;
+      if (photos[hit].kind === 'placeholder') {
+        syncBgButtons(); updateDots(); updateDeleteBtn(); redraw();
+        fillPlaceholder(hit);
+        return;
+      }
+    } else {
+      dragMode     = 'move';
+      armUndo      = true;
+      dragStartMX  = e.clientX;
+      dragStartMY  = e.clientY;
+      dragStartCX  = photos[sel].cx;
+      dragStartCY  = photos[sel].cy;
+      groupStart   = (moveGroupMode && photos[sel].tmplN)
+        ? photos.filter(x => x.frameGroup === photos[sel].frameGroup && x.tmplN).map(c => ({ c, cx: c.cx, cy: c.cy }))
+        : null;
+    }
   } else {
     sel          = -1;
     const si     = Math.max(0, Math.min(slides.length - 1, Math.floor(lx / W)));
@@ -4382,7 +4394,7 @@ canvas.addEventListener('wheel', e => {
   const { lx, ly } = clientToLogical(e.clientX, e.clientY);
   const hit = hitPhoto(lx, ly);
   if (e.ctrlKey) {
-    if (hit < 0) return;
+    if (hit < 0 || photos[hit].locked) return;   // gesperrt: kein Pinch-Resize
     e.preventDefault();
     beginAction('wheel');
     const factor = e.deltaY > 0 ? 0.93 : 1.07;
@@ -4496,14 +4508,8 @@ canvas.addEventListener('touchstart', e => {
 
     // Lösch-Griff (× am Foto) zuerst prüfen.
     if (sel >= 0 && hitDeleteHandle(photos[sel], lx, ly)) { e.preventDefault(); deleteSelected(); return; }
-    // Gesperrtes ausgewähltes Feld: keine Größen-/Dreh-/Verschiebe-Griffe.
-    if (sel >= 0 && photos[sel] && photos[sel].locked) {
-      if (hitPhoto(lx, ly) < 0) { sel = -1; syncBgButtons(); updateDots(); updateDeleteBtn(); redraw(); }
-      return;
-    }
-
-    // Corner handle → resize
-    if (sel >= 0 && hitCornerHandle(photos[sel], lx, ly)) {
+    // Corner handle → resize (nicht bei gesperrten Feldern)
+    if (sel >= 0 && photos[sel] && !photos[sel].locked && hitCornerHandle(photos[sel], lx, ly)) {
       e.preventDefault();
       dragMode      = 'resize';
       armUndo       = true;
@@ -4519,16 +4525,26 @@ canvas.addEventListener('touchstart', e => {
       tapAlreadySelected = (sel === hit);
       sel         = hit;
       panelHidden = false;   // aktiver Tipp aufs Foto → Toolbar aufklappen
-      dragMode    = 'move';
-      armUndo     = true;
-      dragStartMX = t.clientX;
-      dragStartMY = t.clientY;
-      dragStartCX = photos[sel].cx;
-      dragStartCY = photos[sel].cy;
-      groupStart  = (moveGroupMode && photos[sel].tmplN)
-        ? photos.filter(x => x.frameGroup === photos[sel].frameGroup && x.tmplN).map(c => ({ c, cx: c.cx, cy: c.cy }))
-        : null;
       activeSlide = Math.max(0, Math.min(slides.length - 1, Math.floor(photos[sel].cx / W)));
+      if (photos[hit].locked) {
+        // Gesperrt (z. B. Frames-Feld): auswählen ja, verschieben nein.
+        dragMode = null;
+        if (photos[hit].kind === 'placeholder') {
+          syncBgButtons(); updateDots(); updateDeleteBtn(); redraw();
+          fillPlaceholder(hit);
+          return;
+        }
+      } else {
+        dragMode    = 'move';
+        armUndo     = true;
+        dragStartMX = t.clientX;
+        dragStartMY = t.clientY;
+        dragStartCX = photos[sel].cx;
+        dragStartCY = photos[sel].cy;
+        groupStart  = (moveGroupMode && photos[sel].tmplN)
+          ? photos.filter(x => x.frameGroup === photos[sel].frameGroup && x.tmplN).map(c => ({ c, cx: c.cx, cy: c.cy }))
+          : null;
+      }
     } else {
       // Let container scroll — but remember this spot in case it turns out to be a tap
       sel          = -1;
@@ -4553,7 +4569,7 @@ canvas.addEventListener('touchstart', e => {
     const my = (t1.clientY + t2.clientY) / 2;
     const { lx, ly } = clientToLogical(mx, my);
     const hit = hitPhoto(lx, ly);
-    if (hit >= 0) {
+    if (hit >= 0 && !photos[hit].locked) {
       sel = hit;
       armUndo = true;
       pinchData = {
@@ -4833,7 +4849,7 @@ function loadPhotoIntoPlaceholder(file, idx) {
       cx: ph.cx, cy: ph.cy, w: ph.w, h: ph.h, rot: ph.rot || 0,
       crop: { x: 0, y: 0, w: 1, h: 1 },
       frame: ph.frame ? { ...ph.frame } : null,
-      role: ph.role, frameGroup: ph.frameGroup,
+      role: ph.role, frameGroup: ph.frameGroup, locked: !!ph.locked,
       tmplN: ph.tmplN, tmplOrient: ph.tmplOrient, tmplBorder: ph.tmplBorder,
       slot: 0, split: null, fitted: false
     };
@@ -4860,7 +4876,7 @@ function loadPhotoIntoPlaceholder(file, idx) {
           cx: target.cx, cy: target.cy, w: target.w, h: target.h, rot: target.rot || 0,
           crop: { x: 0, y: 0, w: 1, h: 1 },
           frame: target.frame ? { ...target.frame } : null,
-          role: target.role, frameGroup: target.frameGroup,
+          role: target.role, frameGroup: target.frameGroup, locked: !!target.locked,
           tmplN: target.tmplN, tmplOrient: target.tmplOrient, tmplBorder: target.tmplBorder,
           slot: 0, split: null, fitted: false
         };
@@ -5125,8 +5141,10 @@ function addFramesLayout(n) {
   const firstIdx = photos.length;
   for (let i = 0; i < n; i++) {
     const bandCY = i * bandH + bandH / 2;
-    photos.push({ kind: 'placeholder', role: 'bg', frameGroup: gid, cx: cxBase + W / 2, cy: bandCY, w: W, h: bandH, rot: 0, frame: null });
-    photos.push({ kind: 'placeholder', role: 'inset', frameGroup: gid, cx: cxBase + W / 2, cy: bandCY, w: insetW, h: insetH, rot: 0, frame: { width: frameW, color: '#ffffff' } });
+    // locked: Frames sind ab Erstellung EINGEFROREN (Tester-Feedback) —
+    // Antippen wählt aus/öffnet den Picker, Verschieben erst nach Entsperren.
+    photos.push({ kind: 'placeholder', role: 'bg', frameGroup: gid, locked: true, cx: cxBase + W / 2, cy: bandCY, w: W, h: bandH, rot: 0, frame: null });
+    photos.push({ kind: 'placeholder', role: 'inset', frameGroup: gid, locked: true, cx: cxBase + W / 2, cy: bandCY, w: insetW, h: insetH, rot: 0, frame: { width: frameW, color: '#ffffff' } });
   }
   // Neues Layout: sofort auf die Slide springen, ersten Platzhalter auswählen,
   // Toolbar öffnen — und NACH dem Panel-Umbau erneut zentrieren (sonst überlagert).
@@ -5216,7 +5234,7 @@ function addTemplate(n, orient) {
   const firstIdx = photos.length;
   for (let i = 0; i < n; i++) {
     photos.push({
-      kind: 'placeholder', role: 'inset', frameGroup: gid,
+      kind: 'placeholder', role: 'inset', frameGroup: gid, locked: true,
       tmplN: n, tmplOrient: orient, tmplBorder: B,
       cx: cxBase + W / 2, cy: g.cys[i], w: g.w, h: g.h, rot: 0, frame: null
     });
@@ -7960,6 +7978,7 @@ wrap.addEventListener('scroll', () => {
 
 document.getElementById('undoBtn').addEventListener('click', undo);
 document.getElementById('redoBtn').addEventListener('click', redo);
+document.getElementById('undoHdrBtn').addEventListener('click', undo);
 document.getElementById('newBtn').addEventListener('click', () => {
   document.getElementById('settingsMenu').classList.remove('show');
   if (hasContent() && !window.confirm('Start a new project? This clears all photos and slides.')) return;
