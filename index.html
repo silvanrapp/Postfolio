@@ -1040,7 +1040,10 @@ canvas {
    Retina-Schärfe (unabhängig von der Slide-Anzahl) und die Griffe dürfen
    über den Canvas-Rand hinausragen, statt dort abgeschnitten zu werden. */
 #uiOverlay {
-  position: fixed; left: 0; top: 0; pointer-events: none; z-index: 30;
+  /* Absolutes Kind des Scrollers (JS heftet es per left an den sichtbaren
+     Ausschnitt): so rastert iOS die Ebene in voller Auflösung — fixed
+     positionierte Canvas-Ebenen zeigt iOS nur in 1× (verwaschen). */
+  position: absolute; left: 0; top: 0; pointer-events: none; z-index: 5;
   /* Die generische canvas-Regel (Schatten + Ecken) darf hier NICHT greifen —
      sonst malt der Overlay-Schatten einen eckigen Rahmen um die Leinwand. */
   box-shadow: none !important; border-radius: 0 !important; background: transparent !important;
@@ -2129,6 +2132,8 @@ canvas {
   <canvas id="c"></canvas>
   <!-- Unsichtbare Rastpunkte: je Slide-Mitte einer (Mobile-Paging via CSS Scroll-Snap) -->
   <div id="snapPoints" aria-hidden="true"></div>
+  <!-- Auswahl-UI-Overlay: LEBT IM SCROLLER (fixed-Canvas-Ebenen zeigt iOS nur in 1× an) -->
+  <canvas id="uiOverlay"></canvas>
 </div>
 
 <div id="slideStrip" aria-label="Slides"></div>
@@ -2350,16 +2355,13 @@ canvas {
     <div class="hlp-foot">
       <span>Found a bug or have an idea? DM <a href="https://instagram.com/postfolio.app" target="_blank" rel="noopener">@postfolio.app</a></span>
       <em>by photographers, for photo lovers ♥ · <a href="https://instagram.com/silvan.rapp" target="_blank" rel="noopener">by @silvan.rapp</a></em>
-      <button id="pfDiag" type="button" style="background:transparent; border:none; color:var(--line); font-size:9px; letter-spacing:0.12em; text-transform:uppercase; cursor:pointer; padding:4px;">display check · v3.9-testmuster</button>
+      <button id="pfDiag" type="button" style="background:transparent; border:none; color:var(--line); font-size:9px; letter-spacing:0.12em; text-transform:uppercase; cursor:pointer; padding:4px;">display check · v4.0-layerfix</button>
     </div>
   </div>
 </div>
 
 <!-- Kurzer Status-/Fehlerhinweis (z. B. beim Foto-Laden) -->
 <div id="toast"></div>
-
-<!-- Auswahl-UI-Overlay (Rahmen, roter Skalier-Punkt, Lösch-/Lock-Griff) -->
-<canvas id="uiOverlay"></canvas>
 
 <!-- Native „Tap to add"-Fläche: echtes <label for="fileInput"> über der Mitte der
      leeren aktiven Slide. Tippen öffnet den Dateidialog NATIV (zuverlässig auf iOS,
@@ -4038,18 +4040,18 @@ const uiOv  = document.getElementById('uiOverlay');
 const uiCtx = uiOv.getContext('2d');
 function drawOverlayUI() {
   if (!uiOv) return;
-  const wr = wrap.getBoundingClientRect();
   const d2 = Math.max(1, window.devicePixelRatio || 1);
-  // WICHTIG: Position UND Größe auf ganze CSS-Pixel runden. Auf Subpixel-
-  // Koordinaten resampelt iOS die ganze Ebene → alles wird weich.
-  const cl = Math.round(wr.left), ct = Math.round(wr.top);
-  const cw = Math.max(1, Math.round(wr.width)), chh = Math.max(1, Math.round(wr.height));
+  // Das Overlay ist ein absolutes Kind des Scrollers und wird per left an
+  // den sichtbaren Ausschnitt geheftet (scrollt also optisch NICHT mit).
+  // Größe = sichtbarer Ausschnitt; Position auf ganze CSS-Pixel gerundet.
+  const cw = Math.max(1, Math.round(wrap.clientWidth)), chh = Math.max(1, Math.round(wrap.clientHeight));
   const bw = Math.round(cw * d2), bh = Math.round(chh * d2);
   if (uiOv.width !== bw || uiOv.height !== bh) { uiOv.width = bw; uiOv.height = bh; }
-  if (uiOv._l !== cl || uiOv._t !== ct || uiOv._w !== cw || uiOv._h !== chh) {
-    uiOv.style.left = cl + 'px'; uiOv.style.top = ct + 'px';
+  const sl = Math.round(wrap.scrollLeft);
+  if (uiOv._sl !== sl || uiOv._w !== cw || uiOv._h !== chh) {
+    uiOv.style.left = sl + 'px'; uiOv.style.top = '0px';
     uiOv.style.width = cw + 'px'; uiOv.style.height = chh + 'px';
-    uiOv._l = cl; uiOv._t = ct; uiOv._w = cw; uiOv._h = chh;
+    uiOv._sl = sl; uiOv._w = cw; uiOv._h = chh;
   }
   uiCtx.clearRect(0, 0, uiOv.width, uiOv.height);
   // Schärfe-Testmuster (Display-Check): 1-GERÄTEPIXEL-Streifen. Erscheinen sie
@@ -4062,11 +4064,12 @@ function drawOverlayUI() {
     for (let i = 0; i < 60; i++) { dc.fillStyle = i % 2 ? '#000' : '#fff'; dc.fillRect(24, 170 + i, 120, 1); }
     dc.fillStyle = '#D10101'; dc.fillRect(24, 250, 60, 60);   // Referenz: rotes Quadrat, harte Kante
   }
+  const or = uiOv.getBoundingClientRect();
   const cr = canvas.getBoundingClientRect();
   const K  = DSCALE * d2;                       // logische Einheit → Overlay-Pixel
   // Ursprung auf GANZE Backing-Pixel runden: die Scroll-Position ist auf iOS
   // oft krumm (x,33 px) — ungerundet läge jede Linie zwischen den Pixeln.
-  const ox = Math.round((cr.left - cl) * d2), oy = Math.round((cr.top - ct) * d2);
+  const ox = Math.round((cr.left - or.left) * d2), oy = Math.round((cr.top - or.top) * d2);
   const c  = uiCtx;
 
   // „+"-Hinweis mittig auf jeder LEEREN Slide — knackscharf in voller DPR,
