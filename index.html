@@ -300,6 +300,55 @@ details.hlp-sec[open] .hlp-chev { transform: rotate(180deg); }
 .hlp-foot em { font-family: 'Playfair Display', Georgia, serif; font-style: italic; font-size: 12.5px; }
 .hlp-foot a { color: var(--muted); text-decoration: none; border-bottom: 1px solid var(--line); padding-bottom: 1px; }
 .hlp-foot a:hover { color: var(--text); border-color: var(--muted); }
+/* ── Library-Drawer (Schnellzugriff aus der Toolbar) ── */
+#libDrawer {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 80;
+  background: var(--glass-bg-strong);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--hairline); border-radius: 20px 20px 0 0;
+  box-shadow: var(--shadow-card), var(--edge-light);
+  padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0px));
+  transform: translateY(115%); transition: transform 0.22s ease;
+}
+#libDrawer.show { transform: translateY(0); }
+@media (min-width: 820px) {
+  #libDrawer { left: auto; right: 12px; bottom: 12px; width: 380px; border-radius: 18px; }
+}
+.ld-head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.ld-title { font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent); font-weight: 600; flex: 1 1 auto; line-height: 26px; }
+#ldManage {
+  background: var(--glass-bg); border: 1px solid var(--hairline); border-radius: 999px;
+  color: var(--muted); font-size: 11px; padding: 0 12px; height: 26px; line-height: 24px;
+  display: inline-flex; align-items: center;
+}
+#ldManage:hover { color: var(--text); }
+#ldClose {
+  width: 26px; height: 26px; border-radius: 50%; padding: 0; font-size: 12px; line-height: 1;
+  background: var(--glass-bg); border: 1px solid var(--hairline); color: var(--muted);
+  display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto;
+}
+#ldFolders { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 12px; scrollbar-width: none; }
+#ldFolders::-webkit-scrollbar { display: none; }
+#ldFolders .lib-chip {
+  padding: 4px 9px; font-size: 10.5px;
+  min-width: calc((100% - 30px) / 6);   /* Breite einer Raster-Zelle (6 Spalten, 5×6px Gap) */
+  text-align: center; box-sizing: border-box;
+}
+#ldGrid {
+  display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px;
+  height: 200px; overflow-y: auto; -webkit-overflow-scrolling: touch;
+}
+#ldGrid .ld-cell {
+  aspect-ratio: 1; border-radius: 8px; overflow: hidden; padding: 0;
+  border: 1px solid var(--hairline); background: var(--surface); cursor: pointer;
+}
+#ldGrid .ld-cell img { width: 100%; height: 100%; object-fit: cover; display: block; }
+#ldGrid .ld-gal {
+  display: flex; align-items: center; justify-content: center;
+  background: transparent; border-style: dashed; color: var(--muted);
+}
+#ldGrid .ld-gal:hover { color: var(--text); border-color: var(--muted); }
+#ldGrid .ld-empty { grid-column: 1 / -1; align-self: center; text-align: center; font-size: 12px; color: var(--muted); line-height: 1.5; padding: 0 10px; }
 /* ── Mediathek (Library) ── */
 #libOverlay {
   display: none; position: fixed; inset: 0; z-index: 750;
@@ -1205,6 +1254,8 @@ canvas {
 #zoomCtrl:not(.expanded) #zoomLabel { display: none; }
 #zoomCtrl.expanded #zoomToggle { display: none; }
 #previewBtn svg { width: 15px; height: 15px; }
+#libraryBtn { display: none; }
+#libraryBtn.show { display: flex; }
 
 /* Vollbild-Vorschau */
 #preview { display: none; position: fixed; inset: 0; z-index: 700; background: #0b0b0b; }
@@ -1373,6 +1424,14 @@ canvas {
   background: transparent; color: rgba(255,255,255,0.8);
   border: 1px solid rgba(255,255,255,0.28); border-radius: 7px;
   font-size: 10px; padding: 5px 10px; height: auto; white-space: nowrap;
+}
+/* Desktop: Kopfzeile UND Slide-Raster linksbündig — Signatur fluchtet exakt
+   mit der linken Kante von Slide 1 (gleicher Einzug für beide). */
+@media (min-width: 820px) {
+  /* width:100% ist entscheidend: der Overlay-Container zentriert seine Kinder —
+     ohne volle Breite wird der ganze Block mittig gesetzt. */
+  #promoInvite { width: 100%; justify-content: flex-start; padding: 12px 40px 0; }
+  #exp-list { justify-content: flex-start; padding: 24px 40px; }
 }
 /* iPhone: gestapelt & zentriert — Signatur, darunter Angebot + Buttons.
    Kein Trennstrich, kein wildes Umbrechen. */
@@ -1655,7 +1714,7 @@ canvas {
   box-shadow: var(--shadow-card), var(--edge-light);
 }
 /* Header-Buttons (heller Satz — der dunkle Post-Chip und der rote Export bleiben) */
-#textToggle, #bgToggle, #helpBtn, #undoHdrBtn, #settingsBtn, #previewBtn {
+#textToggle, #bgToggle, #helpBtn, #undoHdrBtn, #settingsBtn {
   background: var(--glass-bg);
   -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
   border: 1px solid var(--hairline);
@@ -1983,6 +2042,10 @@ canvas {
     <button id="replaceBtn" class="tool-btn" title="Replace this photo with a new one">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
       <span>Replace</span>
+    </button>
+    <button id="libraryBtn" class="tool-btn" title="Insert photos from your library">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="14" height="12" rx="2"/><path d="M7 7V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v10"/><circle cx="7.5" cy="11" r="1.2"/><path d="M17 17l-4-4-6 6"/></svg>
+      <span>Library</span>
     </button>
     <button id="deleteBtn" class="tool-btn" title="Delete" aria-label="Delete">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
@@ -2591,6 +2654,17 @@ canvas {
     <div id="libGrid"></div>
     <div class="lib-hint">Saved locally in this browser — clearing site data removes them. Tap a photo to place it.</div>
   </div>
+</div>
+
+<!-- Library-Drawer: schneller Foto-Griff aus der Toolbar (6 Spalten, feste Höhe) -->
+<div id="libDrawer">
+  <div class="ld-head">
+    <span class="ld-title">Library</span>
+    <button id="ldManage" type="button" title="Ordner verwalten, Fotos laden">Manage</button>
+    <button id="ldClose" type="button" aria-label="Close">✕</button>
+  </div>
+  <div id="ldFolders"></div>
+  <div id="ldGrid"></div>
 </div>
 
 <!-- Kurzer Status-/Fehlerhinweis (z. B. beim Foto-Laden) -->
@@ -4472,11 +4546,13 @@ function positionEmptyAddBtn() {
   el.style.top  = (r.top + r.height / 2) + 'px';
   el.classList.add('show');
 }
-document.getElementById('emptyAddBtn').addEventListener('click', () => {
-  // Nativer Trigger des Datei-Felds passiert automatisch (label for=…). Hier nur
+document.getElementById('emptyAddBtn').addEventListener('click', (e) => {
   // Zielposition setzen, damit das Foto mittig auf der aktiven Slide landet.
   pendingReplaceImg = -1; pendingReplaceIdx = -1;
   pendingAddPos = { cx: activeSlide * W + W / 2, cy: H / 2 };
+  // Mediathek gefüllt → Drawer statt Galerie (Galerie-Kachel ist im Drawer).
+  if (_libHasItems) { e.preventDefault(); openLibDrawer(); }
+  // sonst: natives Label öffnet den Datei-Dialog wie gehabt.
 });
 
 canvas.addEventListener('mousedown', e => {
@@ -4622,7 +4698,7 @@ window.addEventListener('mouseup', e => {
     if (moved < 6) {
       // Foto zentriert auf der angetippten Slide (wie „Add → Photo", zuverlässig).
       pendingAddPos = { cx: addCandidate.slide * W + W / 2, cy: H / 2 };
-      openFilePicker();
+      openAddFlow();
     }
     addCandidate = null;
   }
@@ -4976,7 +5052,7 @@ canvas.addEventListener('touchend', e => {
       const moved = ct ? Math.hypot(ct.clientX - addCandidate.mx, ct.clientY - addCandidate.my) : 999;
       if (moved < 8) {
         pendingAddPos = { cx: addCandidate.lx, cy: addCandidate.ly };
-        openFilePicker();
+        openAddFlow();
       }
       addCandidate = null;
     }
@@ -5260,6 +5336,7 @@ async function saveToMediaLib(file, img, folder) {
     const drop = idx.length > MEDIA_MAX ? idx.splice(MEDIA_MAX) : [];
     for (const d of drop) { try { await idbDelK('media:' + d.id); } catch (e) {} }
     await idbPut('mediaIndex', idx);
+    _libHasItems = true;
   } catch (e) { /* Mediathek ist Komfort — nie den Foto-Flow stören */ }
 }
 let libFolderSel = '';   // '' = Recent (alle)
@@ -5399,6 +5476,110 @@ document.getElementById('libTrash').addEventListener('click', async () => {
   renderMediaLib();
 });
 document.getElementById('libOverlay').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeMediaLib(); });
+// ── Library-DRAWER: schneller Griff — 1 Tipp = 1 Foto eingesetzt ──
+let ldFolderSel = '';
+let _libHasItems = false;
+idbGetK('mediaIndex').then(ix => { _libHasItems = !!(ix && ix.length); }).catch(() => {});
+// Tipp auf eine LEERE Slide: Library-Drawer statt Galerie — sofern die
+// Mediathek Fotos hat (erste Kachel im Drawer führt zur Galerie).
+function openAddFlow() {
+  if (_libHasItems) openLibDrawer();
+  else openFilePicker();
+}
+async function openLibDrawer() {
+  document.getElementById('libDrawer').classList.add('show');
+  await renderLibDrawer();
+}
+function closeLibDrawer() { document.getElementById('libDrawer').classList.remove('show'); }
+async function renderLibDrawer() {
+  const idx = (await idbGetK('mediaIndex')) || [];
+  const folders = (await idbGetK('mediaFolders')) || [];
+  const fEl = document.getElementById('ldFolders');
+  fEl.innerHTML = '';
+  const chip = (label, val) => {
+    const b = document.createElement('button');
+    b.className = 'lib-chip' + (ldFolderSel === val ? ' sel' : '');
+    b.textContent = label;
+    b.addEventListener('click', () => { ldFolderSel = val; renderLibDrawer(); });
+    return b;
+  };
+  fEl.appendChild(chip('Recent', ''));
+  folders.forEach(fn => fEl.appendChild(chip(fn, fn)));
+  const g = document.getElementById('ldGrid');
+  g.innerHTML = '';
+  // Erste Kachel: Galerie/Datei-Picker — der gewohnte Weg bleibt einen Tipp entfernt.
+  const gal = document.createElement('button');
+  gal.type = 'button'; gal.className = 'ld-cell ld-gal'; gal.title = 'Aus der Galerie wählen';
+  gal.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 4h-5L7.5 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3.5z"/><circle cx="12" cy="13" r="3.5"/></svg>';
+  gal.addEventListener('click', () => {
+    closeLibDrawer();
+    if (sel >= 0 && photos[sel] && photos[sel].kind === 'placeholder') { fillPlaceholder(sel); return; }
+    pendingReplaceImg = -1; pendingReplaceIdx = -1;
+    pendingAddPos = { cx: activeSlide * W + W / 2, cy: H / 2 };
+    openFilePicker();
+  });
+  g.appendChild(gal);
+  const list = idx.filter(m => !ldFolderSel || m.folder === ldFolderSel);
+  if (!list.length) {
+    const e = document.createElement('div');
+    e.className = 'ld-empty';
+    e.textContent = 'Noch keine Fotos hier — über „Manage" laden oder einfach normal Fotos einfügen.';
+    g.appendChild(e);
+    return;
+  }
+  list.forEach(m => {
+    const c = document.createElement('button');
+    c.type = 'button'; c.className = 'ld-cell';
+    const im = document.createElement('img'); im.src = m.thumb; im.alt = '';
+    c.appendChild(im);
+    c.addEventListener('click', () => libDrawerPick(m.id));
+    g.appendChild(c);
+  });
+}
+// Einsetzen: ausgewähltes leeres Feld → befüllen und das NÄCHSTE leere Feld
+// derselben Slide vorwählen (Frames/Templates in Serie füllen). Sonst: leere
+// aktive Slide → dahin; ist sie belegt, nächste leere/neue Slide (Mehrfachwahl).
+function libDrawerPick(id) {
+  idbGetK('media:' + id).then(rec => {
+    if (!rec || !rec.data) { showToast('Bild nicht mehr vorhanden', { err: true }); return; }
+    const img = new Image();
+    img.onload = () => {
+      if (sel >= 0 && photos[sel] && photos[sel].kind === 'placeholder') {
+        const slideIdx = Math.floor(photos[sel].cx / W);
+        beginAction();
+        fillPlaceholderImg(img, sel);
+        // Nächstes leeres Feld derselben Slide vorwählen, Drawer schließen.
+        const next = photos.findIndex(q => q.kind === 'placeholder' && Math.floor(q.cx / W) === slideIdx);
+        if (next >= 0) { sel = next; updateDeleteBtn(); redraw(); }
+        closeLibDrawer();
+        return;
+      }
+      const occupied = i => photos.some(p => Math.floor(p.cx / W) === i);
+      let target = activeSlide;
+      if (occupied(target)) {
+        let found = -1;
+        for (let i = activeSlide + 1; i < slides.length; i++) if (!occupied(i)) { found = i; break; }
+        if (found < 0) {
+          if (slides.length >= 20) { showToast('Maximum of 20 slides'); return; }
+          beginAction();
+          slides.push({ bg: slides[slides.length - 1].bg });
+          found = slides.length - 1;
+          resizeCanvas(); syncBgButtons(); updateDots();
+        }
+        target = found;
+      }
+      activeSlide = target;
+      insertPhotoImg(img, target * W + W / 2, H / 2, false);
+      closeLibDrawer();
+    };
+    img.onerror = () => showToast('Bild ließ sich nicht laden', { err: true });
+    img.src = rec.data;
+  });
+}
+document.getElementById('libraryBtn').addEventListener('click', openLibDrawer);
+document.getElementById('ldClose').addEventListener('click', closeLibDrawer);
+document.getElementById('ldManage').addEventListener('click', () => { closeLibDrawer(); openMediaLib(); });
+
 document.getElementById('catLibrary').addEventListener('click', () => {
   _textMenu.classList.remove('show');
   openMediaLib();
@@ -5535,7 +5716,13 @@ document.getElementById('presetMagazinBtn').addEventListener('click', () => addT
 
 // Branded Outro-/Werbe-Slide ans Ende anhängen — im Stil des Startbildschirms
 // (Badge-Logo + Wortmarke + Claim + Credit). hell oder dunkel.
-function addOutroSlide(dark) {
+async function addOutroSlide(dark) {
+  // Erst die Credit-Schrift WIRKLICH laden — sonst misst measureText die
+  // Ersatzschrift und das Herz sitzt zu weit rechts von „lovers".
+  try {
+    await document.fonts.load('italic 500 38px "Cormorant Garamond"');
+    await document.fonts.load('500 20px "Cormorant Garamond"');
+  } catch (e) {}
   beginAction();
   slides.push({ bg: dark ? '#2A2826' : '#F4F1EB' });
   const idx = slides.length - 1;
@@ -5563,7 +5750,7 @@ function addOutroSlide(dark) {
   const _creditW = _mc.measureText(credit.text).width;
   _mc.font = '500 20px "Cormorant Garamond", Georgia, serif';
   const _heartW = _mc.measureText('♥').width;
-  const _gap = 5;
+  const _gap = 2;   // Herz DIREKT ans Ende von „lovers"
   credit.w = Math.round(_creditW + 12);
   heart.w  = Math.round(_heartW + 8);
   // Text + Herz gemeinsam zentrieren:
@@ -6288,6 +6475,8 @@ function updateDeleteBtn() {
   delBtn.title = isText ? 'Delete text' : 'Delete photo';
   document.getElementById('cropBtn').classList.toggle('show', isImage);
   document.getElementById('replaceBtn').classList.toggle('show', isImage);
+  // Library-Schnellgriff: immer wenn etwas ausgewählt ist (v. a. leere Felder)
+  document.getElementById('libraryBtn').classList.toggle('show', hasSel);
   setSectionAvail('secLayer', hasSel);
   // Akkordeon: welche Sektionen sind für diese Auswahl überhaupt verfügbar?
   // Border: bei normalen Fotos, Template-Zellen und den INNEREN Frame-Fotos (Inset) —
@@ -8091,8 +8280,8 @@ document.getElementById('exportOneBtn').addEventListener('click', () => {
 });
 
 // ── Outro-Einladung: optionale Marken-Slide anhängen und Export neu erzeugen ──
-function addOutroAndReexport(dark) {
-  addOutroSlide(dark);
+async function addOutroAndReexport(dark) {
+  await addOutroSlide(dark);
   document.getElementById('promoInvite').classList.add('hidden'); // nicht doppelt anbieten
   runExport(slides.map((_, i) => i));
 }
