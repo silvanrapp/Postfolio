@@ -2350,7 +2350,7 @@ canvas {
     <div class="hlp-foot">
       <span>Found a bug or have an idea? DM <a href="https://instagram.com/postfolio.app" target="_blank" rel="noopener">@postfolio.app</a></span>
       <em>by photographers, for photo lovers ♥ · <a href="https://instagram.com/silvan.rapp" target="_blank" rel="noopener">by @silvan.rapp</a></em>
-      <button id="pfDiag" type="button" style="background:transparent; border:none; color:var(--line); font-size:9px; letter-spacing:0.12em; text-transform:uppercase; cursor:pointer; padding:4px;">display check · v3.7-1530</button>
+      <button id="pfDiag" type="button" style="background:transparent; border:none; color:var(--line); font-size:9px; letter-spacing:0.12em; text-transform:uppercase; cursor:pointer; padding:4px;">display check · v3.8-pixelsnap</button>
     </div>
   </div>
 </div>
@@ -4054,7 +4054,9 @@ function drawOverlayUI() {
   uiCtx.clearRect(0, 0, uiOv.width, uiOv.height);
   const cr = canvas.getBoundingClientRect();
   const K  = DSCALE * d2;                       // logische Einheit → Overlay-Pixel
-  const ox = (cr.left - cl) * d2, oy = (cr.top - ct) * d2;
+  // Ursprung auf GANZE Backing-Pixel runden: die Scroll-Position ist auf iOS
+  // oft krumm (x,33 px) — ungerundet läge jede Linie zwischen den Pixeln.
+  const ox = Math.round((cr.left - cl) * d2), oy = Math.round((cr.top - ct) * d2);
   const c  = uiCtx;
 
   // „+"-Hinweis mittig auf jeder LEEREN Slide — knackscharf in voller DPR,
@@ -4183,7 +4185,7 @@ function edgePad() {
 }
 function centerActiveSlide(smooth = true) {
   if (!wrap) return;
-  const target = edgePad() + (activeSlide * W + W / 2) * DSCALE - wrap.clientWidth / 2;
+  const target = devSnap(edgePad() + (activeSlide * W + W / 2) * DSCALE - wrap.clientWidth / 2);
   _snapping = true;
   clearTimeout(_snapClearTimer);
   wrap.scrollTo({ left: Math.max(0, target), behavior: smooth ? 'smooth' : 'auto' });
@@ -7389,7 +7391,7 @@ document.getElementById('cropApply').addEventListener('click', () => {
         }
         _snapping = true;
         clearTimeout(_snapClearTimer);
-        wrap.scrollTo({ left: Math.max(0, edgePad() + (_start * W + _span * W / 2) * DSCALE - wrap.clientWidth / 2), behavior: 'smooth' });
+        wrap.scrollTo({ left: Math.max(0, devSnap(edgePad() + (_start * W + _span * W / 2) * DSCALE - wrap.clientWidth / 2)), behavior: 'smooth' });
         _snapClearTimer = setTimeout(() => { _snapping = false; }, 500);
       }, 60);
     }
@@ -7749,7 +7751,10 @@ function rebuildSnapPoints() {
   for (let i = 0; i < slides.length; i++) {
     const d = document.createElement('div');
     d.className = 'snap-pt';
-    d.style.left = (edgePad() + (i * W + W / 2) * DSCALE - 1) + 'px';
+    // Rastpunkt so legen, dass die RUHE-Scrollposition auf dem Gerätepixel-
+    // Raster landet (sonst interpoliert iOS die Canvas-Ebene dauerhaft weich).
+    const rest = devSnap(edgePad() + (i * W + W / 2) * DSCALE - wrap.clientWidth / 2);
+    d.style.left = (rest + wrap.clientWidth / 2 - 1) + 'px';
     cont.appendChild(d);
   }
 }
@@ -7832,7 +7837,10 @@ setTimeout(() => { syncSnapPoints(); updateSeamBtn(); }, 300);
 let _snapTimer = null, _snapping = false, _snapClearTimer = null;
 let _gestStart = null;             // Ausgangs-Slide der laufenden Wischgeste
 const SNAP_TH = 0.22;              // 22% Versatz = Umschaltpunkt
-function slideCenterScroll(i) { return edgePad() + (i * W + W / 2) * DSCALE - wrap.clientWidth / 2; }
+// Scroll-Ziele aufs Gerätepixel-Raster runden: ruht die Canvas auf einer
+// krummen Position (x,33 px bei 3×), interpoliert iOS die ganze Ebene weich.
+function devSnap(v) { const d = window.devicePixelRatio || 1; return Math.round(v * d) / d; }
+function slideCenterScroll(i) { return devSnap(edgePad() + (i * W + W / 2) * DSCALE - wrap.clientWidth / 2); }
 
 // ── Auto-Zoom je Slide: Panorama-Slides rausgezoomt, 1er-Slides voll ──
 // Merkt sich den Zoom VOR dem automatischen Rauszoomen (_autoZoomPrev) und
@@ -7866,7 +7874,7 @@ function autoZoomForSlide() {
       setZoom(Math.max(ZOOM_MIN, fitZ));
       _autoZoomApplied = zoom;
       _snapping = true; clearTimeout(_snapClearTimer);
-      wrap.scrollTo({ left: Math.max(0, edgePad() + (sp.start * W + sp.span * W / 2) * DSCALE - wrap.clientWidth / 2), behavior: 'smooth' });
+      wrap.scrollTo({ left: Math.max(0, devSnap(edgePad() + (sp.start * W + sp.span * W / 2) * DSCALE - wrap.clientWidth / 2)), behavior: 'smooth' });
       _snapClearTimer = setTimeout(() => { _snapping = false; }, 500);
       return true;
     }
