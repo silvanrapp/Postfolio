@@ -2350,6 +2350,7 @@ canvas {
     <div class="hlp-foot">
       <span>Found a bug or have an idea? DM <a href="https://instagram.com/postfolio.app" target="_blank" rel="noopener">@postfolio.app</a></span>
       <em>by photographers, for photo lovers ♥ · <a href="https://instagram.com/silvan.rapp" target="_blank" rel="noopener">by @silvan.rapp</a></em>
+      <button id="pfDiag" type="button" style="background:transparent; border:none; color:var(--line); font-size:9px; letter-spacing:0.12em; text-transform:uppercase; cursor:pointer; padding:4px;">display check · v3.7-1530</button>
     </div>
   </div>
 </div>
@@ -7441,6 +7442,18 @@ document.getElementById('helpBtn').addEventListener('click', (e) => { e.stopProp
 document.getElementById('helpMenuBtn').addEventListener('click', openHelp);
 document.getElementById('helpClose').addEventListener('click', closeHelp);
 document.getElementById('helpOverlay').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeHelp(); });
+// Diagnose: zeigt die echten Render-Werte des Geräts (Schärfe-Analyse).
+document.getElementById('pfDiag').addEventListener('click', () => {
+  const vv = window.visualViewport;
+  const rdpr = Math.round((S / DSCALE) * 100) / 100;
+  showToast(
+    'dpr ' + (window.devicePixelRatio || 1)
+    + ' · zoom ' + (vv ? vv.scale.toFixed(2) : '–')
+    + ' · overlay ' + uiOv.width + '×' + uiOv.height + ' für ' + (uiOv._w || 0) + '×' + (uiOv._h || 0) + 'css'
+    + ' · canvas ' + canvas.width + 'px @ ' + rdpr + 'x',
+    { ms: 15000 }
+  );
+});
 settingsMenu.addEventListener('click', (e) => e.stopPropagation());
 document.addEventListener('click', () => settingsMenu.classList.remove('show'));
 
