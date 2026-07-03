@@ -891,6 +891,10 @@ canvas.picking-color { cursor: crosshair; }
   #contextSheet { padding-top: 8px; gap: 8px; }
   #sheetHandle { margin: 0 auto 4px; }
   #slideStrip { padding: 4px 12px; }
+  /* Slider auf Touch: großer Daumen (28 px Trefferfläche) für präzises Ziehen */
+  input[type=range]::-webkit-slider-thumb { width: 28px; height: 28px; margin-top: -12px; }
+  input[type=range]::-moz-range-thumb { width: 28px; height: 28px; }
+  input[type=range] { height: 34px; }
   #logoMark { width: 34px; height: 34px; }
   /* Alles in EINER Zeile: P-Logo · Format · Add · … · ••• · Export.
      Die Wortmarke „Postfolio" wird auf dem iPhone ausgeblendet (spart Breite);
@@ -1697,13 +1701,13 @@ canvas {
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 20 12 4l7 16"/><path d="M8 14h8"/></svg>
       <span>Font</span>
     </button>
-    <button class="acc-chip tool-btn" data-sec="secTPos" data-ctx="txt" title="Position (X/Y)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v20"/><path d="M2 12h20"/><path d="M9 5l3-3 3 3"/><path d="M9 19l3 3 3-3"/><path d="M5 9l-3 3 3 3"/><path d="M19 9l3 3-3 3"/><circle cx="12" cy="12" r="2.5"/></svg>
-      <span>Position</span>
-    </button>
     <button class="acc-chip tool-btn" data-sec="secStyle" data-ctx="txt" title="Style">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4h7a4 4 0 0 1 0 8H6z"/><path d="M6 12h8a4 4 0 0 1 0 8H6z"/></svg>
       <span>Style</span>
+    </button>
+    <button class="acc-chip tool-btn" data-sec="secTPos" data-ctx="txt" title="Position (X/Y)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v20"/><path d="M2 12h20"/><path d="M9 5l3-3 3 3"/><path d="M9 19l3 3 3-3"/><path d="M5 9l-3 3 3 3"/><path d="M19 9l3 3-3 3"/><circle cx="12" cy="12" r="2.5"/></svg>
+      <span>Position</span>
     </button>
     <button class="acc-chip tool-btn" data-sec="secSpacing" data-ctx="txt" title="Spacing">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 8 3 12l4 4"/><path d="m17 8 4 4-4 4"/><path d="M3 12h18"/></svg>
@@ -2907,7 +2911,10 @@ function addSlideAction() {
   slides.push({ bg: slides[slides.length - 1].bg });
   activeSlide = slides.length - 1;
   resizeCanvas(); syncBgButtons(); updateDots(); redraw(); scheduleSave();
-  setTimeout(centerActiveSlide, 30);
+  // Direkt auf die neue leere Slide springen — erst Rastpunkte aktualisieren,
+  // dann OHNE Smooth-Scroll (iOS-Scroll-Snap kämpft sonst gegen die Animation).
+  if (typeof syncSnapPoints === 'function') try { syncSnapPoints(); } catch (e) {}
+  setTimeout(() => centerActiveSlide(false), 30);
 }
 // Aktive Slide duplizieren: Hintergrund, alle Elemente samt Border, Margin,
 // Farben, Blend, Text — 1:1 auf eine NEUE Slide direkt dahinter. Ist die
@@ -3887,10 +3894,14 @@ function drawOverlayUI() {
     c.moveTo(cxp - pl, cyp); c.lineTo(cxp + pl, cyp);
     c.moveTo(cxp, cyp - pl); c.lineTo(cxp, cyp + pl);
     c.stroke();
-    c.font = `${Math.round(13 * d2)}px 'Helvetica Neue', -apple-system, sans-serif`;
-    try { c.letterSpacing = (0.4 * d2) + 'px'; } catch (e) {}
+    // Text pixelgenau ausrichten: in CSS-Pixel-Koordinaten zeichnen (Transform
+    // übernimmt die Retina-Skalierung) und Ursprung auf ganze Pixel runden —
+    // subpixel-versetzte Glyphen wirken auf iOS sonst pixelig/weich.
+    c.setTransform(d2, 0, 0, d2, 0, 0);
+    c.font = "13px 'Helvetica Neue', -apple-system, sans-serif";
     c.textAlign = 'center'; c.textBaseline = 'top';
-    c.fillText('Tap to add a photo', cxp, cyp + r + 12 * d2);
+    c.fillText('Tap to add a photo', Math.round(cxp / d2), Math.round((cyp + r) / d2) + 12);
+    c.setTransform(1, 0, 0, 1, 0, 0);
     c.restore();
   });
 
@@ -4599,6 +4610,31 @@ function loadPhotoIntoPlaceholder(file, idx) {
     photo.crop = adjustCropToAspect(photo, ph.w / ph.h);
     photos[idx] = photo;
     sel = idx;
+    // Frames-Look: Der Klassiker sind ZWEI Fotos für alle vier Felder —
+    // Hintergrund A + kleines Inset B, dann Hintergrund B + kleines Inset A.
+    // Nach dem Befüllen eines Hintergrunds deshalb anbieten, dasselbe Foto
+    // auch ins (noch leere) kleine Feld des anderen Bandes zu setzen.
+    if (photo.role === 'bg' && photo.frameGroup && !photo.tmplN) {
+      const slideIdx = Math.floor(photo.cx / W);
+      const targets = photos.filter(q => q.kind === 'placeholder' && q.role === 'inset' && !q.tmplN
+        && q.frameGroup !== photo.frameGroup && Math.floor(q.cx / W) === slideIdx)
+        .sort((a, b) => b.cy - a.cy);   // unteres Band zuerst
+      const target = targets[0];
+      if (target && confirm('Use this photo in the small inner frame below, too?\n\nClassic frames look: two photos fill all four fields — each appears once big and once small.')) {
+        const j = photos.indexOf(target);
+        const p2 = {
+          kind: 'image', img, screen: photo.screen,
+          cx: target.cx, cy: target.cy, w: target.w, h: target.h, rot: target.rot || 0,
+          crop: { x: 0, y: 0, w: 1, h: 1 },
+          frame: target.frame ? { ...target.frame } : null,
+          role: target.role, frameGroup: target.frameGroup,
+          tmplN: target.tmplN, tmplOrient: target.tmplOrient, tmplBorder: target.tmplBorder,
+          slot: 0, split: null, fitted: false
+        };
+        p2.crop = adjustCropToAspect(p2, target.w / target.h);
+        photos[j] = p2;
+      }
+    }
     updateDeleteBtn(); forceRedraw(); scheduleSave();
   });
 }
@@ -6073,23 +6109,28 @@ function applyFrameWidthUI(fw) {
 }
 // Rast-Striche auf der Slider-Spur (Standard-Stärken) + magnetisches Snapping.
 const RANGE_TICKS = [8, 18, 30, 40, 52];
-const RANGE_MAX = 120, THUMB_W = 18;
+const RANGE_MAX = 120, THUMB_W = 18, THUMB_W_TOUCH = 28;
+function rangeThumbW() { return window.innerWidth <= 600 ? THUMB_W_TOUCH : THUMB_W; }
 function buildRangeTicks() {
+  const tw = rangeThumbW();
   document.querySelectorAll('.range-ticks').forEach(el => {
     el.innerHTML = '';
     RANGE_TICKS.forEach(v => {
       const t = document.createElement('i');
       const f = v / RANGE_MAX;
       // Position exakt unter der Griff-Mitte bei diesem Wert
-      t.style.left = `calc(${THUMB_W / 2}px + ${(f * 100).toFixed(3)}% - ${(f * THUMB_W).toFixed(2)}px)`;
+      t.style.left = `calc(${tw / 2}px + ${(f * 100).toFixed(3)}% - ${(f * tw).toFixed(2)}px)`;
       el.appendChild(t);
     });
   });
 }
 buildRangeTicks();
+window.addEventListener('resize', buildRangeTicks);
+// Touch: Finger zittert 5–10 px — Magnet-Zone deutlich breiter als mit Maus.
+const RANGE_SNAP = (('ontouchstart' in window) || navigator.maxTouchPoints > 0) ? 7 : 3;
 function snapRangeVal(v) {
-  if (v <= 3) return 0;
-  for (const t of RANGE_TICKS) if (Math.abs(v - t) <= 3) return t;
+  if (v <= RANGE_SNAP) return 0;
+  for (const t of RANGE_TICKS) if (Math.abs(v - t) <= RANGE_SNAP) return t;
   return v;
 }
 
