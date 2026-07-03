@@ -302,13 +302,16 @@ details.hlp-sec[open] .hlp-chev { transform: rotate(180deg); }
 .hlp-foot a:hover { color: var(--text); border-color: var(--muted); }
 /* ── Library-Drawer (Schnellzugriff aus der Toolbar) ── */
 #libDrawer {
-  position: fixed; left: 0; right: 0; bottom: 0; z-index: 80;
+  /* Schwebende Glas-Karte (Apple-Look): abgesetzt vom Rand, rundum runde Ecken */
+  position: fixed; left: 10px; right: 10px;
+  bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  z-index: 80;
   background: var(--glass-bg-strong);
   -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--hairline); border-radius: 20px 20px 0 0;
+  border: 1px solid var(--hairline); border-radius: 20px;
   box-shadow: var(--shadow-card), var(--edge-light);
-  padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0px));
-  transform: translateY(115%); transition: transform 0.22s ease;
+  padding: 10px 14px 12px;
+  transform: translateY(calc(115% + 24px)); transition: transform 0.22s ease;
 }
 #libDrawer.show { transform: translateY(0); }
 @media (min-width: 820px) {
