@@ -235,6 +235,70 @@ button {
 }
 #settingsBtn:hover { opacity: 1; color: var(--text); }
 #settingsBtn svg { width: 18px; height: 18px; display: block; }
+/* Help: ?-Button (Desktop) + Overlay im App-Stil */
+#helpBtn {
+  color: var(--muted); opacity: 0.7; border: 1px solid var(--line); background: transparent;
+  border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; line-height: 0;
+}
+#helpBtn:hover { opacity: 1; color: var(--text); }
+#helpBtn svg { width: 18px; height: 18px; display: block; }
+@media (max-width: 600px) { #helpBtn { display: none; } }  /* iPhone: über ••• → Help & tips */
+#helpOverlay {
+  display: none; position: fixed; inset: 0; z-index: 750;
+  background: rgba(42,40,38,0.45);
+  align-items: center; justify-content: center;
+  padding: calc(14px + env(safe-area-inset-top, 0px)) 14px calc(14px + env(safe-area-inset-bottom, 0px));
+}
+#helpOverlay.show { display: flex; }
+#helpCard {
+  position: relative; width: min(560px, 100%); max-height: 100%;
+  overflow-y: auto; -webkit-overflow-scrolling: touch;
+  background: var(--bg); border-radius: 18px;
+  padding: 24px 24px 18px;
+  box-shadow: 0 24px 70px rgba(0,0,0,0.35);
+}
+#helpClose {
+  position: absolute; top: 12px; right: 12px;
+  width: 32px; height: 32px; border-radius: 50%; padding: 0;
+  background: var(--surface); color: var(--muted); border: 1px solid var(--line);
+  font-size: 14px; line-height: 1; display: inline-flex; align-items: center; justify-content: center;
+}
+#helpClose:hover { color: var(--text); }
+#helpCard h3 {
+  font-family: 'Playfair Display', Georgia, serif; font-size: 30px; font-weight: 600;
+  letter-spacing: -0.01em; color: var(--text); margin: 4px 0 16px;
+}
+.hlp-dot { color: var(--accent); }
+.hlp-eyebrow { font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+/* Akkordeon als feine FAQ-Liste: Haarlinien, ruhige Zeilen, Chevron rechts */
+.hlp-acc { border-top: 1px solid var(--line); }
+.hlp-sec { border-bottom: 1px solid var(--line); }
+.hlp-sec summary {
+  cursor: pointer; list-style: none; user-select: none;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 14px 2px; font-size: 13.5px; font-weight: 600; color: var(--text);
+}
+.hlp-sec summary::-webkit-details-marker { display: none; }
+.hlp-chev { color: var(--muted); font-size: 10px; transition: transform 0.16s ease; flex: 0 0 auto; }
+details.hlp-sec[open] .hlp-chev { transform: rotate(180deg); }
+.hlp-sec ul, .hlp-tips ul { list-style: none; display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0 2px 16px; }
+.hlp-sec li, .hlp-tips li { font-size: 13px; line-height: 1.55; color: var(--text); padding-left: 16px; position: relative; }
+.hlp-sec li::before, .hlp-tips li::before { content: '–'; color: var(--muted); position: absolute; left: 1px; top: 0; }
+/* Tips: immer offen, als ruhige Karte abgesetzt */
+.hlp-tips {
+  margin-top: 20px; background: var(--surface);
+  border: 1px solid var(--line); border-radius: 12px;
+  padding: 14px 16px 4px;
+}
+.hlp-tips h4 { font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent); font-weight: 600; margin-bottom: 9px; }
+.hlp-foot {
+  margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--line);
+  display: flex; flex-direction: column; gap: 6px; text-align: center;
+  font-size: 11px; color: var(--muted);
+}
+.hlp-foot em { font-family: 'Playfair Display', Georgia, serif; font-style: italic; font-size: 12.5px; }
+.hlp-foot a { color: var(--muted); text-decoration: none; border-bottom: 1px solid var(--line); padding-bottom: 1px; }
+.hlp-foot a:hover { color: var(--text); border-color: var(--muted); }
 #settingsMenu {
   display: none; position: absolute; top: calc(100% + 8px); right: 0;
   background: var(--surface); border: 1px solid var(--line); z-index: 100;
@@ -1479,6 +1543,9 @@ canvas {
     <h1>Postfolio</h1>
   </div>
   <div id="headerActions">
+    <button class="icon-btn" id="helpBtn" title="Help & tips" aria-label="Help">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 4.86.83c0 1.67-2.36 2.17-2.36 3.42"/><circle cx="12" cy="16.6" r="0.4" fill="currentColor"/></svg>
+    </button>
     <div id="settingsWrap">
       <button class="icon-btn" id="settingsBtn" title="More" aria-label="More" aria-haspopup="true">
         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
@@ -1499,6 +1566,10 @@ canvas {
         <button id="shareMenuBtn" class="ov-item" title="Share slides as PNG — AirDrop, iCloud, Mail…">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="M8 7l4-4 4 4"/><path d="M5 21h14"/></svg>
           <span>Share slides</span>
+        </button>
+        <button id="helpMenuBtn" class="ov-item" title="Help & tips">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 4.86.83c0 1.67-2.36 2.17-2.36 3.42"/><circle cx="12" cy="16.6" r="0.4" fill="currentColor"/></svg>
+          <span>Help &amp; tips</span>
         </button>
         <div class="set-sep"></div>
         <div class="set-row">
@@ -2197,6 +2268,64 @@ canvas {
     </div>
 
     <div class="splash-by" style="text-align:center; margin-top:auto; padding-top:28px;">by <a href="https://instagram.com/silvan.rapp" target="_blank" rel="noopener" style="color:inherit; text-transform:none; letter-spacing:0.08em; text-decoration:none; border-bottom:1px solid currentColor; padding-bottom:1px;">@silvan.rapp</a></div>
+  </div>
+</div>
+
+<!-- Help & Tips: klassisch-editorial — Akkordeon-FAQ + feste Tips-Karte -->
+<div id="helpOverlay">
+  <div id="helpCard">
+    <button id="helpClose" aria-label="Close">✕</button>
+    <div class="hlp-eyebrow">Postfolio · Help</div>
+    <h3>Good to know<span class="hlp-dot">.</span></h3>
+
+    <div class="hlp-acc">
+      <details class="hlp-sec">
+        <summary>Getting started<span class="hlp-chev" aria-hidden="true">▾</span></summary>
+        <ul>
+          <li>Tap the empty slide to add a photo — or pick several at once: each lands on its own slide.</li>
+          <li>“+” in the filmstrip adds a slide. Long-press a tile to reorder.</li>
+          <li>The duplicate button (bottom right) copies a slide with all its style — then just replace the photo.</li>
+        </ul>
+      </details>
+      <details class="hlp-sec">
+        <summary>Gestures<span class="hlp-chev" aria-hidden="true">▾</span></summary>
+        <ul>
+          <li>Double-tap a photo to crop and choose the visible section.</li>
+          <li>Pinch to zoom a photo inside its frame.</li>
+          <li>Drag the red dot to resize — it snaps to slide edges and other photos.</li>
+          <li>Swipe between slides — the active one always snaps to center.</li>
+        </ul>
+      </details>
+      <details class="hlp-sec">
+        <summary>Frames &amp; panorama<span class="hlp-chev" aria-hidden="true">▾</span></summary>
+        <ul>
+          <li>Frames: one photo big, one small in a white frame. Fill a background and the small frame of the next band fills automatically — the classic look: two photos, four fields.</li>
+          <li>Split-panorama (in Crop): one wide photo runs seamlessly across 2–3 slides. Instagram shows it as one continuous image when swiping.</li>
+        </ul>
+      </details>
+      <details class="hlp-sec">
+        <summary>Your projects<span class="hlp-chev" aria-hidden="true">▾</span></summary>
+        <ul>
+          <li>Everything is saved locally in your browser — nothing leaves your device.</li>
+          <li>Beta: clearing your browser data deletes your projects, so export finished carousels.</li>
+          <li>Long-press a project on the start screen to move, duplicate or delete it.</li>
+        </ul>
+      </details>
+    </div>
+
+    <div class="hlp-tips">
+      <h4>Tips</h4>
+      <ul>
+        <li>iPhone: Share → “Add to Home Screen” — Postfolio runs like a real app, fullscreen without browser bars.</li>
+        <li>Export “All slides” gives you numbered images, ready to upload in order.</li>
+        <li>Add the outro slide to any carousel — it credits the app and looks good doing it ♥</li>
+      </ul>
+    </div>
+
+    <div class="hlp-foot">
+      <span>Found a bug or have an idea? DM <a href="https://instagram.com/postfolio.app" target="_blank" rel="noopener">@postfolio.app</a></span>
+      <em>by photographers, for photo lovers ♥ · <a href="https://instagram.com/silvan.rapp" target="_blank" rel="noopener">by @silvan.rapp</a></em>
+    </div>
   </div>
 </div>
 
@@ -7226,6 +7355,17 @@ document.getElementById('settingsBtn').addEventListener('click', (e) => {
   document.getElementById('exportMenu').classList.remove('show');
   settingsMenu.classList.toggle('show');
 });
+
+// ── Help & Tips ──
+function openHelp() {
+  settingsMenu.classList.remove('show');
+  document.getElementById('helpOverlay').classList.add('show');
+}
+function closeHelp() { document.getElementById('helpOverlay').classList.remove('show'); }
+document.getElementById('helpBtn').addEventListener('click', (e) => { e.stopPropagation(); openHelp(); });
+document.getElementById('helpMenuBtn').addEventListener('click', openHelp);
+document.getElementById('helpClose').addEventListener('click', closeHelp);
+document.getElementById('helpOverlay').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeHelp(); });
 settingsMenu.addEventListener('click', (e) => e.stopPropagation());
 document.addEventListener('click', () => settingsMenu.classList.remove('show'));
 
