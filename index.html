@@ -685,6 +685,12 @@ canvas.picking-color { cursor: crosshair; }
 #tc-track-row { gap: 10px; }
 #tc-track-row input[type=range] { flex: 1 1 auto; min-width: 0; }
 .tc-track-ico { font-size: 11px; color: var(--muted); letter-spacing: 0.06em; white-space: nowrap; }
+/* Position (Text): kompakte einzeilige Regler — Label · Slider · %-Wert */
+#secTPos { gap: 2px; }
+.tpos-row { flex-wrap: nowrap !important; align-items: center; gap: 8px; }
+.tpos-row .label { min-width: 12px; flex: 0 0 auto; }
+.tpos-row input[type=range] { flex: 1 1 auto; min-width: 0; width: auto; }
+.tpos-val { flex: 0 0 auto; min-width: 40px; text-align: right; font-size: 11px; color: var(--muted); }
 #trackVal { font-size: 11px; color: var(--muted); min-width: 26px; text-align: right; }
 #outlineVal { font-size: 11px; color: var(--muted); min-width: 26px; text-align: right; }
 /* Slider schmaler (extreme Dicken unnötig) — lässt Platz für die Pfeile daneben */
@@ -2036,7 +2042,7 @@ canvas {
     </div><!-- /secStyle -->
     <div class="acc-sec" id="secSpacing" style="display:none">
     <div class="tc-row" id="tc-track-row">
-      <span class="tc-track-ico" aria-hidden="true">A↔A</span>
+      <span class="tc-track-ico" aria-hidden="true">A<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin:0 2px;"><path d="M3 12h18"/><path d="M7 8l-4 4 4 4"/><path d="M17 8l4 4-4 4"/></svg>A</span>
       <input type="range" id="trackInput" min="-10" max="120" step="1" value="0" title="Letter spacing">
       <span id="trackVal">0</span>
     </div>
@@ -2068,17 +2074,18 @@ canvas {
     </div>
     </div><!-- /secOutline -->
 
-    <!-- ▼ Position-Sektion (nur Text): X/Y-Regler für exaktes Platzieren -->
+    <!-- ▼ Position-Sektion (nur Text): X/Y-Regler für exaktes Platzieren.
+         Kompakt: Label links, Regler mittig, %-Wert rechts — EINE Zeile je Achse. -->
     <div class="acc-sec" id="secTPos" style="display:none">
-      <div class="row">
+      <div class="row tpos-row">
         <span class="label">X</span>
         <input type="range" id="tposX" min="0" max="1080" step="1" value="540">
-        <span id="tposXVal" style="min-width:38px; text-align:right; font-size:11px; color:var(--muted);">50%</span>
+        <span id="tposXVal" class="tpos-val">50%</span>
       </div>
-      <div class="row">
+      <div class="row tpos-row">
         <span class="label">Y</span>
         <input type="range" id="tposY" min="0" max="1350" step="1" value="675">
-        <span id="tposYVal" style="min-width:38px; text-align:right; font-size:11px; color:var(--muted);">50%</span>
+        <span id="tposYVal" class="tpos-val">50%</span>
       </div>
     </div><!-- /secTPos -->
   </div>
@@ -4030,6 +4037,12 @@ function drawOverlayUI() {
   photos.forEach(q => _occ.add(slideIndexOf(q)));
   slides.forEach((slide, i) => {
     if (_occ.has(i)) return;
+    // Ragt ein Foto (z. B. Panorama der Nachbar-Slide) in die Slide-Mitte,
+    // keinen Hinweis darüber malen — er würde durchs Foto scheinen.
+    const overlapped = photos.some(q => q.kind !== 'placeholder'
+      && (q.cx + q.w / 2) > i * W + W * 0.2
+      && (q.cx - q.w / 2) < (i + 1) * W - W * 0.2);
+    if (overlapped) return;
     const cxp = ox + (i * W + W / 2) * K, cyp = oy + (H / 2) * K;
     if (cxp < -80 * d2 || cxp > uiOv.width + 80 * d2) return;   // außerhalb sichtbar? sparen
     const r = 36 * K;
@@ -4080,12 +4093,15 @@ function drawOverlayUI() {
   c.translate(ox + p.cx * K, oy + p.cy * K);
   c.rotate(p.rot || 0);
 
-  // Dashed bounding box — filigran
-  c.strokeStyle = '#D10101';
-  c.lineWidth   = 1 * d2;
-  c.setLineDash([5 * d2, 4 * d2]);
-  c.strokeRect(-hw, -hh, hw * 2, hh * 2);
-  c.setLineDash([]);
+  // Gestrichelte Auswahlbox NUR während einer aktiven Geste (Ziehen/Skalieren) —
+  // im Ruhezustand wirkt sie irreführend, als wäre der Rahmen größer als das Foto.
+  if (dragMode) {
+    c.strokeStyle = 'rgba(209,1,1,0.75)';
+    c.lineWidth   = 1 * d2;
+    c.setLineDash([4 * d2, 3 * d2]);
+    c.strokeRect(-hw, -hh, hw * 2, hh * 2);
+    c.setLineDash([]);
+  }
 
   // Skalier-Punkt unten rechts — das Markenzeichen, immer voll sichtbar.
   c.beginPath();
