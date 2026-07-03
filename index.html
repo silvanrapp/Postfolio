@@ -1163,6 +1163,16 @@ canvas {
 }
 #pvOverview.on { background: #fff; color: #111; }
 #pvOverview svg { width: 14px; height: 14px; }
+/* Fertig-Haken: sichtbar, sobald etwas ausgewählt ist — links neben der Pille */
+#doneBtn {
+  position: fixed; z-index: 66; display: none;
+  width: 40px; height: 40px; border-radius: 50%; padding: 0;
+  background: var(--accent); color: #fff; border: none;
+  box-shadow: 0 3px 12px rgba(209,1,1,0.35);
+  align-items: center; justify-content: center; cursor: pointer;
+}
+#doneBtn.show { display: flex; }
+#doneBtn svg { width: 18px; height: 18px; }
 /* Überblick-Modus: alle Slides als nahtloser Streifen, mittig */
 #preview.overview #preview-track { scroll-snap-type: none; align-items: center; }
 #preview.overview .pv-panel { flex: 0 0 auto; padding: 0; height: auto; }
@@ -2161,6 +2171,12 @@ canvas {
   <button class="icon-btn" id="zoomFit" title="Fit all slides into view">⊡</button>
 </div>
 
+<!-- Fertig-Haken (Canva-Prinzip): beendet die Bearbeitung — Auswahl weg,
+     Toolbar zu, Wischen wieder frei. Schwebt links neben der Zoom-Pille. -->
+<button id="doneBtn" title="Done" aria-label="Done editing">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12.5 9.5 18 20 6.5"/></svg>
+</button>
+
 <div id="loading"><div class="spinner"></div>Exporting…</div>
 
 <!-- Vollbild-Vorschau: aktuelle Slide groß, per Wisch zwischen allen Slides -->
@@ -2324,6 +2340,7 @@ canvas {
       <details class="hlp-sec">
         <summary>Gestures<span class="hlp-chev" aria-hidden="true">▾</span></summary>
         <ul>
+          <li>Tap once to select — only the selected element can be moved, so nothing ever shifts by accident. Tap ✓ (bottom right) when you're done.</li>
           <li>Double-tap a photo to crop and choose the visible section.</li>
           <li>Pinch to zoom a photo inside its frame.</li>
           <li>Drag the red dot to resize — it snaps to slide edges and other photos.</li>
@@ -4520,14 +4537,20 @@ canvas.addEventListener('touchstart', e => {
     }
 
     const hit = hitPhoto(lx, ly);
+    if (hit >= 0 && hit !== sel) {
+      // „Erst tippen, dann verschieben" (Canva-Prinzip): Ein Finger auf einem
+      // NICHT ausgewählten Element verschiebt nie etwas — er darf wischen.
+      // Ein kurzer Tipp (siehe touchend) wählt aus und öffnet die Toolbar.
+      selCandidate = { idx: hit, mx: t.clientX, my: t.clientY };
+      return;   // kein preventDefault → natives Wischen bleibt möglich
+    }
     if (hit >= 0) {
       e.preventDefault();
-      tapAlreadySelected = (sel === hit);
-      sel         = hit;
-      panelHidden = false;   // aktiver Tipp aufs Foto → Toolbar aufklappen
+      tapAlreadySelected = true;
+      panelHidden = false;
       activeSlide = Math.max(0, Math.min(slides.length - 1, Math.floor(photos[sel].cx / W)));
       if (photos[hit].locked) {
-        // Gesperrt (z. B. Frames-Feld): auswählen ja, verschieben nein.
+        // Gesperrt: ausgewählt bleiben, aber nicht verschieben.
         dragMode = null;
         if (photos[hit].kind === 'placeholder') {
           syncBgButtons(); updateDots(); updateDeleteBtn(); redraw();
@@ -4564,6 +4587,7 @@ canvas.addEventListener('touchstart', e => {
     e.preventDefault();
     dragMode = null;
     addCandidate = null;
+    selCandidate = null;
     const t1 = e.touches[0], t2 = e.touches[1];
     const mx = (t1.clientX + t2.clientX) / 2;
     const my = (t1.clientY + t2.clientY) / 2;
@@ -4686,6 +4710,22 @@ canvas.addEventListener('touchend', e => {
       return;
     }
     dragMode = null; guides = []; armUndo = false;
+    // Tipp auf ein bisher NICHT ausgewähltes Element → jetzt auswählen
+    // (nur wenn der Finger nicht gewischt hat).
+    if (selCandidate) {
+      const ct = e.changedTouches[0];
+      const movedSel = ct ? Math.hypot(ct.clientX - selCandidate.mx, ct.clientY - selCandidate.my) : 999;
+      const idx = selCandidate.idx; selCandidate = null;
+      if (movedSel < 8 && idx >= 0 && idx < photos.length && photos[idx]) {
+        sel = idx; panelHidden = false;
+        activeSlide = Math.max(0, Math.min(slides.length - 1, Math.floor(photos[idx].cx / W)));
+        _dblTapT = Date.now(); _dblTapSel = sel;   // zweiter Tipp kurz danach = Crop
+        syncBgButtons(); updateDots(); updateDeleteBtn(); redraw();
+        if (photos[idx].kind === 'placeholder') { fillPlaceholder(idx); return; }
+        centerActiveSlide();
+        return;
+      }
+    }
     if (addCandidate) {
       const ct = e.changedTouches[0];
       const moved = ct ? Math.hypot(ct.clientX - addCandidate.mx, ct.clientY - addCandidate.my) : 999;
@@ -4849,7 +4889,7 @@ function loadPhotoIntoPlaceholder(file, idx) {
       cx: ph.cx, cy: ph.cy, w: ph.w, h: ph.h, rot: ph.rot || 0,
       crop: { x: 0, y: 0, w: 1, h: 1 },
       frame: ph.frame ? { ...ph.frame } : null,
-      role: ph.role, frameGroup: ph.frameGroup, locked: !!ph.locked,
+      role: ph.role, frameGroup: ph.frameGroup,
       tmplN: ph.tmplN, tmplOrient: ph.tmplOrient, tmplBorder: ph.tmplBorder,
       slot: 0, split: null, fitted: false
     };
@@ -4876,7 +4916,7 @@ function loadPhotoIntoPlaceholder(file, idx) {
           cx: target.cx, cy: target.cy, w: target.w, h: target.h, rot: target.rot || 0,
           crop: { x: 0, y: 0, w: 1, h: 1 },
           frame: target.frame ? { ...target.frame } : null,
-          role: target.role, frameGroup: target.frameGroup, locked: !!target.locked,
+          role: target.role, frameGroup: target.frameGroup,
           tmplN: target.tmplN, tmplOrient: target.tmplOrient, tmplBorder: target.tmplBorder,
           slot: 0, split: null, fitted: false
         };
@@ -5141,10 +5181,8 @@ function addFramesLayout(n) {
   const firstIdx = photos.length;
   for (let i = 0; i < n; i++) {
     const bandCY = i * bandH + bandH / 2;
-    // locked: Frames sind ab Erstellung EINGEFROREN (Tester-Feedback) —
-    // Antippen wählt aus/öffnet den Picker, Verschieben erst nach Entsperren.
-    photos.push({ kind: 'placeholder', role: 'bg', frameGroup: gid, locked: true, cx: cxBase + W / 2, cy: bandCY, w: W, h: bandH, rot: 0, frame: null });
-    photos.push({ kind: 'placeholder', role: 'inset', frameGroup: gid, locked: true, cx: cxBase + W / 2, cy: bandCY, w: insetW, h: insetH, rot: 0, frame: { width: frameW, color: '#ffffff' } });
+    photos.push({ kind: 'placeholder', role: 'bg', frameGroup: gid, cx: cxBase + W / 2, cy: bandCY, w: W, h: bandH, rot: 0, frame: null });
+    photos.push({ kind: 'placeholder', role: 'inset', frameGroup: gid, cx: cxBase + W / 2, cy: bandCY, w: insetW, h: insetH, rot: 0, frame: { width: frameW, color: '#ffffff' } });
   }
   // Neues Layout: sofort auf die Slide springen, ersten Platzhalter auswählen,
   // Toolbar öffnen — und NACH dem Panel-Umbau erneut zentrieren (sonst überlagert).
@@ -5234,7 +5272,7 @@ function addTemplate(n, orient) {
   const firstIdx = photos.length;
   for (let i = 0; i < n; i++) {
     photos.push({
-      kind: 'placeholder', role: 'inset', frameGroup: gid, locked: true,
+      kind: 'placeholder', role: 'inset', frameGroup: gid,
       tmplN: n, tmplOrient: orient, tmplBorder: B,
       cx: cxBase + W / 2, cy: g.cys[i], w: g.w, h: g.h, rot: 0, frame: null
     });
@@ -5815,6 +5853,9 @@ function updateDeleteBtn() {
   const sheet = document.getElementById('contextSheet');
   sheet.classList.toggle('show', hasSel && !panelHidden);
   document.getElementById('panelOpenBtn').classList.toggle('on', hasSel && panelHidden);
+  // Fertig-Haken: sichtbar, solange etwas ausgewählt ist
+  const _done = document.getElementById('doneBtn');
+  if (_done) _done.classList.toggle('show', hasSel);
   if (!hasSel) openSec = null;
   // Text gewählt → standardmäßig die Font-Sektion zeigen (dort ist die Eingabe),
   // außer es ist bereits eine andere Text-/Rotate-Sektion offen.
@@ -5927,6 +5968,8 @@ function openTextEdit() {
 }
 // Doppeltipp-Erkennung (Touch) für Crop
 let _dblTapT = 0, _dblTapSel = -1;
+// Touch-Modell „erst tippen, dann verschieben": Kandidat für Auswahl per Tipp
+let selCandidate = null;
 // Desktop: Doppelklick → Text: Eingabe öffnen · Foto: Crop-Overlay öffnen.
 canvas.addEventListener('dblclick', e => {
   const { lx, ly } = clientToLogical(e.clientX, e.clientY);
@@ -6124,6 +6167,15 @@ attachKnob(document.getElementById('knobFeather'), {
 
 // Verkleinert den Leinwand-Rahmen über dem (evtl. höheren) Panel, damit die
 // Slide vollständig + zentriert sichtbar bleibt. Nach dem Layout messen.
+// Fertig-Haken links neben der Zoom-Pille ausrichten (vertikal mittig zu ihr)
+function positionDoneBtn(zoom) {
+  const done = document.getElementById('doneBtn');
+  if (!done || !zoom) return;
+  const zb = parseFloat(zoom.style.bottom) || 14;
+  const zr = parseFloat(zoom.style.right) || 14;
+  done.style.right  = Math.round(zr + (zoom.offsetWidth || 76) + 10) + 'px';
+  done.style.bottom = Math.round(zb - (40 - (zoom.offsetHeight || 32)) / 2) + 'px';
+}
 function reserveForPanel() {
   const sheet = document.getElementById('contextSheet');
   const zoom  = document.getElementById('zoomCtrl');
@@ -6146,6 +6198,7 @@ function reserveForPanel() {
       // Pille vertikal in der Filmstrip-Zeile zentrieren (gleiche Höhe wie links)
       const zoomHd = zoom.offsetHeight || 40;
       zoom.style.bottom = Math.max(6, Math.round((stripH - zoomHd) / 2)) + 'px';
+      positionDoneBtn(zoom);
       // Export-Bereich immer ganz rechts; bei offener Seitenleiste nach links rücken.
       topBar.style.paddingRight = (reserve ? reserve + 16 : 0) + 'px';
       // Panel-Inhalt (Zurück-Pfeil, Tool-Chip) beginnt auf Höhe der
@@ -6170,6 +6223,7 @@ function reserveForPanel() {
       // Mobile: Pille ein Stück ÜBER dem Filmstrip (nicht in seiner Zeile)
       zoom.style.bottom = (stripH + sheetH + 8) + 'px';
       zoom.style.right  = '14px';
+      positionDoneBtn(zoom);
       // Safari färbt seine (eingeklappte) Adressleisten-Zone unter der Seite
       // mit theme-color: an die unterste Leiste angleichen, damit die Toolbar
       // optisch bis zur Bildschirmkante durchläuft.
@@ -7979,6 +8033,11 @@ wrap.addEventListener('scroll', () => {
 document.getElementById('undoBtn').addEventListener('click', undo);
 document.getElementById('redoBtn').addEventListener('click', redo);
 document.getElementById('undoHdrBtn').addEventListener('click', undo);
+// Fertig-Haken: Bearbeitung beenden — Auswahl weg, Toolbar zu, Wischen frei.
+document.getElementById('doneBtn').addEventListener('click', () => {
+  sel = -1;
+  syncBgButtons(); updateDots(); updateDeleteBtn(); redraw(); scheduleSave();
+});
 document.getElementById('newBtn').addEventListener('click', () => {
   document.getElementById('settingsMenu').classList.remove('show');
   if (hasContent() && !window.confirm('Start a new project? This clears all photos and slides.')) return;
