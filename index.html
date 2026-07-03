@@ -1192,14 +1192,21 @@ canvas {
 .dl-btn { background: #D10101; color: white; font-size: 10px; padding: 8px 14px; }
 
 /* Dezente Outro-Einladung im Export-Overlay */
-#promoInvite { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 9px 14px; padding: 12px 18px 0; }
+#promoInvite { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: center; gap: 9px 14px; padding: 12px 18px 0; }
 #promoInvite.hidden { display: none; }
-.pi-text { font-size: 11px; color: rgba(255,255,255,0.5); letter-spacing: 0.02em; text-align: center; }
-.pi-actions { display: flex; gap: 8px; }
+/* Links die Signatur (zweizeilig), Trennstrich, rechts Angebot + Buttons. */
+.pi-sig { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; }
+.pi-sig em { font-style: italic; font-family: 'Playfair Display', Georgia, serif; font-size: 13px; color: rgba(255,255,255,0.7); }
+.pi-by { font-size: 10px; letter-spacing: 0.05em; color: rgba(255,255,255,0.4); text-decoration: none; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 1px; }
+.pi-by:hover { color: #fff; border-color: rgba(255,255,255,0.6); }
+.pi-div { width: 1px; height: 32px; background: rgba(255,255,255,0.2); flex: 0 0 auto; align-self: center; }
+.pi-offer { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center; margin-bottom: -6px; }
+.pi-text { font-size: 11px; color: rgba(255,255,255,0.5); letter-spacing: 0.02em; }
+.pi-actions { display: flex; gap: 7px; }
 #promoInvite button {
-  background: transparent; color: rgba(255,255,255,0.85);
-  border: 1px solid rgba(255,255,255,0.3); border-radius: 8px;
-  font-size: 11px; padding: 7px 12px; height: auto; white-space: nowrap;
+  background: transparent; color: rgba(255,255,255,0.8);
+  border: 1px solid rgba(255,255,255,0.28); border-radius: 7px;
+  font-size: 10px; padding: 5px 10px; height: auto; white-space: nowrap;
 }
 #promoInvite button:hover { border-color: rgba(255,255,255,0.7); }
 
@@ -1219,6 +1226,15 @@ canvas {
 #crop-title { font-size: 11px; letter-spacing: 0.15em; color: rgba(255,255,255,0.7); text-transform: uppercase; }
 #crop-actions { display: flex; gap: 8px; }
 #cropCancel { background: rgba(255,255,255,0.14); color: white; font-size: 12px; padding: 9px 16px; border-radius: 9px; }
+/* Format-Dropdown-Toggle: nach der Wahl klappt das Preset-Panel zu und das
+   Bild bekommt die volle Bühne — hierüber jederzeit wieder öffnen. */
+#cropFmtToggle {
+  background: transparent; color: rgba(255,255,255,0.8);
+  border: 1px solid rgba(255,255,255,0.3); border-radius: 9px;
+  font-size: 12px; padding: 9px 14px;
+}
+#cropFmtToggle.open { background: rgba(255,255,255,0.14); }
+#crop-presets.collapsed { display: none; }
 #cropApply  { background: #D10101; color: white; font-size: 12px; padding: 9px 18px; border-radius: 9px; }
 
 /* Aufgeräumtes Preset-Panel: dezente Karte, klar gruppiert, größere
@@ -2066,11 +2082,18 @@ canvas {
   </div>
   <!-- Dezente Einladung: optionale Postfolio-Outro-Slide hinzufügen -->
   <div id="promoInvite">
-    <span class="pi-text">By a photographer, for photo lovers ♥ — support your Indie-Makers with:</span>
-    <span class="pi-actions">
-      <button id="promoAddLight">+ Outro · light</button>
-      <button id="promoAddDark">+ Outro · dark</button>
-    </span>
+    <div class="pi-sig">
+      <em>by photographers, for photo lovers ♥</em>
+      <a class="pi-by" href="https://instagram.com/silvan.rapp" target="_blank" rel="noopener">by @silvan.rapp</a>
+    </div>
+    <span class="pi-div" aria-hidden="true"></span>
+    <div class="pi-offer">
+      <span class="pi-text">support your indie-makers with:</span>
+      <span class="pi-actions">
+        <button id="promoAddLight">+ Outro · light</button>
+        <button id="promoAddDark">+ Outro · dark</button>
+      </span>
+    </div>
   </div>
   <div id="exp-list"></div>
 </div>
@@ -2079,6 +2102,7 @@ canvas {
   <div id="crop-header">
     <span id="crop-title">Crop Photo</span>
     <div id="crop-actions">
+      <button id="cropFmtToggle">Format ▾</button>
       <button id="cropCancel">Cancel</button>
       <button id="cropApply">Apply</button>
     </div>
@@ -3500,16 +3524,16 @@ function drawPlaceholderItem(c, p, scale) {
     c.fillStyle = p.frame.color || '#ffffff';
     c.fillRect(x - fw, y - fw, w + 2 * fw, h + 2 * fw);
   }
-  c.fillStyle = 'rgba(42,40,38,0.05)';
+  c.fillStyle = 'rgba(42,40,38,0.04)';
   c.fillRect(x, y, w, h);
-  c.strokeStyle = 'rgba(42,40,38,0.32)';
-  c.lineWidth = 0.75 * DPR;                 // filigraner Rahmen
-  c.setLineDash([5 * DPR, 5 * DPR]);
+  c.strokeStyle = 'rgba(42,40,38,0.20)';
+  c.lineWidth = 0.5 * DPR;                  // hauchfein — nur Orientierung
+  c.setLineDash([3 * DPR, 4 * DPR]);
   c.strokeRect(x, y, w, h);
   c.setLineDash([]);
   const pl = Math.min(w, h) * 0.10;
-  c.strokeStyle = 'rgba(42,40,38,0.38)';
-  c.lineWidth = 1.2 * DPR;                   // dünneres „+"
+  c.strokeStyle = 'rgba(42,40,38,0.30)';
+  c.lineWidth = 1 * DPR;                     // dünneres „+"
   c.beginPath();
   c.moveTo(-pl, 0); c.lineTo(pl, 0);
   c.moveTo(0, -pl); c.lineTo(0, pl);
@@ -4626,15 +4650,18 @@ function loadPhotoIntoPlaceholder(file, idx) {
     sel = idx;
     // Frames-Look: Der Klassiker sind ZWEI Fotos für alle vier Felder —
     // Hintergrund A + kleines Inset B, dann Hintergrund B + kleines Inset A.
-    // Nach dem Befüllen eines Hintergrunds deshalb anbieten, dasselbe Foto
-    // auch ins (noch leere) kleine Feld des anderen Bandes zu setzen.
+    // Nach dem Befüllen eines Hintergrunds landet dasselbe Foto deshalb
+    // AUTOMATISCH im (noch leeren) kleinen Feld des nächsten Bandes.
+    // (Alle Bänder teilen sich eine frameGroup — Bänder unterscheiden sich
+    //  über ihre Mittelhöhe cy, nicht über die Gruppe.)
     if (photo.role === 'bg' && photo.frameGroup && !photo.tmplN) {
       const slideIdx = Math.floor(photo.cx / W);
-      const targets = photos.filter(q => q.kind === 'placeholder' && q.role === 'inset' && !q.tmplN
-        && q.frameGroup !== photo.frameGroup && Math.floor(q.cx / W) === slideIdx)
-        .sort((a, b) => b.cy - a.cy);   // unteres Band zuerst
-      const target = targets[0];
-      if (target && confirm('Use this photo in the small inner frame below, too?\n\nClassic frames look: two photos fill all four fields — each appears once big and once small.')) {
+      const others = photos.filter(q => q.kind === 'placeholder' && q.role === 'inset' && !q.tmplN
+        && Math.floor(q.cx / W) === slideIdx && Math.abs(q.cy - photo.cy) > 1)
+        .sort((a, b) => a.cy - b.cy);
+      // Zyklisch: das Inset des NÄCHSTEN Bandes unterhalb, sonst das erste darüber.
+      const target = others.find(q => q.cy > photo.cy) || others[0];
+      if (target) {
         const j = photos.indexOf(target);
         const p2 = {
           kind: 'image', img, screen: photo.screen,
@@ -4647,6 +4674,7 @@ function loadPhotoIntoPlaceholder(file, idx) {
         };
         p2.crop = adjustCropToAspect(p2, target.w / target.h);
         photos[j] = p2;
+        showToast('Photo also placed in the small frame — replace it anytime');
       }
     }
     updateDeleteBtn(); forceRedraw(); scheduleSave();
@@ -4730,6 +4758,9 @@ function ensureSingleSlideView() {
   let z = null;
   if (_autoZoomPrev !== null) { z = _autoZoomPrev; _autoZoomPrev = null; _autoZoomApplied = null; }
   else if (zoom < 0.999) z = 1;
+  // Auto-Zoom-out auf dieser Slide unterdrücken — sonst zoomt die Panorama-
+  // Automatik beim nächsten Scroll-Settle sofort wieder raus.
+  _azHoldSlide = activeSlide;
   if (z !== null) {
     setZoom(z);
     _snapping = true; clearTimeout(_snapClearTimer);
@@ -6724,6 +6755,11 @@ function openCropOverlay() {
   // ausblenden, im Overlay nur Ausschnitt (zoom/pan) bei gelocktem Verhältnis.
   const isFrameInset = !!cropPhoto.frameGroup;
   document.getElementById('crop-presets').style.display = isFrameInset ? 'none' : '';
+  // Start: Format-Panel offen (erst Format wählen, dann klappt es zu).
+  document.getElementById('crop-presets').classList.remove('collapsed');
+  const _fmtTgl = document.getElementById('cropFmtToggle');
+  _fmtTgl.style.display = isFrameInset ? 'none' : '';
+  _fmtTgl.classList.add('open'); _fmtTgl.textContent = 'Format ▴';
 
   // Erst einblenden, damit die Bühne ihre echte Größe kennt — dann das Bild
   // exakt in den Bereich UNTER dem Preset-Panel einpassen. Verhindert, dass ein
@@ -6782,8 +6818,43 @@ function closeCropOverlay() {
   cropOpen  = false;
   cropPhoto = null;
   cropDrag  = null;
+  cropPinch = null;
   document.getElementById('crop-overlay').classList.remove('show');
 }
+
+// ── Format-Panel ein-/ausklappen: zugeklappt bekommt das Bild die volle
+//    Bühne. Der Crop-Rahmen wird beim Umbau proportional mitgenommen. ──
+function setCropPresets(open) {
+  const panel = document.getElementById('crop-presets');
+  const tgl = document.getElementById('cropFmtToggle');
+  panel.classList.toggle('collapsed', !open);
+  if (tgl) { tgl.classList.toggle('open', open); tgl.textContent = open ? 'Format ▴' : 'Format ▾'; }
+  resizeCropStage();
+}
+function resizeCropStage() {
+  if (!cropPhoto) return;
+  const stageEl = document.getElementById('crop-stage');
+  const natW = cropPhoto.img.naturalWidth, natH = cropPhoto.img.naturalHeight;
+  const pad = 28;
+  const stageW = Math.max(80, (stageEl.clientWidth  || window.innerWidth  * 0.9) - pad);
+  const stageH = Math.max(80, (stageEl.clientHeight || window.innerHeight * 0.7) - pad);
+  const fit = Math.min(1, stageW / natW, stageH / natH);
+  const newW = natW * fit, newH = natH * fit;
+  if (cropRect && cropImgW > 0 && cropImgH > 0) {
+    const kx = newW / cropImgW, ky = newH / cropImgH;
+    cropRect = { x: cropRect.x * kx, y: cropRect.y * ky, w: cropRect.w * kx, h: cropRect.h * ky };
+  }
+  cropImgW = newW; cropImgH = newH;
+  cropCanvas.width        = cropImgW * DPR;
+  cropCanvas.height       = cropImgH * DPR;
+  cropCanvas.style.width  = cropImgW + 'px';
+  cropCanvas.style.height = cropImgH + 'px';
+  cropCtx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  drawCropCanvas();
+}
+document.getElementById('cropFmtToggle').addEventListener('click', () => {
+  setCropPresets(document.getElementById('crop-presets').classList.contains('collapsed'));
+});
 
 function getCropHandles(r) {
   const handles = {
@@ -6839,6 +6910,8 @@ document.querySelectorAll('.ratio-btn').forEach(btn => {
       pendingPano = null;
     }
     drawCropCanvas();
+    // Format gewählt → Panel zuklappen, Bild bekommt die volle Bühne.
+    setCropPresets(false);
   });
 });
 
@@ -7003,18 +7076,48 @@ cropCanvas.addEventListener('mousedown', e => cropDragStart(e.clientX, e.clientY
 window.addEventListener('mousemove', e => { if (cropOpen) cropDragMove(e.clientX, e.clientY); });
 window.addEventListener('mouseup',   () => { if (cropOpen) cropDragEnd(); });
 
+// Pinch im Crop-Fenster: zwei Finger zoomen den Ausschnitt (auseinander =
+// reinzoomen, also kleinerer Crop-Rahmen). Verhältnis-Lock bleibt erhalten.
+let cropPinch = null;
 cropCanvas.addEventListener('touchstart', e => {
   e.preventDefault();
+  if (e.touches.length === 2) {
+    cropDrag = null;
+    const a = e.touches[0], b = e.touches[1];
+    cropPinch = { dist: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY), rect: { ...cropRect } };
+    return;
+  }
   const t = e.touches[0];
   cropDragStart(t.clientX, t.clientY);
 }, { passive: false });
 cropCanvas.addEventListener('touchmove', e => {
-  if (!cropOpen || !cropDrag) return;
+  if (!cropOpen) return;
+  if (cropPinch && e.touches.length === 2) {
+    e.preventDefault();
+    const a = e.touches[0], b = e.touches[1];
+    const dist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+    const scale = cropPinch.dist / Math.max(1, dist);   // Finger auf = Rahmen kleiner
+    const s0 = cropPinch.rect;
+    const cx = s0.x + s0.w / 2, cy = s0.y + s0.h / 2;
+    let w = clampNum(s0.w * scale, CROP_MIN, cropImgW);
+    let h = lockRatio ? w / lockRatio : clampNum(s0.h * scale, CROP_MIN, cropImgH);
+    if (lockRatio && h > cropImgH) { h = cropImgH; w = h * lockRatio; }
+    if (lockRatio && h < CROP_MIN) { h = CROP_MIN; w = h * lockRatio; }
+    const x = clampNum(cx - w / 2, 0, cropImgW - w);
+    const y = clampNum(cy - h / 2, 0, cropImgH - h);
+    cropRect = { x, y, w, h };
+    drawCropCanvas();
+    return;
+  }
+  if (!cropDrag) return;
   e.preventDefault();
   const t = e.touches[0];
   cropDragMove(t.clientX, t.clientY);
 }, { passive: false });
-cropCanvas.addEventListener('touchend', () => cropDragEnd());
+cropCanvas.addEventListener('touchend', e => {
+  if (e.touches.length < 2) cropPinch = null;
+  cropDragEnd();
+});
 
 document.getElementById('cropCancel').addEventListener('click', closeCropOverlay);
 
@@ -7503,6 +7606,7 @@ function slideCenterScroll(i) { return edgePad() + (i * W + W / 2) * DSCALE - wr
 // normalen Slide, wird der alte Zoom wiederhergestellt und mittig gesnappt —
 // aber nur, wenn der Nutzer den Zoom nicht inzwischen selbst geändert hat.
 let _autoZoomPrev = null, _autoZoomApplied = null;
+let _azHoldSlide = -1;   // Slide, auf der der Auto-Zoom-out gerade UNTERDRÜCKT ist (z. B. Textbearbeitung)
 function slideSpanAt(i) {
   let best = null;
   for (const p of photos) {
@@ -7516,6 +7620,10 @@ function slideSpanAt(i) {
 }
 function autoZoomForSlide() {
   const sp = slideSpanAt(activeSlide);
+  // Text-Bearbeitung hat die Slide bewusst ranzoomt → hier NICHT wieder
+  // rauszoomen, solange man auf dieser Slide bleibt.
+  if (sp && activeSlide === _azHoldSlide) return false;
+  if (activeSlide !== _azHoldSlide) _azHoldSlide = -1;
   if (sp) {
     // Auf einer Panorama-Slide: so weit rauszoomen, dass alle Teile sichtbar sind.
     const fitZ = zoom * (wrap.clientWidth * 0.92) / (sp.span * W * DSCALE);
