@@ -2157,9 +2157,9 @@ canvas {
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 20 12 4l7 16"/></svg>
       <span>Outline</span>
     </button>
-    <button class="acc-chip tool-btn" data-sec="secRatio" data-ctx="tpl" title="Photo ratio">
+    <button class="acc-chip tool-btn" data-sec="secRatio" data-ctx="tpl" title="Cell format (portrait / landscape)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="8" height="12" rx="1"/><rect x="13" y="8" width="8" height="8" rx="1"/></svg>
-      <span>Ratio</span>
+      <span>Format</span>
     </button>
     <button class="acc-chip tool-btn" data-sec="secLayer" data-ctx="both" title="Layer order">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg>
@@ -4626,7 +4626,14 @@ function centerSlideNowAndAfterLayout() {
 }
 function centerActiveSlide(smooth = true) {
   if (!wrap) return;
-  const target = devSnap(edgePad() + (activeSlide * W + W / 2) * DSCALE - wrap.clientWidth / 2);
+  // Split-/Panorama-Überblick: Ist die Slide Teil einer Gruppe UND die Gruppe
+  // passt in den Viewport, wird die Gruppenmitte (= Trennlinie bei 2 Slides)
+  // auf die Screenmitte zentriert — nicht die einzelne Slide.
+  const sp = (typeof slideSpanAt === 'function') ? slideSpanAt(activeSlide) : null;
+  const mid = (sp && sp.span * W * DSCALE <= wrap.clientWidth * 0.98)
+    ? (sp.start * W + sp.span * W / 2)
+    : (activeSlide * W + W / 2);
+  const target = devSnap(edgePad() + mid * DSCALE - wrap.clientWidth / 2);
   _snapping = true;
   clearTimeout(_snapClearTimer);
   wrap.scrollTo({ left: Math.max(0, target), behavior: smooth ? 'smooth' : 'auto' });
@@ -4641,7 +4648,8 @@ function positionEmptyAddBtn() {
   const el = document.getElementById('emptyAddBtn');
   if (!el || !wrap) return;
   const splashOpen = !document.getElementById('splash').classList.contains('hidden');
-  const occupied = photos.some(p => Math.floor(p.cx / W) === activeSlide);
+  // slideOccupied statt cx-Check: Split-Fotos belegen auch die linke Slide.
+  const occupied = slideOccupied(activeSlide);
   if (splashOpen || occupied) { el.classList.remove('show'); return; }
   const r = wrap.getBoundingClientRect();
   el.style.left = (r.left + r.width / 2) + 'px';
@@ -4722,10 +4730,20 @@ canvas.addEventListener('mousedown', e => {
   updateDeleteBtn();
   redraw();
 });
+// Liegt auf Slide i (auch nur anteilig) irgendein Element? Split-/Panorama-
+// Fotos decken mehrere Slides ab — der reine cx-Check sah nur die cx-Slide
+// und hielt die linke Split-Hälfte fälschlich für leer (Add-Popup statt Edit).
+function slideOccupied(i) {
+  return photos.some(p => {
+    const hw = (p.w || 0) / 2;
+    if (hw > 1) return (p.cx + hw) > i * W + 6 && (p.cx - hw) < (i + 1) * W - 6;
+    return Math.floor(p.cx / W) === i;
+  });
+}
 // Tippt man nahe der Mitte einer leeren Slide (auf das „+")?
 function emptyCenterTap(lx, ly) {
   const si = Math.max(0, Math.min(slides.length - 1, Math.floor(lx / W)));
-  const empty = !photos.some(p => Math.floor(p.cx / W) === si);
+  const empty = !slideOccupied(si);
   const nearCenter = Math.hypot(lx - (si * W + W / 2), ly - H / 2) < Math.min(W, H) * 0.14;
   return empty && nearCenter;
 }
@@ -5651,7 +5669,7 @@ function libDrawerPick(id) {
         closeLibDrawer();
         return;
       }
-      const occupied = i => photos.some(p => Math.floor(p.cx / W) === i);
+      const occupied = i => slideOccupied(i);   // Split-Fotos zählen auf allen Slides
       let target = activeSlide;
       if (occupied(target)) {
         let found = -1;
@@ -8803,12 +8821,23 @@ function autoZoomForSlide() {
   if (sp) {
     // Auf einer Panorama-Slide: so weit rauszoomen, dass alle Teile sichtbar sind.
     const fitZ = zoom * (wrap.clientWidth * 0.92) / (sp.span * W * DSCALE);
+    // Ziel: Gruppenmitte = Trennlinie (bei 2 Slides) exakt auf Screenmitte.
+    const seamTarget = () => Math.max(0, devSnap(edgePad() + (sp.start * W + sp.span * W / 2) * DSCALE - wrap.clientWidth / 2));
     if (fitZ < zoom - 0.01) {
       if (_autoZoomPrev === null) _autoZoomPrev = zoom;
       setZoom(Math.max(ZOOM_MIN, fitZ));
       _autoZoomApplied = zoom;
       _snapping = true; clearTimeout(_snapClearTimer);
-      wrap.scrollTo({ left: Math.max(0, devSnap(edgePad() + (sp.start * W + sp.span * W / 2) * DSCALE - wrap.clientWidth / 2)), behavior: 'smooth' });
+      // sofort dahin springen (kein Smooth-Scroll — Naht steht direkt mittig)
+      wrap.scrollTo({ left: seamTarget(), behavior: 'auto' });
+      _snapClearTimer = setTimeout(() => { _snapping = false; }, 120);
+      return true;
+    }
+    // Bereits im Überblick (Gruppe passt in den Viewport): nach jeder Geste
+    // sanft auf die Trennlinie einrasten — wie das Mitten-Snap normaler Slides.
+    if (sp.span * W * DSCALE <= wrap.clientWidth * 0.98 && Math.abs(wrap.scrollLeft - seamTarget()) > 2) {
+      _snapping = true; clearTimeout(_snapClearTimer);
+      wrap.scrollTo({ left: seamTarget(), behavior: 'smooth' });
       _snapClearTimer = setTimeout(() => { _snapping = false; }, 500);
       return true;
     }
