@@ -1244,6 +1244,26 @@ canvas {
 #seamBtn svg { width: 16px; height: 16px; display: none; }
 #seamBtn.toSingle .sb-single { display: block; }
 #seamBtn:not(.toSingle) .sb-over { display: block; }
+/* „Split across 2 slides?"-Pill: erscheint, wenn ein Querformat-Foto über die
+   rechte Slide-Kante gezogen wurde. ✓ = Slide anlegen + nahtlos einpassen. */
+#splitAsk {
+  position: fixed; z-index: 62; display: none; align-items: center; gap: 8px;
+  padding: 7px 7px 7px 14px; border-radius: 999px;
+  background: var(--glass-bg-strong, rgba(255,255,255,0.78));
+  -webkit-backdrop-filter: var(--glass-blur, saturate(1.6) blur(22px));
+  backdrop-filter: var(--glass-blur, saturate(1.6) blur(22px));
+  border: 1px solid var(--hairline, rgba(42,40,38,0.10));
+  box-shadow: 0 6px 20px rgba(30,25,20,0.16), inset 0 1px 0 var(--edge-light, rgba(255,255,255,0.55));
+  font-size: 13px; font-weight: 600; color: #2A2826; white-space: nowrap;
+}
+#splitAsk.show { display: flex; }
+#splitAsk button {
+  width: 30px; height: 30px; min-width: 30px; border-radius: 50%; border: none;
+  padding: 0; display: flex; align-items: center; justify-content: center;
+  font-size: 14px; line-height: 1; cursor: pointer;
+}
+#splitAsk .sa-no  { background: rgba(42,40,38,0.08); color: #2A2826; }
+#splitAsk .sa-yes { background: var(--accent); color: #fff; box-shadow: 0 3px 10px rgba(209,1,1,0.35); }
 #canvas-wrap::-webkit-scrollbar { height: 8px; }
 #canvas-wrap::-webkit-scrollbar-track { background: transparent; }
 #canvas-wrap::-webkit-scrollbar-thumb {
@@ -2506,6 +2526,13 @@ canvas {
   <svg class="sb-single" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="4.5" width="10" height="15" rx="2"/></svg>
   <svg class="sb-over" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="6" width="8" height="12" rx="1.5"/><rect x="12.5" y="6" width="8" height="12" rx="1.5"/></svg>
 </button>
+
+<!-- Frage-Pill: Querformat-Foto über die rechte Slide-Kante gezogen → Split anbieten -->
+<div id="splitAsk" role="dialog" aria-label="Split across 2 slides?">
+  <span>Split across 2 slides?</span>
+  <button class="sa-no" id="splitAskNo" aria-label="No">✕</button>
+  <button class="sa-yes" id="splitAskYes" aria-label="Yes">✓</button>
+</div>
 
 <div id="zoomCtrl">
   <button class="icon-btn" id="previewBtn" title="Fullscreen preview" aria-label="Fullscreen preview">
@@ -4670,6 +4697,7 @@ canvas.addEventListener('mousedown', e => {
   if (pickingFrameColor || pickingBgColor || pickingOutline || pickingTextColor) { e.preventDefault(); doPick(e.clientX, e.clientY); return; }
   const { lx, ly } = clientToLogical(e.clientX, e.clientY);
   addCandidate = null;
+  if (typeof hideSplitAsk === 'function') hideSplitAsk();   // neue Interaktion → Pill weg
   pressX = e.clientX; pressY = e.clientY;
 
   // Lock-Badge (rotes Schloss) — nur am AUSGEWÄHLTEN Feld sichtbar/tappbar.
@@ -4813,6 +4841,8 @@ window.addEventListener('mouseup', e => {
     openTextEdit();
     return;
   }
+  // Querformat-Foto über die rechte Kante gezogen? → Split-Angebot zeigen.
+  if (dragMode === 'move' && sel >= 0 && Math.hypot(e.clientX - dragStartMX, e.clientY - dragStartMY) >= 8) maybeOfferSplit(sel);
   dragMode = null; guides = []; armUndo = false;
   if (addCandidate) {
     const moved = Math.hypot(e.clientX - addCandidate.mx, e.clientY - addCandidate.my);
@@ -4946,6 +4976,7 @@ canvas.addEventListener('touchstart', e => {
     const t = e.touches[0];
     const { lx, ly } = clientToLogical(t.clientX, t.clientY);
     addCandidate = null;
+    if (typeof hideSplitAsk === 'function') hideSplitAsk();   // neue Interaktion → Pill weg
     pressX = t.clientX; pressY = t.clientY;
 
     // Lock-Badge (rotes Schloss) — nur am AUSGEWÄHLTEN Feld sichtbar/tappbar.
@@ -5152,6 +5183,8 @@ canvas.addEventListener('touchend', e => {
       openTextEdit();
       return;
     }
+    // Querformat-Foto über die rechte Kante gezogen? → Split-Angebot zeigen.
+    if (dragMode === 'move' && sel >= 0 && ct0 && Math.hypot(ct0.clientX - dragStartMX, ct0.clientY - dragStartMY) >= 8) maybeOfferSplit(sel);
     dragMode = null; guides = []; armUndo = false;
     // Tipp auf ein bisher NICHT ausgewähltes Element → jetzt auswählen
     // (nur wenn der Finger nicht gewischt hat).
@@ -8761,6 +8794,74 @@ function toggleSeam(k) {
   }
   updateSeamBtn();
 }
+// ── Drag-zu-Split: Querformat-Foto über die rechte Slide-Kante gezogen →
+//    Pill „Split across 2 slides?". ✓ nutzt eine leere Nachbar-Slide oder legt
+//    eine neue an und passt das Foto nahtlos über beide ein (wie Split-Panorama).
+let splitAsk = null;   // { idx, k } — Foto-Index + Naht-Index (Grenze zwischen k-1 und k)
+function photoOnSlide(q, i) {
+  const hw = (q.w || 0) / 2;
+  if (hw > 1) return (q.cx + hw) > i * W + 6 && (q.cx - hw) < (i + 1) * W - 6;
+  return Math.floor(q.cx / W) === i;
+}
+function hideSplitAsk() {
+  splitAsk = null;
+  document.getElementById('splitAsk').classList.remove('show');
+}
+function positionSplitAsk() {
+  if (!splitAsk) return;
+  if (!photos[splitAsk.idx] || photos[splitAsk.idx].kind !== 'image') { hideSplitAsk(); return; }
+  const el = document.getElementById('splitAsk');
+  const rect = wrap.getBoundingClientRect();
+  el.classList.add('show');
+  const pw = el.offsetWidth;
+  let gx = edgePad() + splitAsk.k * W * DSCALE - wrap.scrollLeft + rect.left;
+  gx = Math.max(rect.left + 10 + pw / 2, Math.min(rect.right - 10 - pw / 2, gx));
+  el.style.left = Math.round(gx - pw / 2) + 'px';
+  el.style.top  = Math.round(rect.top + 14) + 'px';
+}
+function maybeOfferSplit(idx) {
+  if (idx < 0 || idx >= photos.length) return;
+  const p = photos[idx];
+  if (p.kind !== 'image' || p.locked || p.frameGroup || p.tmplN) return;
+  if (Math.abs(p.rot || 0) > 0.09) return;
+  if (p.w / Math.max(1, p.h) < 1.25) return;              // nur Querformat
+  if (Math.round(p.w / W) >= 2) return;                   // ist schon Panorama
+  const s = Math.max(0, Math.min(slides.length - 1, Math.floor(p.cx / W)));
+  const overR = (p.cx + p.w / 2) - (s + 1) * W;
+  if (overR < p.w * 0.2) return;                          // ragt kaum über die Kante
+  // Braucht es eine NEUE Slide und ist das Limit erreicht? Dann gar nicht anbieten.
+  const nextFree = (s + 1 < slides.length) && !photos.some(q => q !== p && photoOnSlide(q, s + 1));
+  if (!nextFree && slides.length >= 20) return;
+  splitAsk = { idx, k: s + 1 };
+  positionSplitAsk();
+}
+function doSplitAcross() {
+  if (!splitAsk || !photos[splitAsk.idx]) { hideSplitAsk(); return; }
+  const p = photos[splitAsk.idx];
+  const s = splitAsk.k - 1;
+  hideSplitAsk();
+  const nextFree = (s + 1 < slides.length) && !photos.some(q => q !== p && photoOnSlide(q, s + 1));
+  if (!nextFree && slides.length >= 20) { showToast('Maximum of 20 slides'); return; }
+  beginAction();
+  if (!nextFree) {
+    // Neue Slide rechts einfügen; alles ab dort eine Slide nach rechts rücken.
+    slides.splice(s + 1, 0, { bg: slides[s].bg });
+    photos.forEach(q => { if (q !== p && Math.floor(q.cx / W) >= s + 1) q.cx += W; });
+  }
+  // Foto exakt über beide Slides — fitPhoto übernimmt Crop-Anpassung + Passung.
+  p.split = null; p.rot = 0;
+  p.w = 2 * W; p.h = H;
+  p.cx = s * W + W; p.cy = H / 2;
+  fitPhoto(p);
+  activeSlide = s; sel = photos.indexOf(p);
+  resizeCanvas(); syncBgButtons(); updateDots(); updateDeleteBtn();
+  redraw(); scheduleSave();
+  // Überblick: rauszoomen + Trennlinie sofort mittig (neue autoZoom-Logik).
+  setTimeout(() => { autoZoomForSlide(); updateSeamBtn(); }, 60);
+}
+document.getElementById('splitAskYes').addEventListener('click', doSplitAcross);
+document.getElementById('splitAskNo').addEventListener('click', hideSplitAsk);
+
 document.getElementById('seamBtn').addEventListener('click', () => {
   const sp = slideSpanAt(activeSlide);
   if (!sp) return;
@@ -8778,7 +8879,7 @@ document.getElementById('seamBtn').addEventListener('click', () => {
 window.addEventListener('resize', () => { syncSnapPoints(); updateSeamBtn(); });
 // Zustand aktuell halten, wenn Fotos bewegt oder Slides geändert werden
 // (nicht nur beim Scrollen) — leichtgewichtiger Puls statt vieler Hooks.
-setInterval(() => { if (isMobileLayout()) syncSnapPoints(); updateSeamBtn(); }, 400);
+setInterval(() => { if (isMobileLayout()) syncSnapPoints(); updateSeamBtn(); if (splitAsk) positionSplitAsk(); }, 400);
 // Initial einmal aufbauen.
 setTimeout(() => { syncSnapPoints(); updateSeamBtn(); }, 300);
 
@@ -8860,6 +8961,7 @@ function autoZoomForSlide() {
 
 wrap.addEventListener('scroll', () => {
   drawOverlayUI();   // Auswahl-Overlay folgt der Canvas unter ihm
+  if (splitAsk) positionSplitAsk();   // Pill klebt an der Naht
   if (_snapping) { updateSlideNum(); updateSeamBtn(); return; }   // programmatisches Zentrieren nicht erneut auslösen
   // Manuelles Wischen beendet den Naht-Modus.
   if (seamAt >= 0) { seamAt = -1; syncSnapPoints(); }
