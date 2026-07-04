@@ -346,10 +346,15 @@ details.hlp-sec[open] .hlp-chev { transform: rotate(180deg); }
 #ldGrid {
   /* 5 Spalten + minimaler Abstand → spürbar größere Thumbnails */
   display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px;
+  /* Zeilen oben packen statt über die Höhe verteilen (sonst große Lücken) */
+  align-content: start; grid-auto-rows: max-content;
   height: 224px; overflow-y: auto; -webkit-overflow-scrolling: touch;
 }
 #ldGrid .ld-cell {
-  aspect-ratio: 1; border-radius: 10px; overflow: hidden; padding: 0;
+  /* width/height explizit: hebt die globale button-Höhe (40px) auf —
+     sonst bleibt die Kachel 40×40 statt die Spalte zu füllen */
+  width: 100%; height: auto; aspect-ratio: 1;
+  border-radius: 10px; overflow: hidden; padding: 0;
   border: 1px solid var(--hairline); background: var(--surface); cursor: pointer;
 }
 #ldGrid .ld-cell img { width: 100%; height: 100%; object-fit: cover; display: block; }
