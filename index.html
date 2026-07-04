@@ -2237,6 +2237,10 @@ canvas {
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg>
       <span>Rotate</span>
     </button>
+    <button class="acc-chip tool-btn" data-sec="secBlur" data-ctx="img" title="Blur">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3s6 6.6 6 11a6 6 0 0 1-12 0C6 9.6 12 3 12 3z"/></svg>
+      <span>Blur</span>
+    </button>
     <button class="acc-chip tool-btn" data-sec="secBlend" data-ctx="img" title="Blend">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="12" r="6"/><circle cx="15" cy="12" r="6"/></svg>
       <span>Blend</span>
@@ -2385,6 +2389,15 @@ canvas {
   </div><!-- /secMargin -->
 
   <!-- ▼ Blend & Opacity (Doppelbelichtung / zwei Ebenen mischen) -->
+  <!-- ▼ Blur-Sektion: Foto weichzeichnen, Regler 0–100 % -->
+  <div class="acc-sec" id="secBlur" style="display:none">
+    <div class="row">
+      <span class="label">Blur</span>
+      <input type="range" id="blurRange" min="0" max="100" step="1" value="0" title="Blur strength">
+      <span id="blurVal">0%</span>
+    </div>
+  </div><!-- /secBlur -->
+
   <div class="acc-sec" id="secBlend" style="display:none">
     <!-- Ebene 1: Blend-Modus + Deckkraft + Absprung in die Gradient-Maske -->
     <div class="blend-lvl" id="blendMain">
@@ -4306,9 +4319,112 @@ function fillFrameRect(c, x, y, w, h, color) {
   c.fill();
 }
 
+// ── Blur-Quelle: weichgezeichnete Kopie der Bildquelle, pro Foto gecacht.
+//    Funktioniert OHNE ctx.filter (Safari!): Downscale-Kaskade + weiches
+//    Hochskalieren ≈ Gauß. Mit ctx.filter wird der schnelle Weg genutzt.
+//    Rückgabe { c, f, off }: Quell-Koordinaten × f − off ergeben Blur-Canvas-Koordinaten.
+const _blurCache = new WeakMap();
+function blurredSource(p, src, sw) {
+  const sW = src.width || src.naturalWidth, sH = src.height || src.naturalHeight;
+  if (!sW || !sH) return null;
+  const rSrc = (p.blur || 0) * (sw / Math.max(1, p.w));      // Radius in Quell-px
+  if (rSrc < 0.4) return null;
+  const f0 = Math.min(1, 1400 / Math.max(sW, sH));           // Arbeitsauflösung deckeln
+  const w = Math.max(2, Math.round(sW * f0)), h = Math.max(2, Math.round(sH * f0));
+  const rW = Math.max(0.5, rSrc * f0);                       // Radius in Arbeits-px
+  const key = Math.round(rW * 2) + '|' + sW + '|' + sH;
+  const hit = _blurCache.get(p);
+  if (hit && hit.key === key) return hit;
+  let entry;
+  const cv = document.createElement('canvas');
+  const cc = cv.getContext('2d');
+  if ('filter' in cc) {
+    // Überzeichnen um den Radius, sonst franst die Kante transparent aus.
+    const e = Math.ceil(rW * 2);
+    cv.width = w; cv.height = h;
+    cc.filter = 'blur(' + rW + 'px)';
+    cc.drawImage(src, -e, -e, w + 2 * e, h + 2 * e);
+    cc.filter = 'none';
+    entry = { key, c: cv, f: (w + 2 * e) / sW, off: e };
+  } else {
+    // Fallback (Safari, kein ctx.filter): auf eine Arbeitsgröße verkleinern, bei
+    // der der nötige Box-Radius ≤ 6 px bleibt, dort 3× separabler Box-Blur
+    // (≈ Gauß, butterweich), hochskaliert wird erst beim Zeichnen (bilinear).
+    const s2 = Math.min(1, 6 / rW);
+    let tw = Math.max(16, Math.round(w * s2)), th = Math.max(16, Math.round(h * s2));
+    // In Halbierungsschritten runter (vermeidet Aliasing-Klötzchen), dann final.
+    let cur = src, cw = sW, chh = sH;
+    while (cw > tw * 2.5) {
+      const nw = Math.max(tw, Math.round(cw / 2)), nh = Math.max(th, Math.round(chh / 2));
+      const t = document.createElement('canvas'); t.width = nw; t.height = nh;
+      const tc = t.getContext('2d');
+      tc.imageSmoothingEnabled = true; tc.imageSmoothingQuality = 'high';
+      tc.drawImage(cur, 0, 0, nw, nh);
+      cur = t; cw = nw; chh = nh;
+    }
+    cv.width = tw; cv.height = th;
+    cc.imageSmoothingEnabled = true; cc.imageSmoothingQuality = 'high';
+    cc.drawImage(cur, 0, 0, tw, th);
+    _boxBlur3(cv, Math.max(1, Math.round(rW * s2 / 1.7)));
+    entry = { key, c: cv, f: tw / sW, off: 0 };
+  }
+  _blurCache.set(p, entry);
+  return entry;
+}
+// 3 Durchgänge separabler Box-Blur ≈ Gauß (Radius b je Durchgang, Spread ≈ 1.7·b).
+function _boxBlur3(cv, b) {
+  const w = cv.width, h = cv.height;
+  const c2 = cv.getContext('2d');
+  const im = c2.getImageData(0, 0, w, h);
+  const a = im.data, t = new Uint8ClampedArray(a.length);
+  const passH = (src, dst) => {
+    const div = 2 * b + 1;
+    for (let y = 0; y < h; y++) {
+      const o = y * w * 4;
+      let r0 = 0, g0 = 0, b0 = 0, a0 = 0;
+      for (let i = -b; i <= b; i++) {
+        const k = o + Math.max(0, Math.min(w - 1, i)) * 4;
+        r0 += src[k]; g0 += src[k + 1]; b0 += src[k + 2]; a0 += src[k + 3];
+      }
+      for (let x = 0; x < w; x++) {
+        const d = o + x * 4;
+        dst[d] = r0 / div; dst[d + 1] = g0 / div; dst[d + 2] = b0 / div; dst[d + 3] = a0 / div;
+        const ka = o + Math.min(w - 1, x + b + 1) * 4, kr = o + Math.max(0, x - b) * 4;
+        r0 += src[ka] - src[kr]; g0 += src[ka + 1] - src[kr + 1];
+        b0 += src[ka + 2] - src[kr + 2]; a0 += src[ka + 3] - src[kr + 3];
+      }
+    }
+  };
+  const passV = (src, dst) => {
+    const div = 2 * b + 1, st = w * 4;
+    for (let x = 0; x < w; x++) {
+      const o = x * 4;
+      let r0 = 0, g0 = 0, b0 = 0, a0 = 0;
+      for (let i = -b; i <= b; i++) {
+        const k = o + Math.max(0, Math.min(h - 1, i)) * st;
+        r0 += src[k]; g0 += src[k + 1]; b0 += src[k + 2]; a0 += src[k + 3];
+      }
+      for (let y = 0; y < h; y++) {
+        const d = o + y * st;
+        dst[d] = r0 / div; dst[d + 1] = g0 / div; dst[d + 2] = b0 / div; dst[d + 3] = a0 / div;
+        const ka = o + Math.min(h - 1, y + b + 1) * st, kr = o + Math.max(0, y - b) * st;
+        r0 += src[ka] - src[kr]; g0 += src[ka + 1] - src[kr + 1];
+        b0 += src[ka + 2] - src[kr + 2]; a0 += src[ka + 3] - src[kr + 3];
+      }
+    }
+  };
+  for (let it = 0; it < 3; it++) { passH(a, t); passV(t, a); }
+  c2.putImageData(im, 0, 0);
+}
+
 function drawPhotoLayer(c, p, src, sx, sy, sw, sh, dw, dh) {
   const blend = p.blendMode || 'source-over';
   const op = (p.opacity == null) ? 1 : p.opacity;
+  // Blur: gecachte weichgezeichnete Quelle einwechseln, Koordinaten ummappen.
+  if ((p.blur || 0) > 0.4) {
+    const e = blurredSource(p, src, sw);
+    if (e) { sx = sx * e.f - e.off; sy = sy * e.f - e.off; sw *= e.f; sh *= e.f; src = e.c; }
+  }
   c.save();
   const r = cornerR(dw, dh);
   if (r > 0) { pathRoundRect(c, -dw / 2, -dh / 2, dw, dh, r); c.clip(); }
@@ -6934,6 +7050,7 @@ function updateDeleteBtn() {
   setSectionAvail('secZoom',    isImage);   // Zoom für alle gefüllten Fotos
   setSectionAvail('secMargin',  isImage && !photos[sel].frameGroup);   // kein Margin in Frames/Templates
   setSectionAvail('secBlend',   isImage);   // Blend jetzt auch in Frames/Templates verfügbar
+  setSectionAvail('secBlur',    isImage);   // Weichzeichner für alle gefüllten Fotos
   setSectionAvail('secRatio',   isTpl);
   // Frames-Inset (Platzhalter ODER gefüllt): Format-Umschalter Quer ↔ 1:1
   const isFrInset = hasSel && !!photos[sel].frameGroup && photos[sel].role === 'inset' && !photos[sel].tmplN;
@@ -6962,6 +7079,7 @@ function updateDeleteBtn() {
   syncSlotUI();
   syncTextUI();
   syncBlendUI();
+  syncBlurChips();
   syncZoomUI();
   syncTextStrip();
   syncRatioUI();
@@ -7183,6 +7301,27 @@ function attachKnob(el, opts) {
   window.addEventListener('mouseup', up);
   el.addEventListener('dblclick', reset);
 }
+// ── Blur: Weichzeichner pro Foto — Regler 0–100 % (intern logische Slide-px).
+//    Perzeptive Kurve (γ 1.8): unten feine Dosierung, oben kräftig; 100 % = 32 pt.
+const BLUR_MAX = 32, BLUR_GAMMA = 1.8;
+const pctToBlur = pct => Math.pow(pct / 100, BLUR_GAMMA) * BLUR_MAX;
+const blurToPct = px => Math.round(Math.pow((px || 0) / BLUR_MAX, 1 / BLUR_GAMMA) * 100);
+function syncBlurChips() {
+  const p = curImg();
+  const pct = p ? blurToPct(p.blur) : 0;
+  const r = document.getElementById('blurRange'), v = document.getElementById('blurVal');
+  if (r) r.value = pct;
+  if (v) v.textContent = pct + '%';
+}
+document.getElementById('blurRange').addEventListener('input', function () {
+  const p = curImg(); if (!p) return;
+  beginAction('blur');
+  const pct = Math.max(0, Math.min(100, +this.value || 0));
+  p.blur = pctToBlur(pct);
+  document.getElementById('blurVal').textContent = pct + '%';
+  redraw(); scheduleSave();
+});
+
 function syncBlendUI() {
   const p = curImg();
   if (!p) return;
