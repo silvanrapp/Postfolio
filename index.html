@@ -2847,8 +2847,8 @@ canvas {
 <div id="libOverlay">
   <div id="libCard">
     <button id="libClose" aria-label="Close">✕</button>
-    <button id="libAdd" title="Fotos in diesen Ordner laden" aria-label="Fotos laden">＋</button>
-    <button id="libTrash" title="Diesen Ordner löschen" aria-label="Ordner löschen">
+    <button id="libAdd" title="Add photos to this folder" aria-label="Add photos">＋</button>
+    <button id="libTrash" title="Delete this folder" aria-label="Delete folder">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
     </button>
     <button id="libSelect" type="button" title="Fotos auswählen" aria-label="Fotos auswählen">
@@ -2859,10 +2859,10 @@ canvas {
     <div id="libFolders"></div>
     <div id="libGrid"></div>
     <div id="libSelBar">
-      <span id="libSelCount">0 ausgewählt</span>
+      <span id="libSelCount">0 selected</span>
       <div class="lsb-actions">
-        <button id="libSelMove" type="button" title="In Ordner verschieben" aria-label="In Ordner verschieben"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></button>
-        <button id="libSelDel" type="button" class="danger" title="Löschen" aria-label="Löschen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14"/></svg></button>
+        <button id="libSelMove" type="button" title="Move to folder" aria-label="Move to folder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></button>
+        <button id="libSelDel" type="button" class="danger" title="Delete" aria-label="Delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14"/></svg></button>
       </div>
     </div>
     <div class="lib-hint">Saved locally in this browser — clearing site data removes them. Tap a photo to place it.</div>
@@ -2885,8 +2885,8 @@ canvas {
 <div id="libDrawer">
   <div class="ld-head">
     <span class="ld-title">Library</span>
-    <button id="ldAdd" type="button" title="Fotos in diesen Ordner laden" aria-label="Fotos laden">＋</button>
-    <button id="ldManage" type="button" title="Ordner verwalten, Fotos laden">Manage</button>
+    <button id="ldAdd" type="button" title="Add photos to this folder" aria-label="Add photos">＋</button>
+    <button id="ldManage" type="button" title="Manage folders & uploads">Manage</button>
     <button id="ldClose" type="button" aria-label="Close">✕</button>
   </div>
   <div id="ldFolders"></div>
@@ -3057,7 +3057,7 @@ function openFilePicker() {
   _pickerOpenedAt = _now;
   // click() MUSS synchron in der Nutzergeste passieren (iOS), daher zuerst.
   try { document.getElementById('fileInput').click(); }
-  catch (e) { showToast('Fotoauswahl ließ sich nicht öffnen', { err: true }); }
+  catch (e) { showToast('Could not open the photo picker', { err: true }); }
 }
 // Kehrt die App aus dem Hintergrund/Dialog zurück, Guard zurücksetzen und neu zeichnen.
 window.addEventListener('focus', () => { _rafPending = false; redraw(); });
@@ -3686,8 +3686,8 @@ function deleteSlide(i) {
   // Sicherheitsabfrage — verhindert versehentliches Löschen im Filmstreifen.
   const cnt = photos.filter(p => Math.floor(p.cx / W) === i).length;
   const msg = cnt > 0
-    ? 'Slide ' + (i + 1) + ' mit ' + cnt + (cnt === 1 ? ' Element' : ' Elementen') + ' löschen?'
-    : 'Slide ' + (i + 1) + ' löschen?';
+    ? 'Delete slide ' + (i + 1) + ' with ' + cnt + (cnt === 1 ? ' element' : ' elements') + '?'
+    : 'Delete slide ' + (i + 1) + '?';
   if (!confirm(msg)) return;
   beginAction();
   // Fotos auf dieser Slide entfernen, die rechts davon eine Slide nach links rücken.
@@ -5382,7 +5382,7 @@ function onFilePicked(inputEl) {
     resizeCanvas(); syncBgButtons(); updateDots();
   }
   if (usable.length < files.length)
-    showToast('Maximal 20 Slides — ' + (files.length - usable.length) + ' Foto(s) übersprungen');
+    showToast('Maximum of 20 slides — ' + (files.length - usable.length) + ' photo(s) skipped');
   usable.forEach((f, k) => {
     if (k === 0) loadPhoto(f, pos.cx, pos.cy);
     else loadPhoto(f, (startSlide + k) * W + W / 2, H / 2, true);
@@ -5405,7 +5405,7 @@ function readImageFile(file, cb) {
   const fail = (why) => {
     if (done) return; done = true;
     console.error('readImageFile failed:', why);
-    showToast('Foto ließ sich nicht laden', { err: true, ms: 5000 });
+    showToast('Photo could not be loaded', { err: true, ms: 5000 });
     cb(null);
   };
 
@@ -5581,7 +5581,7 @@ function insertPhotoImg(img, targetCX, targetCY, quiet) {
       scheduleSave();
       if (!quiet) { setTimeout(() => centerActiveSlide(false), 20); setTimeout(() => centerActiveSlide(false), 340); hintCropResize(); }
     } catch (e) {
-      showToast('Fehler beim Einfügen', { err: true, ms: 5000 });
+      showToast('Something went wrong while inserting', { err: true, ms: 5000 });
     }
 }
 
@@ -5690,15 +5690,15 @@ async function renderMediaLib() {
   // Auswahl-Status spiegeln: Select-Modus am Card, Leiste nur bei Markierung
   document.getElementById('libCard').classList.toggle('selecting', libSelectMode);
   document.getElementById('libSelect').classList.toggle('on', libSelectMode);
-  document.getElementById('libSelCount').textContent = libSel.size + ' ausgewählt';
+  document.getElementById('libSelCount').textContent = libSel.size + ' selected';
   document.getElementById('libSelBar').classList.toggle('show', libSel.size > 0);
   const list = idx.filter(m => !libFolderSel || m.folder === libFolderSel);
   if (!list.length) {
     const empty = document.createElement('div');
     empty.className = 'lib-empty';
     empty.textContent = libFolderSel
-      ? 'Noch nichts in diesem Ordner — über \u201E⇢\u201C auf einem Bild einsortieren.'
-      : 'Noch keine Bilder — alles, was du in die App lädst, landet automatisch hier.';
+      ? 'Nothing in this folder yet — use \u201C⇢\u201D on a photo to sort it here.'
+      : 'No photos yet — everything you add to the app lands here automatically.';
     g.appendChild(empty);
     return;
   }
@@ -5724,7 +5724,7 @@ async function renderMediaLib() {
       renderMediaLib();
     });
     const mv = document.createElement('button'); mv.className = 'lib-mv'; mv.textContent = '⇢';
-    mv.title = 'In Ordner einsortieren';
+    mv.title = 'Move to folder';
     mv.addEventListener('click', async (e) => {
       e.stopPropagation();
       const dest = await pickFolder('Move to folder', m.folder || '');
@@ -5748,7 +5748,7 @@ async function renderMediaLib() {
 // sonst mittig auf die aktive Slide.
 function insertFromLibrary(id) {
   idbGetK('media:' + id).then(rec => {
-    if (!rec || !rec.data) { showToast('Bild nicht mehr vorhanden', { err: true }); return; }
+    if (!rec || !rec.data) { showToast('Image no longer available', { err: true }); return; }
     const img = new Image();
     img.onload = () => {
       closeMediaLib();
@@ -5759,7 +5759,7 @@ function insertFromLibrary(id) {
         insertPhotoImg(img, activeSlide * W + W / 2, H / 2, false);
       }
     };
-    img.onerror = () => showToast('Bild ließ sich nicht laden', { err: true });
+    img.onerror = () => showToast('Image could not be loaded', { err: true });
     img.src = rec.data;
   });
 }
@@ -5903,8 +5903,8 @@ async function renderLibDrawer() {
     const e = document.createElement('div');
     e.className = 'ld-empty';
     e.textContent = ldFolderSel
-      ? 'Noch keine Fotos in diesem Ordner — mit ＋ hierher laden.'
-      : 'Noch keine Fotos hier — mit ＋ laden oder einfach normal Fotos einfügen.';
+      ? 'No photos in this folder yet — add some with ＋.'
+      : 'No photos here yet — add with ＋ or just insert photos as usual.';
     g.appendChild(e);
     return;
   }
@@ -5922,7 +5922,7 @@ async function renderLibDrawer() {
 // aktive Slide → dahin; ist sie belegt, nächste leere/neue Slide (Mehrfachwahl).
 function libDrawerPick(id) {
   idbGetK('media:' + id).then(rec => {
-    if (!rec || !rec.data) { showToast('Bild nicht mehr vorhanden', { err: true }); return; }
+    if (!rec || !rec.data) { showToast('Image no longer available', { err: true }); return; }
     const img = new Image();
     img.onload = () => {
       // „Replace": Bild des gewählten Fotos austauschen, Geometrie behalten.
@@ -5960,7 +5960,7 @@ function libDrawerPick(id) {
       insertPhotoImg(img, target * W + W / 2, H / 2, false);
       closeLibDrawer();
     };
-    img.onerror = () => showToast('Bild ließ sich nicht laden', { err: true });
+    img.onerror = () => showToast('Image could not be loaded', { err: true });
     img.src = rec.data;
   });
 }
@@ -9417,22 +9417,22 @@ function openCardMenu(entry) {
   const showRoot = () => {
     sheet.innerHTML = '';
     sheet.appendChild(title(entry.name));
-    sheet.appendChild(btn('In Ordner verschieben', '', showFolders));
+    sheet.appendChild(btn('Move to folder', '', showFolders));
     sheet.appendChild(btn('Duplizieren', '', async () => { closeCardMenu(); await duplicateEntry(entry); }));
-    sheet.appendChild(btn('Löschen', 'danger', async () => { closeCardMenu(); await deleteEntry(entry); }));
+    sheet.appendChild(btn('Delete', 'danger', async () => { closeCardMenu(); await deleteEntry(entry); }));
     sheet.appendChild(btn('Abbrechen', 'cancel', closeCardMenu));
   };
   const showFolders = async () => {
     sheet.innerHTML = '';
-    sheet.appendChild(title('In Ordner verschieben'));
+    sheet.appendChild(title('Move to folder'));
     const list = (await idbGetK('folderList')) || [];
     const idx = (await idbGetK('projIndex')) || [];
     idx.forEach(e => { if (e.folder && !list.includes(e.folder)) list.push(e.folder); });
     const cur = entry.folder || '';
     sheet.appendChild(btn('Unsorted' + (cur === '' ? '  ✓' : ''), '', () => setEntryFolder(entry, '')));
     list.forEach(f => sheet.appendChild(btn(f + (cur === f ? '  ✓' : ''), '', () => setEntryFolder(entry, f))));
-    sheet.appendChild(btn('Neuer Ordner…', 'accent', async () => {
-      const name = (prompt('Ordnername:') || '').trim(); if (!name) return;
+    sheet.appendChild(btn('New folder…', 'accent', async () => {
+      const name = (prompt('Folder name:') || '').trim(); if (!name) return;
       await setEntryFolder(entry, name);
     }));
     sheet.appendChild(btn('Zurück', 'cancel', showRoot));
