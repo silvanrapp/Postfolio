@@ -8817,7 +8817,8 @@ function positionSplitAsk() {
   let gx = edgePad() + splitAsk.k * W * DSCALE - wrap.scrollLeft + rect.left;
   gx = Math.max(rect.left + 10 + pw / 2, Math.min(rect.right - 10 - pw / 2, gx));
   el.style.left = Math.round(gx - pw / 2) + 'px';
-  el.style.top  = Math.round(rect.top + 14) + 'px';
+  // Deutlich sichtbar ÜBER dem Canvas schweben (nicht am oberen Rand kleben).
+  el.style.top  = Math.round(rect.top + Math.min(rect.height * 0.18, 130)) + 'px';
 }
 function maybeOfferSplit(idx) {
   if (idx < 0 || idx >= photos.length) return;
