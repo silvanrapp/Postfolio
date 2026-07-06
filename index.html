@@ -3777,7 +3777,16 @@ function cornerHandlePositions(p) {
   }));
 }
 
+// Panorama = Foto, das über ≥ 2 Slides läuft. Solche Fotos sollen ihre Slides
+// immer voll füllen (nahtloses Panorama); Freihand-Verkleinern würde sonst den
+// Slide-Hintergrund ungleich (mehr seitlich als oben/unten) durchscheinen
+// lassen. Deshalb kein Skalier-Punkt — der gleichmäßige Rand kommt über „Border".
+function isSpanningPano(p) {
+  return !!p && p.kind === 'image' && Math.round((p.w || 0) / W) >= 2;
+}
+
 function hitCornerHandle(p, lx, ly) {
+  if (isSpanningPano(p)) return false;   // Panoramen: kein Freihand-Skalieren
   const c = cornerHandlePositions(p)[2]; // nur unten rechts dient zum Skalieren
   return Math.hypot(lx - c.x, ly - c.y) <= CORNER_HANDLE_R;
 }
@@ -4812,11 +4821,14 @@ function drawOverlayUI() {
     c.setLineDash([]);
   }
 
-  // Skalier-Punkt unten rechts — das Markenzeichen, immer voll sichtbar.
-  c.beginPath();
-  c.arc(hw, hh, HR, 0, Math.PI * 2);
-  c.fillStyle = '#D10101';
-  c.fill();
+  // Skalier-Punkt unten rechts — das Markenzeichen. Bei Panoramen (≥ 2 Slides)
+  // ausgeblendet, weil Freihand-Verkleinern dort ungleiche Ränder erzeugt.
+  if (!isSpanningPano(p)) {
+    c.beginPath();
+    c.arc(hw, hh, HR, 0, Math.PI * 2);
+    c.fillStyle = '#D10101';
+    c.fill();
+  }
 
   // Lösch-Griff: roter Kreis mit Mülleimer, diagonal außerhalb oben links.
   const DK = (DEL_OFFSET / Math.SQRT2) * K;
@@ -5276,7 +5288,9 @@ canvas.addEventListener('touchstart', e => {
     const my = (t1.clientY + t2.clientY) / 2;
     const { lx, ly } = clientToLogical(mx, my);
     const hit = hitPhoto(lx, ly);
-    if (hit >= 0 && !photos[hit].locked) {
+    // Panoramen (≥ 2 Slides) nicht per Pinch skalieren/rotieren — sie sollen
+    // ihre Slides füllen (gleicher Rand nur über „Border"). Siehe isSpanningPano.
+    if (hit >= 0 && !photos[hit].locked && !isSpanningPano(photos[hit])) {
       sel = hit;
       armUndo = true;
       pinchData = {
