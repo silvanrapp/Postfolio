@@ -1378,7 +1378,7 @@ canvas {
 #zoomCtrl {
   position: fixed;
   bottom: 14px; right: 14px;
-  transition: bottom 0.15s ease;
+  transition: bottom 0.15s ease, opacity 0.15s ease;
   z-index: 65;
   display: flex; align-items: center; gap: 2px;
   background: rgba(255,255,255,0.82);
@@ -1388,6 +1388,11 @@ canvas {
   border-radius: 999px;
   padding: 4px 6px;
 }
+/* Foto ausgewählt → Zoom-/Fullscreen-Pille tritt zurück (halbtransparent, nicht
+   klickbar), damit der rote Skalier-Punkt unten rechts immer greifbar bleibt.
+   Der ✓ (#doneBtn) bleibt separat und voll bedienbar; nach Bestätigen endet die
+   Auswahl und die Pille wird wieder normal. */
+#zoomCtrl.dimmed { opacity: 0.5; pointer-events: none; }
 #zoomCtrl .icon-btn {
   width: 24px; height: 24px;
   padding: 0; line-height: 1;
@@ -2130,6 +2135,10 @@ canvas {
         <button id="frames2Btn" class="tm-item" title="Two stacked bands, each with a framed inset">
           <span class="tm-prev"><svg viewBox="0 0 24 30" width="17" height="21" aria-hidden="true"><rect x="1" y="1" width="22" height="13.5" rx="2" fill="none" stroke="#9B948A" stroke-width="1.5"/><rect x="7" y="4.5" width="10" height="6.5" rx="1" fill="none" stroke="#2A2826" stroke-width="1.5"/><rect x="1" y="15.5" width="22" height="13.5" rx="2" fill="none" stroke="#9B948A" stroke-width="1.5"/><rect x="7" y="19" width="10" height="6.5" rx="1" fill="none" stroke="#2A2826" stroke-width="1.5"/></svg></span>
           <span class="tm-txt"><b>Frames · 2 stacked</b><small>The classic look</small></span>
+        </button>
+        <button id="framesCols2Btn" class="tm-item" title="Two side-by-side columns, each with a framed inset">
+          <span class="tm-prev"><svg viewBox="0 0 24 30" width="17" height="21" aria-hidden="true"><rect x="1" y="1" width="10.5" height="28" rx="2" fill="none" stroke="#9B948A" stroke-width="1.5"/><rect x="3.4" y="10" width="5.7" height="10" rx="1" fill="none" stroke="#2A2826" stroke-width="1.5"/><rect x="12.5" y="1" width="10.5" height="28" rx="2" fill="none" stroke="#9B948A" stroke-width="1.5"/><rect x="14.9" y="10" width="5.7" height="10" rx="1" fill="none" stroke="#2A2826" stroke-width="1.5"/></svg></span>
+          <span class="tm-txt"><b>Frames · 2 side by side</b><small>Vertical split</small></span>
         </button>
         <button id="frames3Btn" class="tm-item" title="Three stacked bands — great for 9:16 stories">
           <span class="tm-prev"><svg viewBox="0 0 24 30" width="17" height="21" aria-hidden="true"><rect x="1" y="1" width="22" height="8.7" rx="1.5" fill="none" stroke="#9B948A" stroke-width="1.4"/><rect x="1" y="10.7" width="22" height="8.7" rx="1.5" fill="none" stroke="#9B948A" stroke-width="1.4"/><rect x="1" y="20.4" width="22" height="8.7" rx="1.5" fill="none" stroke="#9B948A" stroke-width="1.4"/></svg></span>
@@ -5619,11 +5628,18 @@ function fillPlaceholderImg(img, idx) {
     //  über ihre Mittelhöhe cy, nicht über die Gruppe.)
     if (photo.role === 'bg' && photo.frameGroup && !photo.tmplN) {
       const slideIdx = Math.floor(photo.cx / W);
+      // Achse bestimmen: Bänder unterscheiden sich in cy (gestapelt) oder cx
+      // (nebeneinander). Danach richtet sich, welches Inset das „nächste" ist.
+      const grpBgs = photos.filter(q => q.frameGroup === photo.frameGroup && q.role === 'bg');
+      const cxs = grpBgs.map(b => b.cx), cys = grpBgs.map(b => b.cy);
+      const vert = (Math.max(...cxs) - Math.min(...cxs)) > (Math.max(...cys) - Math.min(...cys));
+      const key = vert ? (q => q.cx) : (q => q.cy);
+      const kp = key(photo);
       const others = photos.filter(q => q.kind === 'placeholder' && q.role === 'inset' && !q.tmplN
-        && Math.floor(q.cx / W) === slideIdx && Math.abs(q.cy - photo.cy) > 1)
-        .sort((a, b) => a.cy - b.cy);
-      // Zyklisch: das Inset des NÄCHSTEN Bandes unterhalb, sonst das erste darüber.
-      const target = others.find(q => q.cy > photo.cy) || others[0];
+        && Math.floor(q.cx / W) === slideIdx && Math.abs(key(q) - kp) > 1)
+        .sort((a, b) => key(a) - key(b));
+      // Zyklisch: das Inset des NÄCHSTEN Bandes (unten bzw. rechts), sonst das erste.
+      const target = others.find(q => key(q) > kp) || others[0];
       if (target) {
         const j = photos.indexOf(target);
         const p2 = {
@@ -6316,12 +6332,19 @@ async function addOutroSlide(dark) {
 function mirrorFramesInset(p) {
   if (!p || !p.frameGroup || p.role !== 'inset' || p.tmplN) return;
   const group = photos.filter(q => q.frameGroup === p.frameGroup);
-  const bgs = group.filter(q => q.role === 'bg').sort((a, b) => a.cy - b.cy);
-  const n = bgs.length;
+  const bgsAll = group.filter(q => q.role === 'bg');
+  const n = bgsAll.length;
   if (n < 2) return;
+  // Achse automatisch bestimmen: Bänder unterscheiden sich entweder in cy
+  // (gestapelt / horizontale Trennung) oder in cx (nebeneinander / vertikale
+  // Trennung). Danach richtet sich Band-Zuordnung und Spiegelung.
+  const cxs = bgsAll.map(b => b.cx), cys = bgsAll.map(b => b.cy);
+  const vert = (Math.max(...cxs) - Math.min(...cxs)) > (Math.max(...cys) - Math.min(...cys));
+  const key = vert ? (q => q.cx) : (q => q.cy);
+  const bgs = bgsAll.slice().sort((a, b) => key(a) - key(b));
   const bandOf = (q) => {
     let bi = 0, bd = 1e9;
-    bgs.forEach((b, i) => { const d = Math.abs(b.cy - q.cy); if (d < bd) { bd = d; bi = i; } });
+    bgs.forEach((b, i) => { const d = Math.abs(key(b) - key(q)); if (d < bd) { bd = d; bi = i; } });
     return bi;
   };
   const bi = bandOf(p);
@@ -6379,7 +6402,8 @@ function fillPlaceholder(idx, forceNative) {
 function framesSlideOccupied(idx) {
   return photos.some(p => slideIndexOf(p) === idx);
 }
-function addFramesLayout(n) {
+function addFramesLayout(n, axis) {
+  axis = (axis === 'col') ? 'col' : 'row';
   beginAction();
   let idx = activeSlide;
   if (framesSlideOccupied(idx) && slides.length < 20) {
@@ -6387,17 +6411,28 @@ function addFramesLayout(n) {
     idx = slides.length - 1;
   }
   const cxBase = idx * W;
-  const bandH = H / n;
   const gid = ++frameGroupSeq;           // verbindet die Insets dieser Gruppe (gleiche Größe)
-  // Inset: kompakt und quadratisch als Start (Format-Tool schaltet 1:1/2:3/3:2)
-  const insetW = Math.min(W * 0.36, bandH * 0.72);
-  const insetH = insetW;
   const firstIdx = photos.length;
-  for (let i = 0; i < n; i++) {
-    const bandCY = i * bandH + bandH / 2;
-    photos.push({ kind: 'placeholder', role: 'bg', frameGroup: gid, cx: cxBase + W / 2, cy: bandCY, w: W, h: bandH, rot: 0, frame: null });
-    // Inset startet OHNE Border — der weiße Rahmen kommt bewusst über das Border-Tool.
-    photos.push({ kind: 'placeholder', role: 'inset', frameGroup: gid, cx: cxBase + W / 2, cy: bandCY, w: insetW, h: insetH, rot: 0, frame: null });
+  if (axis === 'col') {
+    // Vertikale Trennung: n Spalten nebeneinander (volle Höhe), Inset zentriert.
+    const bandW = W / n;
+    const insetSize = Math.min(bandW * 0.72, H * 0.36);
+    for (let i = 0; i < n; i++) {
+      const bandCX = cxBase + i * bandW + bandW / 2;
+      photos.push({ kind: 'placeholder', role: 'bg',    frameGroup: gid, cx: bandCX, cy: H / 2, w: bandW, h: H, rot: 0, frame: null });
+      // Inset startet OHNE Border — der weiße Rahmen kommt bewusst über das Border-Tool.
+      photos.push({ kind: 'placeholder', role: 'inset', frameGroup: gid, cx: bandCX, cy: H / 2, w: insetSize, h: insetSize, rot: 0, frame: null });
+    }
+  } else {
+    // Horizontale Trennung: n gestapelte Bänder (volle Breite), Inset zentriert.
+    const bandH = H / n;
+    const insetSize = Math.min(W * 0.36, bandH * 0.72);
+    for (let i = 0; i < n; i++) {
+      const bandCY = i * bandH + bandH / 2;
+      photos.push({ kind: 'placeholder', role: 'bg',    frameGroup: gid, cx: cxBase + W / 2, cy: bandCY, w: W, h: bandH, rot: 0, frame: null });
+      // Inset startet OHNE Border — der weiße Rahmen kommt bewusst über das Border-Tool.
+      photos.push({ kind: 'placeholder', role: 'inset', frameGroup: gid, cx: cxBase + W / 2, cy: bandCY, w: insetSize, h: insetSize, rot: 0, frame: null });
+    }
   }
   // Neues Layout: sofort auf die Slide springen, ersten Platzhalter auswählen,
   // Toolbar öffnen — und NACH dem Panel-Umbau erneut zentrieren (sonst überlagert).
@@ -6410,6 +6445,7 @@ function addFramesLayout(n) {
 document.getElementById('frames1Btn').addEventListener('click', () => addFramesLayout(1));
 document.getElementById('frames2Btn').addEventListener('click', () => addFramesLayout(2));
 document.getElementById('frames3Btn').addEventListener('click', () => addFramesLayout(3));
+document.getElementById('framesCols2Btn').addEventListener('click', () => addFramesLayout(2, 'col'));
 
 // Templates: 1–3 gerahmte Foto-Zellen (Hochformat 2:3), gestapelt, gleicher
 // Außenrand + gleiche Abstände + gleicher Rahmen. Passt sich Post/Story an.
@@ -7084,6 +7120,11 @@ function updateDeleteBtn() {
   // Fertig-Haken: sichtbar, solange etwas ausgewählt ist
   const _done = document.getElementById('doneBtn');
   if (_done) _done.classList.toggle('show', hasSel);
+  // Bei ausgewähltem FOTO tritt die Zoom-/Fullscreen-Pille in den Hintergrund
+  // (halbtransparent + nicht klickbar), damit der rote Skalier-Punkt unten
+  // rechts nie dahinter verschwindet. Mit dem ✓ endet die Auswahl → wieder normal.
+  const _zc = document.getElementById('zoomCtrl');
+  if (_zc) _zc.classList.toggle('dimmed', hasSel && !!photos[sel] && photos[sel].kind === 'image');
   if (!hasSel) openSec = null;
   // Text gewählt → standardmäßig die Font-Sektion zeigen (dort ist die Eingabe),
   // außer es ist bereits eine andere Text-/Rotate-Sektion offen.
@@ -7576,14 +7617,10 @@ const FRAME_COLOR   = '#ffffff';
 function applyFrameToPhoto(p, newFw, color) {
   if (!p || p.kind !== 'image') return;
   p.frame = newFw > 0 ? { width: newFw, color: color || (p.frame && p.frame.color) || FRAME_COLOR } : null;
-  // Der Rahmen wächst nach AUSSEN. Foto-Box und Ausschnitt (crop) bleiben
-  // UNANGETASTET — das Bild darf sich durch Border-Änderungen nie verändern
-  // (nur durch bewusstes Croppen oder „Fit").
-  const { axis, n } = getPhotoSplit(p);
-  if (p.fitted && axis && n > 1) {
-    // Eingepasste Split-Fotos: exakte Passung beibehalten.
-    fitPhoto(p);
-  }
+  // Jede Änderung der Rahmendicke passt das Foto IMMER automatisch neu in seine
+  // Zelle ein (Auto-Fit) — so sitzt der Rahmen rundum sauber, ohne dass man
+  // „Fit" drücken muss. (Früher blieb die Foto-Box unangetastet.)
+  fitPhoto(p);
 }
 
 const FRAME_LEVEL = { none: 0, s1: 1, s2: 2, s3: 3, s4: 4, s5: 5 };
@@ -8751,9 +8788,11 @@ document.getElementById('cropApply').addEventListener('click', () => {
     // this slide instead of always defaulting back to the first one.
     autoAssignSlot(cropPhoto);
 
-    // A row/column split crop has a fully-defined target cell — snap the photo
-    // into it right away instead of leaving it at a ragged size/position.
-    if (pendingSplit) fitPhoto(cropPhoto);
+    // Nach jedem Zuschnitt das Foto sofort einpassen (Vollformat) — sowohl bei
+    // Row/Column-Splits (in ihre Zelle) als auch bei normalem Crop (füllt die
+    // Slide). Nur beim Panorama nicht, das wird unten eigens über die Spanne
+    // eingepasst.
+    if (!pendingPano) fitPhoto(cropPhoto);
 
     // Split-Panorama: fehlende Folge-Slides automatisch anlegen, Foto über
     // die volle Spanne legen und exakt einpassen (randlos an den Slide-Kanten).
