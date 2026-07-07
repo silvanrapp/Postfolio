@@ -304,13 +304,13 @@ details.hlp-sec[open] .hlp-chev { transform: rotate(180deg); }
 #libDrawer {
   /* Schwebende Glas-Karte (Apple-Look): abgesetzt vom Rand, rundum runde Ecken */
   position: fixed; left: 10px; right: 10px;
-  bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  bottom: 24px;   /* etwas mehr Abstand unten (iPhone-Rundung + Home-Indicator) */
   z-index: 80;
   background: var(--glass-bg-strong);
   -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
   border: 1px solid var(--hairline); border-radius: 20px;
   box-shadow: var(--shadow-card), var(--edge-light);
-  padding: 10px 14px 12px;
+  padding: 10px 14px 14px;
   transform: translateY(calc(115% + 24px)); transition: transform 0.22s ease;
 }
 #libDrawer.show { transform: translateY(0); }
@@ -348,7 +348,7 @@ details.hlp-sec[open] .hlp-chev { transform: rotate(180deg); }
   display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px;
   /* Zeilen oben packen statt über die Höhe verteilen (sonst große Lücken) */
   align-content: start; grid-auto-rows: max-content;
-  height: 224px; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  max-height: 34vh; overflow-y: auto; -webkit-overflow-scrolling: touch;
 }
 #ldGrid .ld-cell {
   /* width/height explizit: hebt die globale button-Höhe (40px) auf —
@@ -472,6 +472,7 @@ details.hlp-sec[open] .hlp-chev { transform: rotate(180deg); }
 }
 #libSelBar.show { display: inline-flex; }
 #libSelCount { font-size: 12.5px; white-space: nowrap; }
+#libSelAll { background: rgba(255,255,255,0.14); color: var(--bg); border: none; border-radius: 999px; padding: 5px 12px; font-size: 12.5px; font-weight: 600; cursor: pointer; white-space: nowrap; }
 .lsb-actions { display: flex; gap: 6px; }
 .lsb-actions button {
   width: 30px; height: 30px; border-radius: 50%; padding: 0;
@@ -1458,6 +1459,21 @@ canvas {
 }
 #doneBtn.show { display: flex; }
 #doneBtn svg { width: 18px; height: 18px; }
+/* Mirror-Umschalter (schwebt unten links, nur bei Frames-Insets). ── */
+#mirrorBtn {
+  position: fixed; z-index: 66; display: none;
+  right: 14px; bottom: 66px;   /* Fallback — JS positioniert präzise über dem ✓ */
+  height: 40px; border-radius: 999px; padding: 0 15px 0 12px; gap: 7px;
+  background: rgba(255,255,255,0.82); color: var(--muted);
+  border: 1px solid rgba(0,0,0,0.08);
+  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  box-shadow: 0 3px 12px rgba(42,40,38,0.14);
+  align-items: center; justify-content: center; cursor: pointer;
+  font-family: inherit; font-size: 13px; font-weight: 600; white-space: nowrap;
+}
+#mirrorBtn.show { display: inline-flex; }
+#mirrorBtn.sel { background: var(--dark); color: var(--bg); border-color: var(--dark); }
+#mirrorBtn svg { width: 18px; height: 18px; display: block; flex: 0 0 auto; }
 /* Überblick-Modus: alle Slides als nahtloser Streifen, mittig */
 #preview.overview #preview-track { scroll-snap-type: none; align-items: center; }
 #preview.overview .pv-panel { flex: 0 0 auto; padding: 0; height: auto; }
@@ -1584,6 +1600,11 @@ canvas {
 .pi-claim { font-size: 10.5px; letter-spacing: 0.09em; text-transform: uppercase; color: rgba(255,255,255,0.48); }
 .pi-claim b { color: rgba(255,255,255,0.82); font-weight: 600; }
 .pi-get { color: var(--accent); font-weight: 600; }
+/* Fertige iOS-App: Beta-/Waitlist-Zeile im Export-Overlay ausblenden
+   (Browser-Beta behält sie für die Waitlist). native-ios setzt native.js. */
+html.native-ios .pi-claim { display: none; }
+html.native-ios .lib-hint { display: none; }
+html.native-ios .splash-note { display: none; }
 .pi-sig2 { display: flex; align-items: baseline; gap: 10px; }
 .pi-sig2 em { font-style: italic; font-family: 'Playfair Display', Georgia, serif; font-size: 12.5px; color: rgba(255,255,255,0.65); }
 .pi-by { font-size: 10px; letter-spacing: 0.05em; color: rgba(255,255,255,0.4); text-decoration: none; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 1px; }
@@ -2659,6 +2680,14 @@ canvas {
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12.5 9.5 18 20 6.5"/></svg>
 </button>
 
+<!-- Mirror-Umschalter (schwebt unten links) — nur bei Frames-Insets sichtbar.
+     An (.sel) = die beiden inneren Fotos bewegen sich symmetrisch gespiegelt;
+     Aus = jedes Inset einzeln (Snap-Linien bleiben). -->
+<button id="mirrorBtn" title="Mirror the two inner photos — off = move each one freely">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 6H8"/><path d="M11 3 8 6l3 3"/><line x1="3.5" y1="12" x2="20.5" y2="12" stroke-dasharray="2.5 2.5"/><path d="M8 18h8"/><path d="M13 15l3 3-3 3"/></svg>
+  <span>Mirror</span>
+</button>
+
 <div id="loading"><div class="spinner"></div>Exporting…</div>
 
 <!-- Vollbild-Vorschau: aktuelle Slide groß, per Wisch zwischen allen Slides -->
@@ -2841,8 +2870,8 @@ canvas {
       <details class="hlp-sec">
         <summary>Your projects<span class="hlp-chev" aria-hidden="true">▾</span></summary>
         <ul>
-          <li>Everything is saved locally in your browser — nothing leaves your device.</li>
-          <li>Beta: clearing your browser data deletes your projects, so export finished carousels.</li>
+          <li>Everything is saved locally on your device — nothing leaves it.</li>
+          <li>Your projects live only on this device — export finished carousels to keep them safe.</li>
           <li>Long-press a project on the start screen to move, duplicate or delete it.</li>
         </ul>
       </details>
@@ -2881,6 +2910,7 @@ canvas {
     <div id="libFolders"></div>
     <div id="libGrid"></div>
     <div id="libSelBar">
+      <button id="libSelAll" type="button">Select all</button>
       <span id="libSelCount">0 selected</span>
       <div class="lsb-actions">
         <button id="libSelMove" type="button" title="Move to folder" aria-label="Move to folder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></button>
@@ -3016,6 +3046,7 @@ let pendingReplaceIdx = -1; // Index eines Frames-Platzhalters, der gerade befü
 let pendingReplaceImg = -1; // Index eines Fotos, das per "Replace" ersetzt wird
 let pressX = 0, pressY = 0;  // Start eines Tipps (für „Tap → Slide zentrieren")
 let moveGroupMode = false;   // „Move all": ganze Vorlage gemeinsam verschieben
+let framesMirror = true;     // „Mirror": Frames-Insets symmetrisch spiegeln; aus = jedes einzeln (Snap bleibt)
 let groupStart = null;       // Startpositionen der Gruppenzellen beim Ziehen
 let photosLocked = false;    // Text-Modus: alle Fotos gesperrt (nur Text bewegbar)
 let _prevIsText = false;     // um beim Wechsel in Textbearbeitung automatisch zu sperren
@@ -5837,8 +5868,10 @@ async function renderMediaLib() {
   document.getElementById('libCard').classList.toggle('selecting', libSelectMode);
   document.getElementById('libSelect').classList.toggle('on', libSelectMode);
   document.getElementById('libSelCount').textContent = libSel.size + ' selected';
-  document.getElementById('libSelBar').classList.toggle('show', libSel.size > 0);
+  document.getElementById('libSelBar').classList.toggle('show', libSelectMode);
   const list = idx.filter(m => !libFolderSel || m.folder === libFolderSel);
+  const _selAll = document.getElementById('libSelAll');
+  if (_selAll) _selAll.textContent = (list.length && list.every(m => libSel.has(m.id))) ? 'Deselect all' : 'Select all';
   if (!list.length) {
     const empty = document.createElement('div');
     empty.className = 'lib-empty';
@@ -5968,6 +6001,14 @@ document.getElementById('libOverlay').addEventListener('click', (e) => { if (e.t
 document.getElementById('libSelect').addEventListener('click', () => {
   libSelectMode = !libSelectMode;
   if (!libSelectMode) libSel.clear();
+  renderMediaLib();
+});
+document.getElementById('libSelAll').addEventListener('click', async () => {
+  const idx = (await idbGetK('mediaIndex')) || [];
+  const list = idx.filter(m => !libFolderSel || m.folder === libFolderSel);
+  const allSel = list.length > 0 && list.every(m => libSel.has(m.id));
+  if (allSel) libSel.clear();
+  else list.forEach(m => libSel.add(m.id));
   renderMediaLib();
 });
 document.getElementById('libSelMove').addEventListener('click', async () => {
@@ -6281,7 +6322,7 @@ async function addOutroSlide(dark) {
   const wm      = makeTextItem('Postfolıo', 'Playfair Display', { weight: 600, size: 118, color: col });
   const wmDot   = makeTextItem('.', 'Playfair Display', { weight: 600, size: 118, color: '#D10101' });
   const tag     = makeTextItem('CAROUSELS & STORIES, IN SECONDS', 'Archivo', { weight: 500, size: 28, color: col });
-  const trigger = makeTextItem('GET YOURS — FREE WHILE IN BETA', 'Archivo', { weight: 500, size: 30, color: '#D10101' });
+  const trigger = makeTextItem('GET YOURS AT POSTFOLIO.STUDIO', 'Archivo', { weight: 500, size: 30, color: '#D10101' });
   const credit  = makeTextItem('By photographers, for photo lovers', 'Cormorant Garamond', { italic: true, weight: 500, size: 38, color: col });
   // Herz wie eine Hochzahl (x²): klein, hochgestellt, in Textfarbe.
   const heart   = makeTextItem('♥', 'Cormorant Garamond', { weight: 500, size: 20, color: col });
@@ -6330,6 +6371,7 @@ async function addOutroSlide(dark) {
 //    rechts/oben, spiegelt das untere nach links/unten (Punktspiegelung um die
 //    Slide-Mitte). Bei 3 Bändern spiegeln oben ↔ unten, die Mitte bleibt frei. ──
 function mirrorFramesInset(p) {
+  if (!framesMirror) return;                 // Spiegelung aus → Insets einzeln bewegen (Snap-Linien bleiben aktiv)
   if (!p || !p.frameGroup || p.role !== 'inset' || p.tmplN) return;
   const group = photos.filter(q => q.frameGroup === p.frameGroup);
   const bgsAll = group.filter(q => q.role === 'bg');
@@ -6484,7 +6526,8 @@ function reflowTemplateFromCell(cell) {
   cells.sort((a, b) => a.cy - b.cy);            // Stapelreihenfolge (oben → unten)
   const slideIdx = Math.floor(cell.cx / W);
   const Xc = slideIdx * W + W / 2, Yc = H / 2;  // Slide-Mitte (beide Achsen)
-  cells.forEach(c => { c.w = cell.w; c.h = cell.h; });  // gleiche Größe
+  cells.forEach(c => { c.w = cell.w; c.h = cell.h; });  // gleiche Größe (immer)
+  if (!framesMirror) return;                     // Mirror aus → Zellen einzeln bewegen
   const i = cells.indexOf(cell);
   const j = n - 1 - i;                           // Spiegelpartner
   if (i === j) {                                 // mittlere Zelle bleibt zentral
@@ -7108,6 +7151,10 @@ function updateDeleteBtn() {
   const moveBtn = document.getElementById('moveAllBtn');
   moveBtn.style.display = isTpl ? '' : 'none';
   if (!isTpl) { moveGroupMode = false; moveBtn.classList.remove('sel'); }
+  // „Mirror": bei Frames-Insets UND Template-Zellen. An = gespiegelt.
+  const mirrorBtn = document.getElementById('mirrorBtn');
+  mirrorBtn.classList.toggle('show', isFrInset || isTpl);
+  mirrorBtn.classList.toggle('sel', framesMirror);
   setSectionAvail('secRotate',  hasSel);
   setSectionAvail('secFont',    isText);
   setSectionAvail('secStyle',   isText);
@@ -7270,6 +7317,13 @@ document.getElementById('panelOpenBtn').addEventListener('click', (e) => {
 document.getElementById('moveAllBtn').addEventListener('click', () => {
   moveGroupMode = !moveGroupMode;
   document.getElementById('moveAllBtn').classList.toggle('sel', moveGroupMode);
+});
+// „Mirror": Spiegel-Symmetrie der Frames-Insets an/aus. Aus = jedes Inset
+// einzeln bewegbar (Snap-Linien bleiben aktiv). Gilt für klassische und
+// side-by-side Frames.
+document.getElementById('mirrorBtn').addEventListener('click', () => {
+  framesMirror = !framesMirror;
+  document.getElementById('mirrorBtn').classList.toggle('sel', framesMirror);
 });
 
 // ── Ebenen sperren + Ebenen-Liste (wie Photoshop) ──
@@ -7467,6 +7521,12 @@ function positionDoneBtn(zoom) {
   const zr = parseFloat(zoom.style.right) || 14;
   done.style.right  = Math.round(zr + (zoom.offsetWidth || 76) + 10) + 'px';
   done.style.bottom = Math.round(zb - (40 - (zoom.offsetHeight || 32)) / 2) + 'px';
+  // Mirror-Pille direkt ÜBER dem ✓ (rechte Kante bündig), damit man sie sieht.
+  const mir = document.getElementById('mirrorBtn');
+  if (mir) {
+    mir.style.right  = done.style.right;
+    mir.style.bottom = Math.round((parseFloat(done.style.bottom) || 14) + 40 + 22) + 'px';
+  }
 }
 function reserveForPanel() {
   const sheet = document.getElementById('contextSheet');
@@ -7512,7 +7572,7 @@ function reserveForPanel() {
       // Enger gepackt: Canvas bekommt maximale Höhe (Unfold-Prinzip)
       wrap.style.marginBottom = (stripH + sheetH + 4) + 'px';
       // Mobile: Pille ein Stück ÜBER dem Filmstrip (nicht in seiner Zeile)
-      zoom.style.bottom = (stripH + sheetH + 8) + 'px';
+      zoom.style.bottom = (stripH + sheetH + 22) + 'px';
       zoom.style.right  = '14px';
       positionDoneBtn(zoom);
       // Safari färbt seine (eingeklappte) Adressleisten-Zone unter der Seite
@@ -8788,11 +8848,13 @@ document.getElementById('cropApply').addEventListener('click', () => {
     // this slide instead of always defaulting back to the first one.
     autoAssignSlot(cropPhoto);
 
-    // Nach jedem Zuschnitt das Foto sofort einpassen (Vollformat) — sowohl bei
-    // Row/Column-Splits (in ihre Zelle) als auch bei normalem Crop (füllt die
-    // Slide). Nur beim Panorama nicht, das wird unten eigens über die Spanne
-    // eingepasst.
-    if (!pendingPano) fitPhoto(cropPhoto);
+    // Auto-Fit in die Slide nur, wenn (a) ein Row/Column-Split gewählt wurde
+    // (Foto passt in seine Zelle) ODER (b) der Crop EXAKT zum Slide-Format passt
+    // (4:5 in Post, 9:16 in Story). Bei bewusst abweichendem Crop (z. B. 2:3, 3:4,
+    // 1:1) bleibt das Foto in seinem Zuschnitt und frei platzierbar.
+    const _isSplitCrop  = !!getPhotoSplit(cropPhoto).axis;
+    const _matchesSlide = Math.abs((cropPhoto.w / cropPhoto.h) - (W / H)) < 0.02;
+    if (!pendingPano && (_isSplitCrop || _matchesSlide)) fitPhoto(cropPhoto);
 
     // Split-Panorama: fehlende Folge-Slides automatisch anlegen, Foto über
     // die volle Spanne legen und exakt einpassen (randlos an den Slide-Kanten).
@@ -9223,7 +9285,9 @@ function updateSeamBtn() {
   const gx = edgePad() + (sp.start * W + sp.span * W / 2) * DSCALE - wrap.scrollLeft + rect.left;
   if (gx < rect.left + 24 || gx > rect.right - 24) { btn.classList.remove('show'); return; }
   btn.style.left = Math.round(gx - 17) + 'px';
-  btn.style.top  = Math.round(rect.top + 14) + 'px';   // oben — unten kollidiert er mit der Pille
+  const _pad = 18;
+  const _canvasTop = rect.top + Math.max(_pad, (wrap.clientHeight - H * DSCALE) / 2);
+  btn.style.top  = Math.round(Math.max(rect.top + 6, _canvasTop - 42)) + 'px';   // knapp über der Slide-Oberkante (statt ganz oben)
   // Überblick = die ganze Gruppe passt in den Viewport → Aktion: Einzelansicht.
   const overview = sp.span * W * DSCALE <= wrap.clientWidth * 0.98;
   btn.classList.toggle('toSingle', overview);
