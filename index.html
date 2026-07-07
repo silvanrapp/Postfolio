@@ -607,7 +607,13 @@ details.hlp-sec[open] .hlp-chev { transform: rotate(180deg); }
 /* „0°" snappt magnetisch in der Mitte; dieser Knopf setzt exakt auf 0. */
 #rotZero {
   flex: 0 0 auto; background: transparent; border: 1px solid var(--line);
-  color: var(--muted); font-size: 11px; height: 28px; padding: 0 9px; border-radius: 8px;
+  color: var(--muted); height: 28px; width: 32px; padding: 0; border-radius: 8px;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+#rotZero svg { display: block; }
+#rotFill {
+  flex: 0 0 auto; background: var(--dark); color: var(--bg); border: none;
+  font-size: 11px; font-weight: 600; height: 28px; padding: 0 11px; border-radius: 8px;
 }
 
 .frame-btn, .margin-btn {
@@ -1605,6 +1611,7 @@ canvas {
 html.native-ios .pi-claim { display: none; }
 html.native-ios .lib-hint { display: none; }
 html.native-ios .splash-note { display: none; }
+html.native-ios .hlp-browser-only { display: none; }
 .pi-sig2 { display: flex; align-items: baseline; gap: 10px; }
 .pi-sig2 em { font-style: italic; font-family: 'Playfair Display', Georgia, serif; font-size: 12.5px; color: rgba(255,255,255,0.65); }
 .pi-by { font-size: 10px; letter-spacing: 0.05em; color: rgba(255,255,255,0.4); text-decoration: none; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 1px; }
@@ -2517,7 +2524,10 @@ html.native-ios .splash-note { display: none; }
   <div class="row" id="rotateCtrl">
     <input type="range" id="rotInput" min="-180" max="180" step="1" value="0">
     <span id="rotVal">0°</span>
-    <button id="rotZero" title="Reset to 0°">0°</button>
+    <button id="rotFill" title="Fill the slide — keeps the rotation">Fill</button>
+    <button id="rotZero" title="Reset rotation to 0°" aria-label="Reset rotation">
+      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+    </button>
   </div>
   </div><!-- /secRotate -->
 
@@ -2848,6 +2858,7 @@ html.native-ios .splash-note { display: none; }
           <li>Tap the empty slide to add a photo — or pick several at once: each lands on its own slide.</li>
           <li>“+” in the filmstrip adds a slide. Long-press a tile to reorder.</li>
           <li>The duplicate button (bottom right) copies a slide with all its style — then just replace the photo.</li>
+          <li>Every photo you add is kept in your <b>Library</b> — reuse it anytime without re-importing (Library button in the toolbar).</li>
         </ul>
       </details>
       <details class="hlp-sec">
@@ -2865,6 +2876,14 @@ html.native-ios .splash-note { display: none; }
         <ul>
           <li>Frames: one photo big, one small in a white frame. Fill a background and the small frame of the next band fills automatically — the classic look: two photos, four fields.</li>
           <li>Split-panorama (in Crop): one wide photo runs seamlessly across 2–3 slides. Instagram shows it as one continuous image when swiping.</li>
+          <li><b>Mirror</b> (in frames and 2–3-photo templates): the paired photos move symmetrically — turn it off to place each one freely.</li>
+        </ul>
+      </details>
+      <details class="hlp-sec">
+        <summary>Frame &amp; style<span class="hlp-chev" aria-hidden="true">▾</span></summary>
+        <ul>
+          <li><b>Border</b> draws a frame right around the photo. <b>Margin</b> adds space to the slide edge in the background colour — together they make a clean double frame.</li>
+          <li><b>Blur</b> softens a photo — put a blurred copy behind a sharp, smaller one for a soft frosted-glass frame.</li>
         </ul>
       </details>
       <details class="hlp-sec">
@@ -2880,7 +2899,7 @@ html.native-ios .splash-note { display: none; }
     <div class="hlp-tips">
       <h4>Tips</h4>
       <ul>
-        <li>iPhone: Share → “Add to Home Screen” — Postfolio runs like a real app, fullscreen without browser bars.</li>
+        <li class="hlp-browser-only">iPhone: Share → “Add to Home Screen” — Postfolio runs like a real app, fullscreen without browser bars.</li>
         <li>Export “All slides” gives you numbered images, ready to upload in order.</li>
         <li>Add the outro slide to any carousel — it credits the app and looks good doing it ♥</li>
       </ul>
@@ -8440,6 +8459,25 @@ document.getElementById('rotZero').addEventListener('click', () => {
   photos[sel].rot = 0;
   document.getElementById('rotInput').value = 0;
   document.getElementById('rotVal').textContent = '0°';
+  redraw(); scheduleSave();
+});
+// „Fill": gedrehtes (oder normales) Foto so hochskalieren, dass es die Slide
+// randlos deckt — Drehung bleibt erhalten, Foto wird mittig gesetzt.
+document.getElementById('rotFill').addEventListener('click', () => {
+  if (sel < 0 || sel >= photos.length) return;
+  const p = photos[sel];
+  if (p.kind !== 'image') return;
+  beginAction();
+  const th = p.rot || 0;
+  const cosT = Math.abs(Math.cos(th)), sinT = Math.abs(Math.sin(th));
+  const needW = W * cosT + H * sinT;   // Box-Maße, damit das gedrehte Rechteck W×H deckt
+  const needH = W * sinT + H * cosT;
+  const sc = Math.max(needW / p.w, needH / p.h);
+  if (sc > 1.0001) { p.w *= sc; p.h *= sc; }
+  const slideIdx = Math.floor(p.cx / W);
+  p.cx = slideIdx * W + W / 2;
+  p.cy = H / 2;
+  p.fitted = false;
   redraw(); scheduleSave();
 });
 
