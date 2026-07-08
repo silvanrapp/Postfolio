@@ -2316,6 +2316,10 @@ html.native-ios .hlp-browser-only { display: none; }
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 20 12 4l7 16"/></svg>
       <span>Outline</span>
     </button>
+    <button class="acc-chip tool-btn" data-sec="secGrid" data-ctx="tpl" title="Grid: outer margin & gap color">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 3v18"/><path d="M3 12h18"/></svg>
+      <span>Grid</span>
+    </button>
     <button class="acc-chip tool-btn" data-sec="secRatio" data-ctx="tpl" title="Cell format (portrait / landscape)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="8" height="12" rx="1"/><rect x="13" y="8" width="8" height="8" rx="1"/></svg>
       <span>Format</span>
@@ -2506,6 +2510,22 @@ html.native-ios .hlp-browser-only { display: none; }
     <div class="row">
       <button id="ratioPortrait" class="frame-btn">Portrait 2:3</button>
       <button id="ratioLandscape" class="frame-btn">Landscape 3:2</button>
+    </div>
+  </div>
+
+  <!-- ▼ Grid-Sektion (nur 2×2/3×3): Außenrand ums ganze Grid + Farbe der Lücken.
+       Außenrand zeigt die Slide-Hintergrundfarbe (BG-Menü oben) → Passepartout
+       in anderer Farbe = BG-Farbe ändern + Gap-Farbe z. B. weiß lassen. -->
+  <div class="acc-sec" id="secGrid" style="display:none">
+    <div class="row">
+      <span style="font-size:12px;color:var(--muted);flex:0 0 auto">Outer</span>
+      <input type="range" id="gridOuterRange" min="0" max="160" step="1" value="0" style="flex:1 1 auto;min-width:0">
+      <span id="gridOuterVal" style="font-size:12px;color:var(--muted);min-width:30px;text-align:right">0</span>
+    </div>
+    <div class="row">
+      <span style="font-size:12px;color:var(--muted);flex:0 0 auto">Gap color</span>
+      <input type="color" id="gridGapColor" class="color-pick" value="#ffffff">
+      <button id="gridGapReset" class="frame-btn" title="Gaps follow the slide background again">= BG</button>
     </div>
   </div>
 
@@ -4584,6 +4604,22 @@ function drawItem(p) {
   ctx.restore();
 }
 
+// Grid-Backdrop: füllt die Fläche HINTER einem Grid (inkl. Lücken) in eigener
+// Farbe (tmplGapBg). Der Außenrand (tmplOuter) zeigt weiter die Slide-BG-Farbe —
+// so entsteht das Passepartout in zwei Farben. Ohne tmplGapBg passiert nichts.
+function drawGridBackdrops(c, slideIdx, scale, offX) {
+  const done = new Set();
+  photos.forEach(p => {
+    if (!((p.tmplCols || 1) > 1) || !p.frameGroup || done.has(p.frameGroup)) return;
+    if (Math.floor(p.cx / W) !== slideIdx) return;
+    done.add(p.frameGroup);
+    if (!p.tmplGapBg) return;
+    const o = p.tmplOuter || 0;
+    c.fillStyle = p.tmplGapBg;
+    c.fillRect(offX + o * scale, o * scale, (W - 2 * o) * scale, (H - 2 * o) * scale);
+  });
+}
+
 function renderNow() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -4602,6 +4638,7 @@ function renderNow() {
 
     ctx.fillStyle = slide.bg;
     ctx.fillRect(i * W * S, 0, W * S, H * S);
+    drawGridBackdrops(ctx, i, S, i * W * S);
 
     photos.forEach(p => {
       if (p.kind === 'placeholder') return;
@@ -6598,19 +6635,21 @@ function tplLevel(B) { // px → nächste Stufe
   TPL_BORDERS.forEach((r, i) => { const d = Math.abs(r * W - B); if (d < bd) { bd = d; best = i; } });
   return best;
 }
-function templateGeom(n, orient, B, cols) {
+function templateGeom(n, orient, B, cols, outer) {
   cols = cols || 1;
+  outer = outer || 0;   // zusätzlicher Außenrand ums ganze Grid (zeigt die Slide-BG-Farbe)
   if (cols > 1) {
     // Grid (2×2, 3×3, …): Zellen füllen die Slide mit ÜBERALL gleichem Rand B —
     // Außenrand = Lücke, wie beim Magazin-Stack. Das Zellenformat ergibt sich
     // aus der Slide (Post 4:5 → leicht hochformatige Zellen), „orient" greift nicht.
+    // Mit „outer" rückt das ganze Grid zusätzlich nach innen (Passepartout-Look).
     const rows = Math.ceil(n / cols);
-    const w = (W - 2 * B - (cols - 1) * B) / cols;
-    const h = (H - 2 * B - (rows - 1) * B) / rows;
+    const w = (W - 2 * outer - 2 * B - (cols - 1) * B) / cols;
+    const h = (H - 2 * outer - 2 * B - (rows - 1) * B) / rows;
     const pos = [];
     for (let r = 0; r < rows && pos.length < n; r++)
       for (let c = 0; c < cols && pos.length < n; c++)
-        pos.push({ x: B + c * (w + B) + w / 2, cy: B + r * (h + B) + h / 2 });
+        pos.push({ x: outer + B + c * (w + B) + w / 2, cy: outer + B + r * (h + B) + h / 2 });
     return { w, h, pos, cys: pos.map(p => p.cy) };
   }
   const ratio = orient === 'landscape' ? 3 / 2 : 2 / 3;  // Breite/Höhe
@@ -6640,6 +6679,7 @@ function reflowTemplateFromCell(cell) {
   const slideIdx = Math.floor(cell.cx / W);
   const Xc = slideIdx * W + W / 2, Yc = H / 2;  // Slide-Mitte (beide Achsen)
   cells.forEach(c => { c.w = cell.w; c.h = cell.h; });  // gleiche Größe (immer)
+  if ((cell.tmplCols || 1) > 1) return;          // Grids: KEIN Spiegeln — Zellen frei bewegen
   if (!framesMirror) return;                     // Mirror aus → Zellen einzeln bewegen
   const i = cells.indexOf(cell);
   const j = n - 1 - i;                           // Spiegelpartner
@@ -6655,12 +6695,13 @@ function reflowTemplateFromCell(cell) {
 function layoutTemplate(cells, orient, B) {
   const slideIdx = Math.floor(cells[0].cx / W);
   const cols = cells[0].tmplCols || 1;
-  const g = templateGeom(cells.length, orient, B, cols);
+  const outer = cells[0].tmplOuter || 0;
+  const g = templateGeom(cells.length, orient, B, cols, outer);
   // Zeilenweise sortieren (erst cy, dann cx) — beim Stack ist cx konstant.
   cells.sort((a, b) => (a.cy - b.cy) || (a.cx - b.cx));
   cells.forEach((c, i) => {
     c.w = g.w; c.h = g.h; c.cx = slideIdx * W + g.pos[i].x; c.cy = g.pos[i].cy;
-    c.tmplOrient = orient; c.tmplBorder = B; c.tmplN = cells.length; c.tmplCols = cols; c.frame = null;
+    c.tmplOrient = orient; c.tmplBorder = B; c.tmplN = cells.length; c.tmplCols = cols; c.tmplOuter = outer; c.frame = null;
     if (c.kind === 'image' && c.img) c.crop = adjustCropToAspect(c, g.w / g.h);
   });
 }
@@ -6732,6 +6773,45 @@ function setTemplateBorder(level, allSlides) {
     layoutTemplate(cells, oc ? oc.tmplOrient : 'portrait', B);   // symmetrisch, zentriert
   });
   redraw(); scheduleSave(); updateDeleteBtn();
+}
+// ── Grid-Sektion: Außenrand (Passepartout) + Lückenfarbe ──
+function gridCellsOfSel() {
+  if (sel < 0 || sel >= photos.length) return null;
+  const p = photos[sel];
+  if (!((p.tmplCols || 1) > 1) || !p.frameGroup) return null;
+  return photos.filter(x => x.frameGroup === p.frameGroup);
+}
+document.getElementById('gridOuterRange').addEventListener('input', function() {
+  const cells = gridCellsOfSel(); if (!cells) return;
+  beginAction('gridOuter');
+  const outer = Math.max(0, +this.value || 0);
+  cells.forEach(c => { c.tmplOuter = outer; });
+  const oc = cells.find(c => c.tmplOrient);
+  layoutTemplate(cells, oc ? oc.tmplOrient : 'portrait',
+    cells[0].tmplBorder != null ? cells[0].tmplBorder : Math.round(W * TPL_BORDERS[2]));
+  document.getElementById('gridOuterVal').textContent = outer;
+  redraw(); scheduleSave();
+});
+document.getElementById('gridGapColor').addEventListener('input', function() {
+  const cells = gridCellsOfSel(); if (!cells) return;
+  beginAction('gridGap');
+  cells.forEach(c => { c.tmplGapBg = this.value; });
+  redraw(); scheduleSave();
+});
+document.getElementById('gridGapReset').addEventListener('click', function() {
+  const cells = gridCellsOfSel(); if (!cells) return;
+  beginAction();
+  cells.forEach(c => { c.tmplGapBg = null; });
+  syncGridUI(); redraw(); scheduleSave();
+});
+function syncGridUI() {
+  const cells = gridCellsOfSel(); if (!cells) return;
+  const p = cells[0];
+  const r = document.getElementById('gridOuterRange');
+  if (r) r.value = Math.round(p.tmplOuter || 0);
+  document.getElementById('gridOuterVal').textContent = Math.round(p.tmplOuter || 0);
+  const gp = document.getElementById('gridGapColor');
+  if (gp) gp.value = toHex6(p.tmplGapBg || slides[Math.floor(p.cx / W)].bg || '#ffffff');
 }
 function syncRatioUI() {
   const p = (sel >= 0 && sel < photos.length) ? photos[sel] : null;
@@ -7060,6 +7140,7 @@ function renderPreviewCanvas(i, mult) {
   c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'high';
   c.save(); c.beginPath(); c.rect(0, 0, ec.width, ec.height); c.clip();
   c.fillStyle = slides[i].bg; c.fillRect(0, 0, ec.width, ec.height);
+  drawGridBackdrops(c, i, mult, 0);
   photos.forEach(p => {
     if (!itemDrawsOnSlide(p, i)) return;   // nur eigene Slide(s) — siehe slideSpan()
     c.save();
@@ -7264,17 +7345,20 @@ function updateDeleteBtn() {
   setSectionAvail('secMargin',  isImage && !photos[sel].frameGroup);   // kein Margin in Frames/Templates
   setSectionAvail('secBlend',   isImage);   // Blend jetzt auch in Frames/Templates verfügbar
   setSectionAvail('secBlur',    isImage);   // Weichzeichner für alle gefüllten Fotos
-  setSectionAvail('secRatio',   isTpl);
+  // Format (Hoch/Quer) greift bei Grids nicht — Zellen füllen die Slide.
+  setSectionAvail('secRatio',   isTpl && !(hasSel && (photos[sel].tmplCols || 1) > 1));
   // Frames-Inset (Platzhalter ODER gefüllt): Format-Umschalter Quer ↔ 1:1
   const isFrInset = hasSel && !!photos[sel].frameGroup && photos[sel].role === 'inset' && !photos[sel].tmplN;
   setSectionAvail('secFRatio', isFrInset);
   const moveBtn = document.getElementById('moveAllBtn');
   moveBtn.style.display = isTpl ? '' : 'none';
   if (!isTpl) { moveGroupMode = false; moveBtn.classList.remove('sel'); }
-  // „Mirror": bei Frames-Insets UND Template-Zellen. An = gespiegelt.
+  // „Mirror": bei Frames-Insets UND Template-Zellen — NICHT bei Grids (dort deaktiviert).
+  const isGrid = hasSel && (photos[sel].tmplCols || 1) > 1;
   const mirrorBtn = document.getElementById('mirrorBtn');
-  mirrorBtn.classList.toggle('show', isFrInset || isTpl);
+  mirrorBtn.classList.toggle('show', (isFrInset || isTpl) && !isGrid);
   mirrorBtn.classList.toggle('sel', framesMirror);
+  setSectionAvail('secGrid', isGrid);
   setSectionAvail('secRotate',  hasSel);
   setSectionAvail('secFont',    isText);
   setSectionAvail('secStyle',   isText);
@@ -7305,6 +7389,7 @@ function updateDeleteBtn() {
   syncZoomUI();
   syncTextStrip();
   syncRatioUI();
+  syncGridUI();
   // Text-Modus: beim Wechsel in Textbearbeitung Fotos automatisch sperren;
   // außerhalb der Textbearbeitung globale Sperre wieder lösen.
   if (isText && !_prevIsText) photosLocked = true;
@@ -7868,13 +7953,13 @@ function applyFrameWidthUI(fw) {
   const gcells = p.frameGroup ? photos.filter(x => x.frameGroup === p.frameGroup) : [];
   const isTpl = p.tmplN || gcells.some(c => c.tmplN || c.tmplBorder != null);
   if (isTpl) {
-    // Templates arbeiten mit festen Stufen → nächstgelegene Stufe wählen.
-    const vals = Object.values(FRAME_PRESETS);
-    let lvl = 0, bd = 1e9;
-    vals.forEach((v, i) => { const d = Math.abs(v - fw); if (d < bd) { bd = d; lvl = i; } });
+    // Templates: Rand/Abstand STUFENLOS in px — der Slider steuert direkt B.
     gcells.forEach(c => { if (!c.tmplN) c.tmplN = gcells.length; });
-    setTemplateBorder(lvl, false);
+    const cells = gcells.length ? gcells : [p];
+    const oc = cells.find(c => c.tmplOrient);
+    layoutTemplate(cells, oc ? oc.tmplOrient : 'portrait', Math.max(0, Math.round(fw)));
     syncFrameButtons();
+    redraw();
     return;
   }
   const color = (p.frame && p.frame.color) || FRAME_COLOR;
@@ -8028,9 +8113,10 @@ function syncFrameButtons() {
   const p = (sel >= 0 && sel < photos.length) ? photos[sel] : null;
   if (p && p.tmplN) {
     // Template: Border-Stufe aus dem gespeicherten Rand ableiten; keine Rahmenfarbe.
+    // Slider zeigt den ECHTEN px-Wert (stufenlos), die Chips nur die nächste Stufe.
     const key = FRAME_KEYS[tplLevel(p.tmplBorder || 0)];
     document.querySelectorAll('.frame-btn').forEach(b => b.classList.toggle('sel', b.dataset.frame === key));
-    _syncFrameRange(FRAME_PRESETS[key] || 0);
+    _syncFrameRange(Math.round(p.tmplBorder || 0));
     document.getElementById('frameColorCtrl').style.display = 'none';
     return;
   }
@@ -9351,6 +9437,7 @@ function exportSlideCanvas(i) {
   // Background
   ectx.fillStyle = slides[i].bg;
   ectx.fillRect(0, 0, W * EX, H * EX);
+  drawGridBackdrops(ectx, i, EX, 0);
 
   // Photos + text items (offset so slide i starts at x=0)
   photos.forEach(p => {
