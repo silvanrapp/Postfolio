@@ -4354,21 +4354,27 @@ function drawPlaceholderItem(c, p, scale) {
     c.fillStyle = p.frame.color || '#ffffff';
     c.fillRect(x - fw, y - fw, w + 2 * fw, h + 2 * fw);
   }
-  // Effektive Farbe HINTER dem Feld: Grid-Lückenfarbe (falls gesetzt), sonst Slide-BG.
-  const si = Math.max(0, Math.min(slides.length - 1, Math.floor(p.cx / W)));
-  const behind = p.tmplGapBg || (slides[si] && slides[si].bg) || '#ffffff';
-  const ink = isDarkBg(behind) ? '255,255,255' : '42,40,38';
-  const inkA = isDarkBg(behind) ? [0.07, 0.38, 0.55] : [0.04, 0.20, 0.30];
-  c.fillStyle = 'rgba(' + ink + ',' + inkA[0] + ')';
+  // Doppelstrich (hell unter dunkel): auf JEDEM Hintergrund sichtbar — egal ob
+  // weiß, schwarz oder rot. Kein Raten über die Farbe dahinter mehr nötig.
+  c.fillStyle = 'rgba(128,124,118,0.07)';
   c.fillRect(x, y, w, h);
-  c.strokeStyle = 'rgba(' + ink + ',' + inkA[1] + ')';
-  c.lineWidth = 0.5 * DPR;                  // hauchfein — nur Orientierung
   c.setLineDash([3 * DPR, 4 * DPR]);
+  c.strokeStyle = 'rgba(255,255,255,0.85)';   // helle Unterlinie
+  c.lineWidth = 2 * DPR;
+  c.strokeRect(x, y, w, h);
+  c.strokeStyle = 'rgba(42,40,38,0.55)';      // dunkle Strichlinie obendrauf
+  c.lineWidth = 0.75 * DPR;
   c.strokeRect(x, y, w, h);
   c.setLineDash([]);
   const pl = Math.min(w, h) * 0.10;
-  c.strokeStyle = 'rgba(' + ink + ',' + inkA[2] + ')';
-  c.lineWidth = 1 * DPR;                     // dünneres „+"
+  c.strokeStyle = 'rgba(255,255,255,0.85)';   // „+" ebenfalls zweifarbig
+  c.lineWidth = 2.5 * DPR;
+  c.beginPath();
+  c.moveTo(-pl, 0); c.lineTo(pl, 0);
+  c.moveTo(0, -pl); c.lineTo(0, pl);
+  c.stroke();
+  c.strokeStyle = 'rgba(42,40,38,0.6)';
+  c.lineWidth = 1 * DPR;
   c.beginPath();
   c.moveTo(-pl, 0); c.lineTo(pl, 0);
   c.moveTo(0, -pl); c.lineTo(0, pl);
