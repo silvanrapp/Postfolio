@@ -5125,7 +5125,7 @@ window.addEventListener('mousemove', e => {
   } else if (dragMode === 'rotate') {
     const { lx, ly } = clientToLogical(e.clientX, e.clientY);
     const angle = Math.atan2(ly - photos[sel].cy, lx - photos[sel].cx);
-    photos[sel].rot = dragStartRot + (angle - dragStartAngle);
+    photos[sel].rot = snapRightAngle(dragStartRot + (angle - dragStartAngle));
     redraw();
   } else if (dragMode === 'resize') {
     const { lx, ly } = clientToLogical(e.clientX, e.clientY);
@@ -5435,7 +5435,7 @@ canvas.addEventListener('touchmove', e => {
       const t = e.touches[0];
       const { lx, ly } = clientToLogical(t.clientX, t.clientY);
       const angle = Math.atan2(ly - photos[sel].cy, lx - photos[sel].cx);
-      photos[sel].rot = dragStartRot + (angle - dragStartAngle);
+      photos[sel].rot = snapRightAngle(dragStartRot + (angle - dragStartAngle));
       redraw();
     } else if (dragMode === 'resize' && sel >= 0) {
       e.preventDefault();
@@ -8483,11 +8483,21 @@ document.getElementById('cropBtn').addEventListener('click', openCropOverlay);
 
 // ── Drehen über Regler (in Grad, rastet auf ganze Grad) ──
 function normDeg(d) { return ((Math.round(d) + 180) % 360 + 360) % 360 - 180; }
+// Magnetische Rastpunkte bei 0°, ±90°, ±180° (und Vielfachen) — für Regler UND Dreh-Griff.
+// Innerhalb von ±3° schnappt die Drehung exakt auf den rechten Winkel.
+const ROT_SNAP_RAD = 3 * Math.PI / 180;
+function snapRightAngle(rad) {
+  const q = Math.round(rad / (Math.PI / 2)) * (Math.PI / 2);
+  return Math.abs(rad - q) <= ROT_SNAP_RAD ? q : rad;
+}
 document.getElementById('rotInput').addEventListener('input', function() {
   if (sel < 0 || sel >= photos.length) return;
   beginAction('rot');
   let deg = parseInt(this.value, 10) || 0;
-  if (Math.abs(deg) <= 3) { deg = 0; this.value = 0; }   // magnetisch auf 0° in der Mitte
+  // magnetisch auf 0°, ±90°, ±180°
+  for (const s of [-180, -90, 0, 90, 180]) {
+    if (Math.abs(deg - s) <= 3) { deg = s; this.value = s; break; }
+  }
   photos[sel].rot = deg * Math.PI / 180;
   document.getElementById('rotVal').textContent = deg + '°';
   redraw(); scheduleSave();
