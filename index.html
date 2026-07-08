@@ -605,12 +605,14 @@ details.hlp-sec[open] .hlp-chev { transform: rotate(180deg); }
 #rotateCtrl { gap: 8px; }
 #rotateCtrl input[type=range] { flex: 1 1 auto; min-width: 0; }
 /* „0°" snappt magnetisch in der Mitte; dieser Knopf setzt exakt auf 0. */
-#rotZero {
+#rotZero, .rot-step {
   flex: 0 0 auto; background: transparent; border: 1px solid var(--line);
   color: var(--muted); height: 28px; width: 32px; padding: 0; border-radius: 8px;
   display: inline-flex; align-items: center; justify-content: center;
 }
 #rotZero svg { display: block; }
+/* ±90°-Sprünge: zur jeweils nächsten 90°-Marke (0/90/180/270) */
+.rot-step { width: auto; padding: 0 8px; font-size: 11px; font-weight: 600; }
 #rotFill {
   flex: 0 0 auto; background: var(--dark); color: var(--bg); border: none;
   font-size: 11px; font-weight: 600; height: 28px; padding: 0 11px; border-radius: 8px;
@@ -2522,8 +2524,10 @@ html.native-ios .hlp-browser-only { display: none; }
   <!-- ▼ Rotate-Sektion (Bild & Text) — Slider mit 0 in der Mitte (snappt auf 0°) -->
   <div class="acc-sec" id="secRotate" style="display:none">
   <div class="row" id="rotateCtrl">
+    <button class="rot-step" id="rotStepL" title="Rotate to previous 90° stop">−90°</button>
     <input type="range" id="rotInput" min="-180" max="180" step="1" value="0">
     <span id="rotVal">0°</span>
+    <button class="rot-step" id="rotStepR" title="Rotate to next 90° stop">+90°</button>
     <button id="rotFill" title="Fill the slide — keeps the rotation">Fill</button>
     <button id="rotZero" title="Reset rotation to 0°" aria-label="Reset rotation">
       <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
@@ -8502,6 +8506,22 @@ document.getElementById('rotInput').addEventListener('input', function() {
   document.getElementById('rotVal').textContent = deg + '°';
   redraw(); scheduleSave();
 });
+// ±90°-Buttons: zur jeweils nächsten 90°-Marke springen (0/90/180/270).
+// Von 37° geht's mit +90° auf 90°, nochmal → 180°. Exakt auf einer Marke → eine weiter.
+function jumpRot(dir) {
+  if (sel < 0 || sel >= photos.length) return;
+  beginAction();
+  const step = Math.PI / 2, cur = photos[sel].rot || 0;
+  const EPS = 1e-6;
+  const q = dir > 0 ? Math.floor(cur / step + EPS) + 1 : Math.ceil(cur / step - EPS) - 1;
+  const deg = normDeg(q * 90);          // in Grad normalisieren (−180…180, wie der Slider)
+  photos[sel].rot = deg * Math.PI / 180;
+  document.getElementById('rotInput').value = deg;
+  document.getElementById('rotVal').textContent = deg + '°';
+  redraw(); scheduleSave();
+}
+document.getElementById('rotStepL').addEventListener('click', () => jumpRot(-1));
+document.getElementById('rotStepR').addEventListener('click', () => jumpRot(1));
 // Tippen auf die „0" in der Mitte → exakt 0°
 document.getElementById('rotZero').addEventListener('click', () => {
   if (sel < 0 || sel >= photos.length) return;
