@@ -3026,6 +3026,42 @@ html.native-ios .hlp-browser-only { display: none; }
 </div>
 
 <script>
+// ═══ Free/Pro-Feature-Gate (Matrix: Postfolio_Free_Pro_Matrix.md) ═══
+// Web = immer alles offen. Interner Simulations-Schalter zum Fühlen der iOS-Version:
+//   ?tier=free → iOS-Free simulieren (Pro gesperrt, PRO-Badges, Paywall-Demo)
+//   ?tier=pro  → iOS-Pro simulieren (alles offen)
+//   ?tier=off  → Simulation beenden
+// Die Wahl bleibt in localStorage, der schwebende Umschalter unten links wechselt live.
+const PRO_FEATURES = ['tplStack','tplGrid','tplRecap','framesExtra','textPresets',
+                      'batchExport','hiRes','gradientMask','brandKit'];
+const PF_PLATFORM = window.Capacitor ? 'ios' : 'web';
+let pfIsPro = false;      // iOS: später aus StoreKit-Kauf gelesen
+let pfSimTier = null;     // 'free' | 'pro' | null (nur intern)
+(function(){
+  try {
+    const q = new URLSearchParams(location.search).get('tier');
+    if (q === 'off') localStorage.removeItem('pfSimTier');
+    else if (q === 'free' || q === 'pro') localStorage.setItem('pfSimTier', q);
+    pfSimTier = localStorage.getItem('pfSimTier');
+  } catch (e) {}
+})();
+function hasFeature(key) {
+  if (pfSimTier === 'free') return PRO_FEATURES.indexOf(key) === -1;
+  if (pfSimTier === 'pro')  return true;
+  if (PF_PLATFORM === 'web') return true;   // Browser: IMMER alles
+  if (pfIsPro) return true;
+  return PRO_FEATURES.indexOf(key) === -1;
+}
+// Welche UI-Elemente zu welchem Feature-Key gehören:
+const PRO_UI = [
+  ['tplStack',    ['tpl1Btn','tpl2Btn','tpl3Btn']],
+  ['tplGrid',     ['tplGrid4Btn','tplGrid9Btn']],
+  ['framesExtra', ['frames2Btn','frames3Btn','framesCols2Btn']],
+  ['textPresets', ['presetEditorialBtn','presetMagazinBtn']],
+  ['batchExport', ['exportAllBtn']],
+  ['gradientMask',['maskLabelBtn','maskToggle']]
+];
+
 // ═══════════════════════════════════════
 // SETUP
 // ═══════════════════════════════════════
@@ -8733,6 +8769,107 @@ function jumpRot(dir) {
 }
 document.getElementById('rotStepL').addEventListener('click', () => jumpRot(-1));
 document.getElementById('rotStepR').addEventListener('click', () => jumpRot(1));
+
+// ═══ Free/Pro-Simulation: Badges, Sperre, Paywall-Demo, Umschalter ═══
+// (Fortsetzung des Feature-Gates vom Script-Anfang. Ohne aktive Simulation
+//  ist dieser Block komplett unsichtbar und ohne Wirkung.)
+(function(){
+  const st = document.createElement('style');
+  st.textContent =
+    '.pro-badge{display:inline-block;font:600 8.5px -apple-system,sans-serif;letter-spacing:.09em;' +
+      'color:#fff;background:#D10101;border-radius:4px;padding:2px 5px;margin-left:6px;vertical-align:1px}' +
+    '#proSimBar{position:fixed;left:12px;bottom:12px;z-index:9999;display:flex;gap:6px;align-items:center;' +
+      'background:rgba(42,40,38,.92);color:#F4F1EB;border-radius:999px;padding:6px 10px;' +
+      'font:600 12px -apple-system,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.25)}' +
+    '#proSimBar button{border:1px solid rgba(255,255,255,.25);background:transparent;color:inherit;' +
+      'border-radius:999px;padding:3px 10px;font:inherit;cursor:pointer}' +
+    '#proSimBar button.on{background:#D10101;border-color:#D10101}' +
+    '#proStubOv{position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;' +
+      'background:rgba(42,40,38,.45);padding:20px}' +
+    '#proStub{background:#F4F1EB;color:#2A2826;border-radius:18px;padding:28px 26px;max-width:330px;width:100%;' +
+      'text-align:center;font-family:-apple-system,sans-serif;box-shadow:0 30px 60px -20px rgba(0,0,0,.4)}' +
+    '#proStub h3{font-size:19px;margin:0 0 8px}' +
+    '#proStub p{font-size:13.5px;line-height:1.5;color:#6b655d;margin:0 0 16px}' +
+    '#proStub .buy{display:block;width:100%;background:#D10101;color:#fff;border:none;border-radius:999px;' +
+      'padding:12px;font:600 14px -apple-system,sans-serif;cursor:pointer;margin-bottom:8px}' +
+    '#proStub .later{background:none;border:none;font:500 12.5px -apple-system,sans-serif;color:#9B948A;cursor:pointer}';
+  document.head.appendChild(st);
+
+  function applyProBadges() {
+    document.querySelectorAll('.pro-badge').forEach(b => b.remove());
+    if (!pfSimTier) return;                   // Badges nur in der Simulation
+    PRO_UI.forEach(([key, ids]) => {
+      ids.forEach(id => {
+        if (id === 'maskToggle') return;      // der Schalter selbst bekommt kein Badge
+        const el = document.getElementById(id); if (!el) return;
+        const target = el.querySelector('.tm-txt b') || el.querySelector('span') || el;
+        const s = document.createElement('span');
+        s.className = 'pro-badge'; s.textContent = 'PRO';
+        target.appendChild(s);
+      });
+    });
+  }
+
+  // Paywall-Demo (exakt der Ton aus dem Preismodell-Dokument)
+  function showProStub() {
+    if (document.getElementById('proStubOv')) return;
+    const ov = document.createElement('div'); ov.id = 'proStubOv';
+    ov.innerHTML = '<div id="proStub"><h3>Postfolio Pro</h3>' +
+      '<p>Einmaliger Kauf — 4,99&nbsp;€ zum Launch, später 9,99&nbsp;€. Was du kaufst, bleibt deins — für immer, inklusive aller Verbesserungen. Kein Abo. Niemals.</p>' +
+      '<button class="buy" type="button">Pro freischalten — 4,99&nbsp;€</button>' +
+      '<button class="later" type="button">Später</button></div>';
+    document.body.appendChild(ov);
+    ov.addEventListener('click', e => {
+      if (e.target === ov || e.target.classList.contains('later')) ov.remove();
+    });
+    ov.querySelector('.buy').addEventListener('click', () => {
+      pfSimTier = 'pro';                      // Kauf simulieren
+      try { localStorage.setItem('pfSimTier', 'pro'); } catch (e) {}
+      ov.remove(); applyProBadges(); syncSimBar();
+      if (typeof showToast === 'function') showToast('Pro freigeschaltet (Simulation)');
+    });
+  }
+
+  // Gesperrte Aktionen abfangen — Capture-Phase läuft VOR den echten Handlern.
+  document.addEventListener('click', function(e) {
+    for (const [key, ids] of PRO_UI) {
+      if (hasFeature(key)) continue;
+      for (const id of ids) {
+        const el = document.getElementById(id);
+        if (el && (e.target === el || el.contains(e.target))) {
+          e.stopPropagation(); e.preventDefault();
+          const tm = document.getElementById('textMenu');  if (tm) tm.classList.remove('show');
+          const em = document.getElementById('exportMenu'); if (em) em.classList.remove('show');
+          showProStub();
+          return;
+        }
+      }
+    }
+  }, true);
+
+  // Schwebender Umschalter unten links (nur während der Simulation sichtbar)
+  let bar = null;
+  function syncSimBar() {
+    if (!pfSimTier) { if (bar) { bar.remove(); bar = null; } applyProBadges(); return; }
+    if (!bar) {
+      bar = document.createElement('div'); bar.id = 'proSimBar';
+      bar.innerHTML = '<span>Simulation</span>' +
+        '<button type="button" data-t="free">Free</button>' +
+        '<button type="button" data-t="pro">Pro</button>' +
+        '<button type="button" data-t="off" title="Simulation beenden">✕</button>';
+      document.body.appendChild(bar);
+      bar.addEventListener('click', e => {
+        const t = e.target.dataset && e.target.dataset.t;
+        if (!t) return;
+        if (t === 'off') { pfSimTier = null; try { localStorage.removeItem('pfSimTier'); } catch (err) {} }
+        else { pfSimTier = t; try { localStorage.setItem('pfSimTier', t); } catch (err) {} }
+        applyProBadges(); syncSimBar();
+      });
+    }
+    bar.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.t === pfSimTier));
+  }
+  applyProBadges(); syncSimBar();
+})();
 // Tippen auf die „0" in der Mitte → exakt 0°
 document.getElementById('rotZero').addEventListener('click', () => {
   if (sel < 0 || sel >= photos.length) return;
