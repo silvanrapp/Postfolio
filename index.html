@@ -4512,48 +4512,74 @@ function drawPhotoLayer(c, p, src, sx, sy, sw, sh, dw, dh) {
   c.restore();
 }
 
+// Achsenparallele Bounding-Box eines Objekts in Slide-Koordinaten — mit
+// Drehung und Rahmen. Damit wird beim Zeichnen entschieden, welche Slides ein
+// Objekt überhaupt berührt (Culling).
+function itemBounds(p) {
+  let ow = Math.abs(p.w || 0), oh = Math.abs(p.h || 0);
+  if (p.frame && p.frame.width > 0 && p.kind === 'image') {
+    const ins = frameInsets(p);
+    ow += ins.left + ins.right; oh += ins.top + ins.bottom;
+  }
+  if (p.kind === 'text') { ow *= 1.5; oh *= 2.5; }   // großzügig: echte Textmaße erst beim Zeichnen bekannt
+  const th = p.rot || 0;
+  const co = Math.abs(Math.cos(th)), si = Math.abs(Math.sin(th));
+  const hw = (ow * co + oh * si) / 2, hh = (ow * si + oh * co) / 2;
+  return { x0: p.cx - hw, x1: p.cx + hw, y0: p.cy - hh, y1: p.cy + hh };
+}
+
+// Zeichnet EIN Objekt (Foto/Text/Logo) auf die Haupt-Leinwand. Der Aufrufer
+// hat bereits auf die Slide geclippt.
+function drawItem(p) {
+  ctx.save();
+  ctx.translate(p.cx * S, p.cy * S);
+  ctx.rotate(p.rot);
+  if (p.kind === 'text') { drawTextContent(ctx, p, S); ctx.restore(); return; }
+  if (p.kind === 'logo') { drawLogoItem(ctx, p, S); ctx.restore(); return; }
+  if (p.kind === 'placeholder') { ctx.restore(); return; }   // → scharfes UI-Overlay
+  if (p.frame && p.frame.width > 0) {
+    const ins = frameInsets(p);
+    fillFrameRect(ctx, -(p.w / 2 + ins.left) * S, -(p.h / 2 + ins.top) * S,
+                  (p.w + ins.left + ins.right) * S, (p.h + ins.top + ins.bottom) * S, p.frame.color);
+  }
+  const c = p.crop || { x: 0, y: 0, w: 1, h: 1 };
+  // Auf dem Bildschirm aus der herunterskalierten Vorschau zeichnen (Punkt 2);
+  // crop ist anteilig (0..1), daher mit den Maßen der jeweiligen Quelle skalieren.
+  const src = p.screen || p.img;
+  const nw = srcW(src), nh = srcH(src);
+  const sx = c.x * nw, sw = c.w * nw;
+  const sy = c.y * nh, sh = c.h * nh;
+  drawPhotoLayer(ctx, p, src, sx, sy, sw, sh, p.w * S, p.h * S);
+  ctx.restore();
+}
+
 function renderNow() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  // Slide backgrounds
-  slides.forEach((slide, i) => {
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(i * W * S, 0, W * S, H * S);
-    ctx.clip();
-    ctx.fillStyle = slide.bg;
-    ctx.fillRect(i * W * S, 0, W * S, H * S);
-    ctx.restore();
-  });
 
   // „+"-Platzhalter auf leeren Slides: liegt jetzt auf dem scharfen
   // UI-Overlay (siehe drawOverlayUI) — hier auf der Haupt-Canvas nichts mehr.
 
-  // Photos + text items — no clipping for seamless spanning
-  photos.forEach(p => {
+  // Slide für Slide zeichnen und dabei AUF DIE SLIDE CLIPPEN — genau wie der
+  // Export (exportSlideCanvas). Dadurch kann kein gedrehtes/übergroßes Foto in
+  // die Nachbar-Slide bluten, während Split-Panoramen weiter über mehrere
+  // Slides laufen (sie werden je Slide erneut, dort geclippt, gezeichnet).
+  slides.forEach((slide, i) => {
+    const sx0 = i * W, sx1 = sx0 + W;
     ctx.save();
-    ctx.translate(p.cx * S, p.cy * S);
-    ctx.rotate(p.rot);
-    if (p.kind === 'text') {
-      drawTextContent(ctx, p, S);
-      ctx.restore();
-      return;
-    }
-    if (p.kind === 'logo') { drawLogoItem(ctx, p, S); ctx.restore(); return; }
-    if (p.kind === 'placeholder') { ctx.restore(); return; }   // → scharfes UI-Overlay
-    if (p.frame && p.frame.width > 0) {
-      const ins = frameInsets(p);
-      fillFrameRect(ctx, -(p.w / 2 + ins.left) * S, -(p.h / 2 + ins.top) * S,
-                    (p.w + ins.left + ins.right) * S, (p.h + ins.top + ins.bottom) * S, p.frame.color);
-    }
-    const c = p.crop || { x: 0, y: 0, w: 1, h: 1 };
-    // Auf dem Bildschirm aus der herunterskalierten Vorschau zeichnen (Punkt 2);
-    // crop ist anteilig (0..1), daher mit den Maßen der jeweiligen Quelle skalieren.
-    const src = p.screen || p.img;
-    const nw = srcW(src), nh = srcH(src);
-    const sx = c.x * nw, sw = c.w * nw;
-    const sy = c.y * nh, sh = c.h * nh;
-    drawPhotoLayer(ctx, p, src, sx, sy, sw, sh, p.w * S, p.h * S);
+    ctx.beginPath();
+    ctx.rect(sx0 * S, 0, W * S, H * S);
+    ctx.clip();
+
+    ctx.fillStyle = slide.bg;
+    ctx.fillRect(sx0 * S, 0, W * S, H * S);
+
+    photos.forEach(p => {
+      if (p.kind === 'placeholder') return;
+      const b = itemBounds(p);
+      if (b.x1 <= sx0 || b.x0 >= sx1) return;   // berührt diese Slide nicht
+      drawItem(p);
+    });
+
     ctx.restore();
   });
 
