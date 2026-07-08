@@ -908,15 +908,15 @@ input[type=range]::-moz-range-thumb {
 .clr-btn.grey  { background: #888888; }
 .clr-btn.red   { background: var(--accent); }
 
-#frameEyedropBtn {
+#frameEyedropBtn, #gridGapEyedropBtn {
   width: 22px; height: 22px;
   border-radius: 50%; padding: 0;
   background: #ECE7DC; color: var(--text);
   border: 2px solid transparent;
   display: flex; align-items: center; justify-content: center;
 }
-#frameEyedropBtn svg { width: 12px; height: 12px; pointer-events: none; }
-#frameEyedropBtn.picking { background: var(--dark); color: var(--bg); border-color: var(--accent); }
+#frameEyedropBtn svg, #gridGapEyedropBtn svg { width: 12px; height: 12px; pointer-events: none; }
+#frameEyedropBtn.picking, #gridGapEyedropBtn.picking { background: var(--dark); color: var(--bg); border-color: var(--accent); }
 #outlineEyedropBtn, #textEyedropBtn, #marginEyedropBtn {
   flex: 0 0 auto; width: 30px; height: 30px; padding: 0; border-radius: 8px;
   background: transparent; border: 1px solid var(--line); color: var(--text);
@@ -2518,14 +2518,25 @@ html.native-ios .hlp-browser-only { display: none; }
        in anderer Farbe = BG-Farbe ändern + Gap-Farbe z. B. weiß lassen. -->
   <div class="acc-sec" id="secGrid" style="display:none">
     <div class="row">
-      <span style="font-size:12px;color:var(--muted);flex:0 0 auto">Outer</span>
+      <span class="label">Outer</span>
       <input type="range" id="gridOuterRange" min="0" max="160" step="1" value="0" style="flex:1 1 auto;min-width:0">
       <span id="gridOuterVal" style="font-size:12px;color:var(--muted);min-width:30px;text-align:right">0</span>
     </div>
+    <!-- Lückenfarbe: gleiche Anordnung wie überall (5 Farben + Pipette + Picker + Hex) -->
     <div class="row">
-      <span style="font-size:12px;color:var(--muted);flex:0 0 auto">Gap color</span>
-      <input type="color" id="gridGapColor" class="color-pick" value="#ffffff">
-      <button id="gridGapReset" class="frame-btn" title="Gaps follow the slide background again">= BG</button>
+      <span class="label">Color</span>
+      <button class="clr-btn white" data-ggap="#ffffff" title="White"></button>
+      <button class="clr-btn black" data-ggap="#111111" title="Black"></button>
+      <button class="clr-btn beige" data-ggap="#F4F1EB" title="Beige"></button>
+      <button class="clr-btn grey"  data-ggap="#888888" title="Grey"></button>
+      <button class="clr-btn red"   data-ggap="#D10101" title="Red"></button>
+      <button id="gridGapEyedropBtn" title="Farbe aus dem Bild picken">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m2 22 1-1h3l9-9"/><path d="M3 21v-3l9-9"/><path d="m15 6 3.4-3.4a2.1 2.1 0 1 1 3 3L18 9l.4.4a2.1 2.1 0 1 1-3 3l-3.8-3.8a2.1 2.1 0 1 1 3-3l.4.4Z"/>
+        </svg>
+      </button>
+      <input type="color" id="gridGapColor" class="color-pick" value="#ffffff" title="Pick any color">
+      <input type="text" id="gridGapHex" class="hex-input" maxlength="7" placeholder="#hex" autocomplete="off" autocapitalize="off" spellcheck="false" title="Type any hex color">
     </div>
   </div>
 
@@ -5094,7 +5105,7 @@ document.getElementById('emptyAddBtn').addEventListener('click', (e) => {
 
 canvas.addEventListener('mousedown', e => {
   // Pipette aktiv → ausschließlich Farbe picken, keine Auswahl/Verschiebung.
-  if (pickingFrameColor || pickingBgColor || pickingOutline || pickingTextColor) { e.preventDefault(); doPick(e.clientX, e.clientY); return; }
+  if (pickingFrameColor || pickingBgColor || pickingOutline || pickingTextColor || pickingGridGap) { e.preventDefault(); doPick(e.clientX, e.clientY); return; }
   const { lx, ly } = clientToLogical(e.clientX, e.clientY);
   addCandidate = null;
   if (typeof hideSplitAsk === 'function') hideSplitAsk();   // neue Interaktion → Pill weg
@@ -5365,7 +5376,7 @@ window.addEventListener('keydown', e => {
 
 canvas.addEventListener('touchstart', e => {
   // Pipette aktiv → ausschließlich Farbe picken.
-  if ((pickingFrameColor || pickingBgColor || pickingOutline || pickingTextColor) && e.touches.length === 1) {
+  if ((pickingFrameColor || pickingBgColor || pickingOutline || pickingTextColor || pickingGridGap) && e.touches.length === 1) {
     e.preventDefault();
     const t = e.touches[0];
     pickXY = { x: t.clientX, y: t.clientY };  // erst beim Loslassen picken
@@ -5474,7 +5485,7 @@ canvas.addEventListener('touchstart', e => {
 }, { passive: false });
 
 canvas.addEventListener('touchmove', e => {
-  if ((pickingFrameColor || pickingBgColor || pickingOutline || pickingTextColor) && e.touches.length === 1) {
+  if ((pickingFrameColor || pickingBgColor || pickingOutline || pickingTextColor || pickingGridGap) && e.touches.length === 1) {
     e.preventDefault();
     const t = e.touches[0];
     pickXY = { x: t.clientX, y: t.clientY };
@@ -5550,7 +5561,7 @@ canvas.addEventListener('touchmove', e => {
 }, { passive: false });
 
 canvas.addEventListener('touchend', e => {
-  if (pickingFrameColor || pickingBgColor || pickingOutline || pickingTextColor) {
+  if (pickingFrameColor || pickingBgColor || pickingOutline || pickingTextColor || pickingGridGap) {
     if (pickXY) doPick(pickXY.x, pickXY.y);  // Farbe an der zuletzt gezeigten Stelle übernehmen
     pickXY = null;
     return;
@@ -6810,17 +6821,23 @@ document.getElementById('gridOuterRange').addEventListener('input', function() {
   document.getElementById('gridOuterVal').textContent = outer;
   redraw(); scheduleSave();
 });
-document.getElementById('gridGapColor').addEventListener('input', function() {
+function setGridGapColor(col) {
   const cells = gridCellsOfSel(); if (!cells) return;
   beginAction('gridGap');
-  cells.forEach(c => { c.tmplGapBg = this.value; });
-  redraw(); scheduleSave();
-});
-document.getElementById('gridGapReset').addEventListener('click', function() {
-  const cells = gridCellsOfSel(); if (!cells) return;
-  beginAction();
-  cells.forEach(c => { c.tmplGapBg = null; });
+  cells.forEach(c => { c.tmplGapBg = col; });
   syncGridUI(); redraw(); scheduleSave();
+}
+document.getElementById('gridGapColor').addEventListener('input', function() { setGridGapColor(this.value); });
+document.querySelectorAll('#secGrid .clr-btn').forEach(btn =>
+  btn.addEventListener('click', () => setGridGapColor(btn.dataset.ggap)));
+function applyGridGapHex() {
+  const hex = normHex(document.getElementById('gridGapHex').value);
+  if (!hex) { syncGridUI(); return; }
+  setGridGapColor(hex);
+}
+document.getElementById('gridGapHex').addEventListener('change', applyGridGapHex);
+document.getElementById('gridGapHex').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); applyGridGapHex(); e.target.blur(); }
 });
 function syncGridUI() {
   const cells = gridCellsOfSel(); if (!cells) return;
@@ -6828,8 +6845,13 @@ function syncGridUI() {
   const r = document.getElementById('gridOuterRange');
   if (r) r.value = Math.round(p.tmplOuter || 0);
   document.getElementById('gridOuterVal').textContent = Math.round(p.tmplOuter || 0);
+  const cur = toHex6(p.tmplGapBg || slides[Math.floor(p.cx / W)].bg || '#ffffff');
   const gp = document.getElementById('gridGapColor');
-  if (gp) gp.value = toHex6(p.tmplGapBg || slides[Math.floor(p.cx / W)].bg || '#ffffff');
+  if (gp) gp.value = cur;
+  const gh = document.getElementById('gridGapHex');
+  if (gh && document.activeElement !== gh) gh.value = cur;
+  document.querySelectorAll('#secGrid .clr-btn').forEach(b =>
+    b.classList.toggle('sel', !!p.tmplGapBg && b.dataset.ggap.toLowerCase() === toHex6(p.tmplGapBg)));
 }
 function syncRatioUI() {
   const p = (sel >= 0 && sel < photos.length) ? photos[sel] : null;
@@ -8214,6 +8236,7 @@ let pickingFrameColor = false;
 let pickingBgColor    = false; // Pipette für den Slide-Hintergrund
 let pickingOutline    = false; // Pipette für die Text-Outline-Farbe
 let pickingTextColor  = false; // Pipette für die Text-Füllfarbe
+let pickingGridGap    = false; // Pipette für die Grid-Lückenfarbe
 let pickTargetIdx     = -1; // photo index captured when eyedropper is armed —
                              // a stray click landing just outside the photo
                              // (selecting nothing / a different photo) on the
@@ -8225,6 +8248,7 @@ function disarmPickers() {
   pickingBgColor = false;
   pickingOutline = false;
   pickingTextColor = false;
+  pickingGridGap = false;
   pickTargetIdx = -1;
   document.getElementById('frameEyedropBtn').classList.remove('picking');
   document.getElementById('bgEyedropBtn').classList.remove('picking');
@@ -8234,6 +8258,8 @@ function disarmPickers() {
   if (te) te.classList.remove('picking');
   const me = document.getElementById('marginEyedropBtn');
   if (me) me.classList.remove('picking');
+  const ge = document.getElementById('gridGapEyedropBtn');
+  if (ge) ge.classList.remove('picking');
   canvas.classList.remove('picking-color');
   hideLoupe();
 }
@@ -8255,6 +8281,16 @@ document.getElementById('marginEyedropBtn').addEventListener('click', () => {
   disarmPickers();
   pickingBgColor = arm;
   document.getElementById('marginEyedropBtn').classList.toggle('picking', arm);
+  canvas.classList.toggle('picking-color', arm);
+});
+// Pipette in der Grid-Sektion: pickt die Lückenfarbe aus dem Bild.
+document.getElementById('gridGapEyedropBtn').addEventListener('click', () => {
+  if (!gridCellsOfSel()) return;
+  const arm = !pickingGridGap;
+  disarmPickers();
+  pickingGridGap = arm;
+  pickTargetIdx = arm ? sel : -1;
+  document.getElementById('gridGapEyedropBtn').classList.toggle('picking', arm);
   canvas.classList.toggle('picking-color', arm);
 });
 document.getElementById('bgEyedropBtn').addEventListener('click', () => {
@@ -8352,7 +8388,21 @@ function doPick(clientX, clientY) {
   else if (pickingBgColor) pickBgColorAt(clientX, clientY);
   else if (pickingOutline) pickOutlineColorAt(clientX, clientY);
   else if (pickingTextColor) pickTextColorAt(clientX, clientY);
+  else if (pickingGridGap) pickGridGapAt(clientX, clientY);
   hideLoupe();
+}
+// Pipette: Grid-Lückenfarbe aus dem Bild picken (Zellen über die gemerkte Zelle).
+function pickGridGapAt(clientX, clientY) {
+  const idx = pickTargetIdx;
+  disarmPickers();
+  const hex = sampleCanvasColor(clientX, clientY);
+  if (!hex) return;
+  const p = (idx >= 0 && idx < photos.length) ? photos[idx] : null;
+  if (!p || !((p.tmplCols || 1) > 1) || !p.frameGroup) return;
+  beginAction();
+  photos.filter(x => x.frameGroup === p.frameGroup).forEach(c => { c.tmplGapBg = hex; });
+  if (typeof syncGridUI === 'function') syncGridUI();
+  redraw(); scheduleSave();
 }
 // Pipette: Füllfarbe des gewählten Textes setzen.
 function pickTextColorAt(clientX, clientY) {
@@ -8382,11 +8432,11 @@ function pickOutlineColorAt(clientX, clientY) {
 }
 
 canvas.addEventListener('click', e => {
-  if (pickingFrameColor || pickingBgColor || pickingOutline || pickingTextColor) doPick(e.clientX, e.clientY);
+  if (pickingFrameColor || pickingBgColor || pickingOutline || pickingTextColor || pickingGridGap) doPick(e.clientX, e.clientY);
 });
 // Desktop-Hover: Lupe folgt dem Cursor solange die Pipette aktiv ist.
 canvas.addEventListener('mousemove', e => {
-  if (pickingFrameColor || pickingBgColor || pickingOutline || pickingTextColor) updateLoupe(e.clientX, e.clientY);
+  if (pickingFrameColor || pickingBgColor || pickingOutline || pickingTextColor || pickingGridGap) updateLoupe(e.clientX, e.clientY);
 });
 
 // A photo's row/column split is recorded explicitly (p.split) the moment a
