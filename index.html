@@ -2133,7 +2133,7 @@ html.native-ios .hlp-browser-only { display: none; }
         </button>
         <button class="tm-cat" data-go="templates" title="Template layouts">
           <span class="tm-ico"><svg viewBox="0 0 24 30" width="16" height="20" aria-hidden="true"><rect x="6" y="2.5" width="12" height="11.5" rx="1" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="6" y="16" width="12" height="11.5" rx="1" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></span>
-          <span class="tm-txt"><b>Templates</b><small>Framed photos (2:3 / 3:2)</small></span>
+          <span class="tm-txt"><b>Templates</b><small>Framed photos &amp; grids</small></span>
           <span class="tm-arr" aria-hidden="true">›</span>
         </button>
       </div>
@@ -2190,6 +2190,14 @@ html.native-ios .hlp-browser-only { display: none; }
         <button id="tpl3Btn" class="tm-item" title="Three framed photos stacked">
           <span class="tm-prev"><svg viewBox="0 0 24 30" width="17" height="21" aria-hidden="true"><rect x="6" y="1.5" width="12" height="8" rx="1" fill="none" stroke="#2A2826" stroke-width="1.4"/><rect x="6" y="11" width="12" height="8" rx="1" fill="none" stroke="#2A2826" stroke-width="1.4"/><rect x="6" y="20.5" width="12" height="8" rx="1" fill="none" stroke="#2A2826" stroke-width="1.4"/></svg></span>
           <span class="tm-txt"><b>Template · 3 stacked</b><small>Best for 9:16 stories</small></span>
+        </button>
+        <button id="tplGrid4Btn" class="tm-item" title="Four photos in a 2×2 grid">
+          <span class="tm-prev"><svg viewBox="0 0 24 30" width="17" height="21" aria-hidden="true"><rect x="3" y="4.5" width="8.5" height="9.5" rx="1" fill="none" stroke="#2A2826" stroke-width="1.4"/><rect x="12.5" y="4.5" width="8.5" height="9.5" rx="1" fill="none" stroke="#2A2826" stroke-width="1.4"/><rect x="3" y="15" width="8.5" height="9.5" rx="1" fill="none" stroke="#2A2826" stroke-width="1.4"/><rect x="12.5" y="15" width="8.5" height="9.5" rx="1" fill="none" stroke="#2A2826" stroke-width="1.4"/></svg></span>
+          <span class="tm-txt"><b>Grid · 2×2</b><small>Four photos, equal margins</small></span>
+        </button>
+        <button id="tplGrid9Btn" class="tm-item" title="Nine photos in a 3×3 grid">
+          <span class="tm-prev"><svg viewBox="0 0 24 30" width="17" height="21" aria-hidden="true"><rect x="2.5" y="4" width="5.6" height="6.5" rx="0.8" fill="none" stroke="#2A2826" stroke-width="1.2"/><rect x="9.2" y="4" width="5.6" height="6.5" rx="0.8" fill="none" stroke="#2A2826" stroke-width="1.2"/><rect x="15.9" y="4" width="5.6" height="6.5" rx="0.8" fill="none" stroke="#2A2826" stroke-width="1.2"/><rect x="2.5" y="11.7" width="5.6" height="6.5" rx="0.8" fill="none" stroke="#2A2826" stroke-width="1.2"/><rect x="9.2" y="11.7" width="5.6" height="6.5" rx="0.8" fill="none" stroke="#2A2826" stroke-width="1.2"/><rect x="15.9" y="11.7" width="5.6" height="6.5" rx="0.8" fill="none" stroke="#2A2826" stroke-width="1.2"/><rect x="2.5" y="19.4" width="5.6" height="6.5" rx="0.8" fill="none" stroke="#2A2826" stroke-width="1.2"/><rect x="9.2" y="19.4" width="5.6" height="6.5" rx="0.8" fill="none" stroke="#2A2826" stroke-width="1.2"/><rect x="15.9" y="19.4" width="5.6" height="6.5" rx="0.8" fill="none" stroke="#2A2826" stroke-width="1.2"/></svg></span>
+          <span class="tm-txt"><b>Grid · 3×3</b><small>Nine photos — recap look</small></span>
         </button>
       </div>
 
@@ -5707,7 +5715,7 @@ function fillPlaceholderImg(img, idx) {
       crop: { x: 0, y: 0, w: 1, h: 1 },
       frame: ph.frame ? { ...ph.frame } : null,
       role: ph.role, frameGroup: ph.frameGroup,
-      tmplN: ph.tmplN, tmplOrient: ph.tmplOrient, tmplBorder: ph.tmplBorder,
+      tmplN: ph.tmplN, tmplOrient: ph.tmplOrient, tmplBorder: ph.tmplBorder, tmplCols: ph.tmplCols,
       slot: 0, split: null, fitted: false
     };
     photo.crop = adjustCropToAspect(photo, ph.w / ph.h);
@@ -5741,7 +5749,7 @@ function fillPlaceholderImg(img, idx) {
           crop: { x: 0, y: 0, w: 1, h: 1 },
           frame: target.frame ? { ...target.frame } : null,
           role: target.role, frameGroup: target.frameGroup,
-          tmplN: target.tmplN, tmplOrient: target.tmplOrient, tmplBorder: target.tmplBorder,
+          tmplN: target.tmplN, tmplOrient: target.tmplOrient, tmplBorder: target.tmplBorder, tmplCols: target.tmplCols,
           slot: 0, split: null, fitted: false
         };
         p2.crop = adjustCropToAspect(p2, target.w / target.h);
@@ -6563,7 +6571,21 @@ function tplLevel(B) { // px → nächste Stufe
   TPL_BORDERS.forEach((r, i) => { const d = Math.abs(r * W - B); if (d < bd) { bd = d; best = i; } });
   return best;
 }
-function templateGeom(n, orient, B) {
+function templateGeom(n, orient, B, cols) {
+  cols = cols || 1;
+  if (cols > 1) {
+    // Grid (2×2, 3×3, …): Zellen füllen die Slide mit ÜBERALL gleichem Rand B —
+    // Außenrand = Lücke, wie beim Magazin-Stack. Das Zellenformat ergibt sich
+    // aus der Slide (Post 4:5 → leicht hochformatige Zellen), „orient" greift nicht.
+    const rows = Math.ceil(n / cols);
+    const w = (W - 2 * B - (cols - 1) * B) / cols;
+    const h = (H - 2 * B - (rows - 1) * B) / rows;
+    const pos = [];
+    for (let r = 0; r < rows && pos.length < n; r++)
+      for (let c = 0; c < cols && pos.length < n; c++)
+        pos.push({ x: B + c * (w + B) + w / 2, cy: B + r * (h + B) + h / 2 });
+    return { w, h, pos, cys: pos.map(p => p.cy) };
+  }
   const ratio = orient === 'landscape' ? 3 / 2 : 2 / 3;  // Breite/Höhe
   // Zuerst über die Breite (Rand B links/rechts); passt die Höhe dann nicht in
   // die Slide (mit Rand B oben/unten + Lücken B), wird die Höhe darauf begrenzt.
@@ -6573,9 +6595,9 @@ function templateGeom(n, orient, B) {
   if (h > maxH) { h = maxH; w = h * ratio; }
   const totalH = n * h + (n - 1) * B;
   const startCY = (H - totalH) / 2 + h / 2;      // immer vertikal zentriert
-  const cys = [];
-  for (let i = 0; i < n; i++) cys.push(startCY + i * (h + B));
-  return { w, h, cys };
+  const cys = [], pos = [];
+  for (let i = 0; i < n; i++) { cys.push(startCY + i * (h + B)); pos.push({ x: W / 2, cy: cys[i] }); }
+  return { w, h, cys, pos };
 }
 function templateCells(gid) { return photos.filter(x => x.frameGroup === gid); }
 // Spiegel-Layout: verschiebt/skaliert man eine Zelle, bleibt die Gruppe
@@ -6585,7 +6607,9 @@ function reflowTemplateFromCell(cell) {
   if (!cell || !cell.tmplN) return;
   const cells = photos.filter(x => x.frameGroup === cell.frameGroup);
   const n = cells.length; if (n < 2) return;
-  cells.sort((a, b) => a.cy - b.cy);            // Stapelreihenfolge (oben → unten)
+  // Zeilenweise (cy, dann cx) — deckt Stack UND Grid ab. Die Punktspiegelung
+  // um die Slide-Mitte funktioniert im Grid genauso: oben-links ↔ unten-rechts.
+  cells.sort((a, b) => (a.cy - b.cy) || (a.cx - b.cx));
   const slideIdx = Math.floor(cell.cx / W);
   const Xc = slideIdx * W + W / 2, Yc = H / 2;  // Slide-Mitte (beide Achsen)
   cells.forEach(c => { c.w = cell.w; c.h = cell.h; });  // gleiche Größe (immer)
@@ -6603,16 +6627,20 @@ function reflowTemplateFromCell(cell) {
 }
 function layoutTemplate(cells, orient, B) {
   const slideIdx = Math.floor(cells[0].cx / W);
-  const g = templateGeom(cells.length, orient, B);
-  cells.sort((a, b) => a.cy - b.cy);
+  const cols = cells[0].tmplCols || 1;
+  const g = templateGeom(cells.length, orient, B, cols);
+  // Zeilenweise sortieren (erst cy, dann cx) — beim Stack ist cx konstant.
+  cells.sort((a, b) => (a.cy - b.cy) || (a.cx - b.cx));
   cells.forEach((c, i) => {
-    c.w = g.w; c.h = g.h; c.cx = slideIdx * W + W / 2; c.cy = g.cys[i];
-    c.tmplOrient = orient; c.tmplBorder = B; c.tmplN = cells.length; c.frame = null;
+    c.w = g.w; c.h = g.h; c.cx = slideIdx * W + g.pos[i].x; c.cy = g.pos[i].cy;
+    c.tmplOrient = orient; c.tmplBorder = B; c.tmplN = cells.length; c.tmplCols = cols; c.frame = null;
     if (c.kind === 'image' && c.img) c.crop = adjustCropToAspect(c, g.w / g.h);
   });
 }
 // Standard: 1 Foto = Hochformat 2:3, 2 & 3 gestapelt = Querformat 3:2.
-function addTemplate(n, orient) {
+// Grids (cols > 1): Zellen füllen die Slide mit überall gleichem Rand.
+function addTemplate(n, orient, cols) {
+  cols = cols || 1;
   orient = orient || (n === 1 ? 'portrait' : 'landscape');
   beginAction();
   let idx = activeSlide;
@@ -6624,13 +6652,13 @@ function addTemplate(n, orient) {
   const cxBase = idx * W;
   const gid = ++frameGroupSeq;
   const B = Math.round(W * TPL_BORDERS[2]);       // Stufe 2 als Standard-Rand
-  const g = templateGeom(n, orient, B);
+  const g = templateGeom(n, orient, B, cols);
   const firstIdx = photos.length;
   for (let i = 0; i < n; i++) {
     photos.push({
       kind: 'placeholder', role: 'inset', frameGroup: gid,
-      tmplN: n, tmplOrient: orient, tmplBorder: B,
-      cx: cxBase + W / 2, cy: g.cys[i], w: g.w, h: g.h, rot: 0, frame: null
+      tmplN: n, tmplOrient: orient, tmplBorder: B, tmplCols: cols,
+      cx: cxBase + g.pos[i].x, cy: g.pos[i].cy, w: g.w, h: g.h, rot: 0, frame: null
     });
   }
   // Neues Layout: Slide zentrieren, erste Zelle auswählen, Toolbar öffnen —
@@ -6644,6 +6672,8 @@ function addTemplate(n, orient) {
 document.getElementById('tpl1Btn').addEventListener('click', () => addTemplate(1));
 document.getElementById('tpl2Btn').addEventListener('click', () => addTemplate(2));
 document.getElementById('tpl3Btn').addEventListener('click', () => addTemplate(3));
+document.getElementById('tplGrid4Btn').addEventListener('click', () => addTemplate(4, 'portrait', 2));
+document.getElementById('tplGrid9Btn').addEventListener('click', () => addTemplate(9, 'portrait', 3));
 
 // Ratio ändert ALLE Fotos/Zellen der aktiven Slide (Hoch-/Querformat), ordnet sie
 // als gemeinsame Vorlage neu an. Behebt auch das „Foto verschwindet"-Problem bei 1.
