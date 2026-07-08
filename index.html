@@ -2121,6 +2121,10 @@ html.native-ios .hlp-browser-only { display: none; }
           <span class="tm-ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="14" height="12" rx="2"/><path d="M7 7V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-2"/><circle cx="7.5" cy="11" r="1.2"/><path d="M17 17l-4-4-6 6"/></svg></span>
           <span class="tm-txt"><b>Library</b><small>Reuse uploaded photos · folders</small></span>
         </button>
+        <button class="tm-cat" id="catPaste" title="Paste a copied photo or subject cut-out">
+          <span class="tm-ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg></span>
+          <span class="tm-txt"><b>Paste</b><small>Copied photo or subject cut-out</small></span>
+        </button>
         <button class="tm-cat" data-go="text" title="Text options">
           <span class="tm-ico" style="font-family:Georgia,serif;font-size:16px">T</span>
           <span class="tm-txt"><b>Text</b><small>Plain · Editorial · Magazine</small></span>
@@ -6235,6 +6239,29 @@ document.getElementById('ldManage').addEventListener('click', () => { closeLibDr
 document.getElementById('catLibrary').addEventListener('click', () => {
   _textMenu.classList.remove('show');
   openMediaLib();   // „Add → Library" öffnet die volle „Your uploads"-Karte mittig
+});
+
+// „Paste"-Button im Add-Menü: liest die Zwischenablage über die Async-Clipboard-API.
+// Das ist der iPhone-Weg — in Fotos „Motiv kopieren" (Subject-Lift) oder Foto
+// kopieren, dann hier einfügen. Safari fragt beim ersten Mal per Blase nach.
+document.getElementById('catPaste').addEventListener('click', async () => {
+  document.getElementById('textMenu').classList.remove('show');
+  try {
+    if (!navigator.clipboard || !navigator.clipboard.read) throw new Error('unsupported');
+    const items = await navigator.clipboard.read();
+    for (const item of items) {
+      const t = (item.types || []).find(x => x.startsWith('image/'));
+      if (t) {
+        const blob = await item.getType(t);
+        const file = new File([blob], 'pasted.' + (t.split('/')[1] || 'png'), { type: t });
+        loadPhoto(file, activeSlide * W + W / 2, H / 2);
+        return;
+      }
+    }
+    showToast('No image in the clipboard — copy a photo first');
+  } catch (err) {
+    showToast('Clipboard not readable — allow pasting, or use Cmd/Ctrl+V');
+  }
 });
 
 // Desktop: Cmd/Ctrl+V fügt ein Bild aus der Zwischenablage ein.
