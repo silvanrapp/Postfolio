@@ -47,8 +47,8 @@
      Playfair Display, DM Serif Display, Bricolage Grotesque, Archivo) +
      elegante Sublines (Instrument Serif, Cormorant Garamond, Fraunces,
      Arapey, Poppins). -->
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,100..900;1,100..900&family=Arapey:ital@0;1&family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..900;1,6..96,400..900&family=Bricolage+Grotesque:opsz,wght@12..96,200..800&family=Cormorant+Garamond:ital,wght@0,300..700;1,300..700&family=DM+Serif+Display:ital@0;1&family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Instrument+Serif:ital@0;1&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Poppins:ital,wght@0,300..900;1,300..900&display=swap" media="print" onload="this.media='all'">
-<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,100..900;1,100..900&family=Arapey:ital@0;1&family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..900;1,6..96,400..900&family=Bricolage+Grotesque:opsz,wght@12..96,200..800&family=Cormorant+Garamond:ital,wght@0,300..700;1,300..700&family=DM+Serif+Display:ital@0;1&family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Instrument+Serif:ital@0;1&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Poppins:ital,wght@0,300..900;1,300..900&display=swap"></noscript>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,100..900;1,100..900&family=Arapey:ital@0;1&family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..900;1,6..96,400..900&family=Bricolage+Grotesque:opsz,wght@12..96,200..800&family=Cormorant+Garamond:ital,wght@0,300..700;1,300..700&family=DM+Serif+Display:ital@0;1&family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Instrument+Serif:ital@0;1&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Poppins:ital,wght@0,300..900;1,300..900&family=Young+Serif&display=swap" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,100..900;1,100..900&family=Arapey:ital@0;1&family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..900;1,6..96,400..900&family=Bricolage+Grotesque:opsz,wght@12..96,200..800&family=Cormorant+Garamond:ital,wght@0,300..700;1,300..700&family=DM+Serif+Display:ital@0;1&family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Instrument+Serif:ital@0;1&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Poppins:ital,wght@0,300..900;1,300..900&family=Young+Serif&display=swap"></noscript>
 <!-- JSZip wird nur beim Export gebraucht → defer, blockiert das Parsen nicht. -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" defer></script>
 <style>
@@ -657,6 +657,8 @@ details.hlp-sec[open] .hlp-chev { transform: rotate(180deg); }
   -moz-appearance: textfield; appearance: textfield;
 }
 .pt-in::-webkit-outer-spin-button, .pt-in::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+/* Sichtbare Einheit hinter dem Zahlenfeld — Werte sind echte pt (px @1080-Export) */
+.pt-unit { font-size: 10px; color: var(--muted); margin: 0 2px 0 3px; align-self: center; }
 .pt-in:focus { border-color: var(--accent); outline: none; }
 #marginCtrl { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; }
 #marginCtrl::-webkit-scrollbar { height: 0; }
@@ -725,6 +727,8 @@ details.hlp-sec[open] .hlp-chev { transform: rotate(180deg); }
   box-shadow: 0 10px 28px rgba(0,0,0,0.1);
 }
 #textMenu.show { display: block; }
+/* Journal-Ebene hat viele Einträge → innerhalb des Popups scrollen */
+#textMenu .tm-level[data-lvl="journal"] { max-height: min(62vh, 520px); overflow-y: auto; -webkit-overflow-scrolling: touch; }
 #textMenu { padding: 6px; min-width: 248px; }
 .tm-item {
   display: flex; align-items: center; gap: 11px;
@@ -1776,6 +1780,14 @@ html.native-ios .hlp-browser-only { display: none; }
   box-shadow: 0 8px 18px rgba(40,36,31,0.18);
 }
 #splashStart:active { transform: scale(0.99); }
+#splashContinue {
+  margin-top: 10px; width: 100%; max-width: 300px; height: auto;
+  background: transparent; color: var(--dark);
+  border: 1.5px solid var(--dark);
+  border-radius: 14px; padding: 13px; font-size: 15px; font-weight: 600; cursor: pointer;
+}
+#splashContinue:active { transform: scale(0.99); }
+#splashContinue[hidden] { display: none; }
 
 /* Tabs — deutlich abgesetzt vom „New carousel"-Button, mit feiner Trennlinie */
 .home-tabs {
@@ -2140,6 +2152,11 @@ html.native-ios .hlp-browser-only { display: none; }
           <span class="tm-txt"><b>Templates</b><small>Framed photos &amp; grids</small></span>
           <span class="tm-arr" aria-hidden="true">›</span>
         </button>
+        <button class="tm-cat" data-go="journal" title="Travel-magazine pages — cover, articles, photo spreads">
+          <span class="tm-ico" style="font-family:'Young Serif',Georgia,serif;font-size:15px">J</span>
+          <span class="tm-txt"><b>Journal</b><small>Travel magazine · pages &amp; issues</small></span>
+          <span class="tm-arr" aria-hidden="true">›</span>
+        </button>
       </div>
 
       <!-- Ebene 1: Text -->
@@ -2174,6 +2191,14 @@ html.native-ios .hlp-browser-only { display: none; }
           <span class="tm-prev"><svg viewBox="0 0 24 30" width="17" height="21" aria-hidden="true"><rect x="1" y="1" width="10.5" height="28" rx="2" fill="none" stroke="#9B948A" stroke-width="1.5"/><rect x="3.4" y="10" width="5.7" height="10" rx="1" fill="none" stroke="#2A2826" stroke-width="1.5"/><rect x="12.5" y="1" width="10.5" height="28" rx="2" fill="none" stroke="#9B948A" stroke-width="1.5"/><rect x="14.9" y="10" width="5.7" height="10" rx="1" fill="none" stroke="#2A2826" stroke-width="1.5"/></svg></span>
           <span class="tm-txt"><b>Frames · 2 side by side</b><small>Vertical split</small></span>
         </button>
+        <button id="framesFacing2Btn" class="tm-item" title="Two columns — the portrait insets meet flush in the middle, like a diptych">
+          <span class="tm-prev"><svg viewBox="0 0 24 30" width="17" height="21" aria-hidden="true"><rect x="1" y="1" width="10.5" height="28" rx="2" fill="none" stroke="#9B948A" stroke-width="1.5"/><rect x="12.5" y="1" width="10.5" height="28" rx="2" fill="none" stroke="#9B948A" stroke-width="1.5"/><rect x="7.1" y="11.9" width="4.9" height="6.2" rx="0.8" fill="none" stroke="#2A2826" stroke-width="1.5"/><rect x="12" y="11.9" width="4.9" height="6.2" rx="0.8" fill="none" stroke="#2A2826" stroke-width="1.5"/></svg></span>
+          <span class="tm-txt"><b>Frames · 2 facing</b><small>Insets meet in the middle</small></span>
+        </button>
+        <button id="framesFacingRows2Btn" class="tm-item" title="Two stacked bands — the landscape insets meet flush at the horizontal middle, like a diptych">
+          <span class="tm-prev"><svg viewBox="0 0 24 30" width="17" height="21" aria-hidden="true"><rect x="1" y="1" width="22" height="13.5" rx="2" fill="none" stroke="#9B948A" stroke-width="1.5"/><rect x="1" y="15.5" width="22" height="13.5" rx="2" fill="none" stroke="#9B948A" stroke-width="1.5"/><rect x="8.9" y="10" width="6.2" height="5" rx="0.8" fill="none" stroke="#2A2826" stroke-width="1.5"/><rect x="8.9" y="15" width="6.2" height="5" rx="0.8" fill="none" stroke="#2A2826" stroke-width="1.5"/></svg></span>
+          <span class="tm-txt"><b>Frames · 2 facing stacked</b><small>Horizontal split</small></span>
+        </button>
         <button id="frames3Btn" class="tm-item" title="Three stacked bands — great for 9:16 stories">
           <span class="tm-prev"><svg viewBox="0 0 24 30" width="17" height="21" aria-hidden="true"><rect x="1" y="1" width="22" height="8.7" rx="1.5" fill="none" stroke="#9B948A" stroke-width="1.4"/><rect x="1" y="10.7" width="22" height="8.7" rx="1.5" fill="none" stroke="#9B948A" stroke-width="1.4"/><rect x="1" y="20.4" width="22" height="8.7" rx="1.5" fill="none" stroke="#9B948A" stroke-width="1.4"/></svg></span>
           <span class="tm-txt"><b>Frames · 3 stacked</b><small>Best for 9:16 stories</small></span>
@@ -2202,6 +2227,91 @@ html.native-ios .hlp-browser-only { display: none; }
         <button id="tplGrid9Btn" class="tm-item" title="Nine photos in a 3×3 grid">
           <span class="tm-prev"><svg viewBox="0 0 24 30" width="17" height="21" aria-hidden="true"><rect x="2.5" y="4" width="5.6" height="6.5" rx="0.8" fill="none" stroke="#2A2826" stroke-width="1.2"/><rect x="9.2" y="4" width="5.6" height="6.5" rx="0.8" fill="none" stroke="#2A2826" stroke-width="1.2"/><rect x="15.9" y="4" width="5.6" height="6.5" rx="0.8" fill="none" stroke="#2A2826" stroke-width="1.2"/><rect x="2.5" y="11.7" width="5.6" height="6.5" rx="0.8" fill="none" stroke="#2A2826" stroke-width="1.2"/><rect x="9.2" y="11.7" width="5.6" height="6.5" rx="0.8" fill="none" stroke="#2A2826" stroke-width="1.2"/><rect x="15.9" y="11.7" width="5.6" height="6.5" rx="0.8" fill="none" stroke="#2A2826" stroke-width="1.2"/><rect x="2.5" y="19.4" width="5.6" height="6.5" rx="0.8" fill="none" stroke="#2A2826" stroke-width="1.2"/><rect x="9.2" y="19.4" width="5.6" height="6.5" rx="0.8" fill="none" stroke="#2A2826" stroke-width="1.2"/><rect x="15.9" y="19.4" width="5.6" height="6.5" rx="0.8" fill="none" stroke="#2A2826" stroke-width="1.2"/></svg></span>
           <span class="tm-txt"><b>Grid · 3×3</b><small>Nine photos — recap look</small></span>
+        </button>
+        <button id="tplGridTitleBtn" class="tm-item" title="Four flush photos with a white text band across the middle">
+          <span class="tm-prev"><svg viewBox="0 0 24 30" width="17" height="21" aria-hidden="true"><rect x="3" y="2.5" width="8.75" height="10" fill="none" stroke="#2A2826" stroke-width="1.4"/><rect x="11.75" y="2.5" width="8.75" height="10" fill="none" stroke="#2A2826" stroke-width="1.4"/><rect x="3" y="17.5" width="8.75" height="10" fill="none" stroke="#2A2826" stroke-width="1.4"/><rect x="11.75" y="17.5" width="8.75" height="10" fill="none" stroke="#2A2826" stroke-width="1.4"/><line x1="8.5" y1="15" x2="15.5" y2="15" stroke="#9B948A" stroke-width="1.6" stroke-linecap="round"/></svg></span>
+          <span class="tm-txt"><b>Grid · 2×2 + title</b><small>Text band in the middle</small></span>
+        </button>
+        <button id="tplRowsTitleBtn" class="tm-item" title="Two landscape photos — top and bottom — with a white text band across the middle">
+          <span class="tm-prev"><svg viewBox="0 0 24 30" width="17" height="21" aria-hidden="true"><rect x="3" y="2.5" width="17.5" height="10" fill="none" stroke="#2A2826" stroke-width="1.4"/><rect x="3" y="17.5" width="17.5" height="10" fill="none" stroke="#2A2826" stroke-width="1.4"/><line x1="8.5" y1="15" x2="15.5" y2="15" stroke="#9B948A" stroke-width="1.6" stroke-linecap="round"/></svg></span>
+          <span class="tm-txt"><b>Duo · 2 + title</b><small>Landscape top &amp; bottom</small></span>
+        </button>
+      </div>
+
+      <!-- Ebene 1: Journal — Reisemagazin-Seiten & fertige Ausgaben -->
+      <div class="tm-level" data-lvl="journal" hidden>
+        <button class="tm-back" type="button">‹ Back</button>
+        <button id="jrSet5Btn" class="tm-item" title="Complete 5-page issue: cover, article, full page, quote, fin">
+          <span class="tm-prev" style="font-family:'Young Serif',serif;font-size:15px">5</span>
+          <span class="tm-txt"><b>Issue · Mini</b><small>5 matched pages, one tap</small></span>
+        </button>
+        <button id="jrSet7Btn" class="tm-item" title="Complete 7-page issue: cover, feature, spread, article, quote, grid, fin">
+          <span class="tm-prev" style="font-family:'Young Serif',serif;font-size:15px">7</span>
+          <span class="tm-txt"><b>Issue · Classic</b><small>7 matched pages, one tap</small></span>
+        </button>
+        <button id="jrSet10Btn" class="tm-item" title="Complete 10-page guide issue incl. route and spot index">
+          <span class="tm-prev" style="font-family:'Young Serif',serif;font-size:15px">10</span>
+          <span class="tm-txt"><b>Issue · Guide</b><small>10 pages incl. route &amp; spots</small></span>
+        </button>
+        <button id="jrCoverBtn" class="tm-item" title="Full-bleed photo with big serif title">
+          <span class="tm-prev" style="font-family:'Young Serif',serif;font-size:13px">Aa</span>
+          <span class="tm-txt"><b>Cover</b><small>Title page</small></span>
+        </button>
+        <button id="jrFeatureBtn" class="tm-item" title="Portrait photo, serif title and body text">
+          <span class="tm-prev"><svg viewBox="0 0 24 30" width="17" height="21" aria-hidden="true"><rect x="6.5" y="5" width="11" height="13" fill="none" stroke="#2A2826" stroke-width="1.4"/><line x1="6.5" y1="21.5" x2="17.5" y2="21.5" stroke="#9B948A" stroke-width="1.4"/><line x1="6.5" y1="24.5" x2="15" y2="24.5" stroke="#9B948A" stroke-width="1.4"/></svg></span>
+          <span class="tm-txt"><b>Feature</b><small>Photo + running text</small></span>
+        </button>
+        <button id="jrArticleBtn" class="tm-item" title="Headline, landscape photo and body text">
+          <span class="tm-prev"><svg viewBox="0 0 24 30" width="17" height="21" aria-hidden="true"><line x1="3" y1="4.5" x2="14" y2="4.5" stroke="#2A2826" stroke-width="1.8"/><rect x="3" y="8" width="18" height="11" fill="none" stroke="#2A2826" stroke-width="1.4"/><line x1="3" y1="22.5" x2="21" y2="22.5" stroke="#9B948A" stroke-width="1.4"/><line x1="3" y1="25.5" x2="17" y2="25.5" stroke="#9B948A" stroke-width="1.4"/></svg></span>
+          <span class="tm-txt"><b>Article</b><small>Headline · photo · text</small></span>
+        </button>
+        <button id="jrQuoteBtn" class="tm-item" title="Full-bleed photo with a centered serif quote">
+          <span class="tm-prev" style="font-family:Fraunces,serif;font-style:italic;font-size:16px">„"</span>
+          <span class="tm-txt"><b>Quote</b><small>Atmosphere page</small></span>
+        </button>
+        <button id="jrSidebarBtn" class="tm-item" title="Three stacked photos with a text column">
+          <span class="tm-prev"><svg viewBox="0 0 24 30" width="17" height="21" aria-hidden="true"><rect x="3" y="3" width="11" height="7" fill="none" stroke="#2A2826" stroke-width="1.3"/><rect x="3" y="11.5" width="11" height="7" fill="none" stroke="#2A2826" stroke-width="1.3"/><rect x="3" y="20" width="11" height="7" fill="none" stroke="#2A2826" stroke-width="1.3"/><line x1="16.5" y1="5" x2="21" y2="5" stroke="#9B948A" stroke-width="1.4"/><line x1="16.5" y1="8.5" x2="21" y2="8.5" stroke="#9B948A" stroke-width="1.4"/><line x1="16.5" y1="12" x2="21" y2="12" stroke="#9B948A" stroke-width="1.4"/></svg></span>
+          <span class="tm-txt"><b>Sidebar</b><small>3 photos + text column</small></span>
+        </button>
+        <button id="jrSpreadBtn" class="tm-item" title="Two landscape photos with a caption">
+          <span class="tm-prev"><svg viewBox="0 0 24 30" width="17" height="21" aria-hidden="true"><rect x="3" y="4" width="18" height="9.5" fill="none" stroke="#2A2826" stroke-width="1.4"/><rect x="3" y="16" width="18" height="9.5" fill="none" stroke="#2A2826" stroke-width="1.4"/></svg></span>
+          <span class="tm-txt"><b>Spread</b><small>2 photos + caption</small></span>
+        </button>
+        <button id="jrFullBtn" class="tm-item" title="One photo, full page, 5 pt border">
+          <span class="tm-prev"><svg viewBox="0 0 24 30" width="17" height="21" aria-hidden="true"><rect x="2.5" y="2.5" width="19" height="25" fill="none" stroke="#2A2826" stroke-width="1.5"/></svg></span>
+          <span class="tm-txt"><b>Full page</b><small>1 photo · 5 pt border</small></span>
+        </button>
+        <button id="jrGrid4Btn" class="tm-item" title="Four photos, flush grid, 5 pt border">
+          <span class="tm-prev"><svg viewBox="0 0 24 30" width="17" height="21" aria-hidden="true"><rect x="2.5" y="2.5" width="9" height="12" fill="none" stroke="#2A2826" stroke-width="1.3"/><rect x="12.5" y="2.5" width="9" height="12" fill="none" stroke="#2A2826" stroke-width="1.3"/><rect x="2.5" y="15.5" width="9" height="12" fill="none" stroke="#2A2826" stroke-width="1.3"/><rect x="12.5" y="15.5" width="9" height="12" fill="none" stroke="#2A2826" stroke-width="1.3"/></svg></span>
+          <span class="tm-txt"><b>Grid 2×2</b><small>4 photos · 5 pt border</small></span>
+        </button>
+        <button id="jrGrid16Btn" class="tm-item" title="Sixteen photos like a film contact sheet">
+          <span class="tm-prev" style="font-family:Archivo,sans-serif;font-size:11px;letter-spacing:1px">▤</span>
+          <span class="tm-txt"><b>Contact sheet 4×4</b><small>16 photos · recap</small></span>
+        </button>
+        <button id="jrTriBtn" class="tm-item" title="Three portrait photos side by side with captions">
+          <span class="tm-prev"><svg viewBox="0 0 24 30" width="17" height="21" aria-hidden="true"><rect x="2.5" y="8" width="5.5" height="11" fill="none" stroke="#2A2826" stroke-width="1.3"/><rect x="9.2" y="8" width="5.5" height="11" fill="none" stroke="#2A2826" stroke-width="1.3"/><rect x="16" y="8" width="5.5" height="11" fill="none" stroke="#2A2826" stroke-width="1.3"/></svg></span>
+          <span class="tm-txt"><b>Triptych</b><small>3 portraits + captions</small></span>
+        </button>
+        <button id="jrRouteBtn" class="tm-item" title="Day-by-day itinerary with a photo">
+          <span class="tm-prev" style="font-family:'Young Serif',serif;font-size:11px">1–4</span>
+          <span class="tm-txt"><b>Route</b><small>Day-by-day guide</small></span>
+        </button>
+        <button id="jrChapterBtn" class="tm-item" title="Typographic chapter divider">
+          <span class="tm-prev" style="font-family:'Young Serif',serif;font-size:15px">02</span>
+          <span class="tm-txt"><b>Chapter</b><small>Typo divider page</small></span>
+        </button>
+        <button id="jrIndexBtn" class="tm-item" title="Numbered list of spots">
+          <span class="tm-prev" style="font-family:Archivo,sans-serif;font-size:11px">01<br>02</span>
+          <span class="tm-txt"><b>Spot index</b><small>Save-worthy list page</small></span>
+        </button>
+        <button id="jrFinBtn" class="tm-item" title="Quiet closing page">
+          <span class="tm-prev" style="font-family:'Young Serif',serif;font-size:12px">Fin</span>
+          <span class="tm-txt"><b>Fin</b><small>Closing page</small></span>
+        </button>
+        <button id="jrHeadToggleBtn" class="tm-item" title="Show or hide the running header, footer and page numbers on all Journal pages">
+          <span class="tm-prev" style="font-family:Archivo,sans-serif;font-size:14px">⊟</span>
+          <span class="tm-txt"><b>Header &amp; footer</b><small>Show / hide on all pages</small></span>
         </button>
       </div>
 
@@ -2365,17 +2475,21 @@ html.native-ios .hlp-browser-only { display: none; }
   <!-- Stufenloser Regler (0–120 px); die klassischen Stufen bleiben als
        klickbare Marken darunter erhalten. -->
   <div class="row" id="frameCtrl">
+    <!-- Presets in echten pt-Werten (1 pt = 1 px im 1080er-Export) — statt
+         S/M/L. So merken sich Fotografen IHREN Wert („immer 10 pt Border")
+         und bekommen einen konsistenten Feed, auch app-übergreifend. -->
     <div class="size-chips" id="frameChips">
       <button class="size-chip" data-v="0" title="No border">0</button>
-      <button class="size-chip" data-v="8">S</button>
-      <button class="size-chip" data-v="18">M</button>
-      <button class="size-chip" data-v="30">L</button>
-      <button class="size-chip" data-v="40">XL</button>
-      <button class="size-chip" data-v="52">XXL</button>
+      <button class="size-chip" data-v="5" title="5 pt">5</button>
+      <button class="size-chip" data-v="10" title="10 pt">10</button>
+      <button class="size-chip" data-v="20" title="20 pt">20</button>
+      <button class="size-chip" data-v="30" title="30 pt">30</button>
+      <button class="size-chip" data-v="40" title="40 pt">40</button>
+      <button class="size-chip" data-v="50" title="50 pt">50</button>
     </div>
     <div class="stepper">
       <button class="step-btn" data-for="frame" data-step="-1" title="1 pt weniger">−</button>
-      <input type="number" class="px-val pt-in" id="frameRangeVal" min="0" max="120" step="1" value="0" inputmode="numeric" title="Border width in pt — type a value">
+      <input type="number" class="px-val pt-in" id="frameRangeVal" min="0" max="120" step="1" value="0" inputmode="numeric" title="Border width in pt — type a value"><span class="pt-unit">pt</span>
       <button class="step-btn" data-for="frame" data-step="1" title="1 pt mehr">＋</button>
     </div>
     <button id="fitBtn" title="Fit photo into slide / border (Enter)">Fit ⏎</button>
@@ -2407,17 +2521,19 @@ html.native-ios .hlp-browser-only { display: none; }
   <!-- ▼ Margin-Sektion -->
   <div class="acc-sec" id="secMargin" style="display:none">
   <div class="row" id="marginCtrl">
+    <!-- Presets in echten pt-Werten — siehe Kommentar bei #frameChips. -->
     <div class="size-chips" id="marginChips">
       <button class="size-chip" data-v="0" title="No margin">0</button>
-      <button class="size-chip" data-v="8">S</button>
-      <button class="size-chip" data-v="18">M</button>
-      <button class="size-chip" data-v="30">L</button>
-      <button class="size-chip" data-v="40">XL</button>
-      <button class="size-chip" data-v="52">XXL</button>
+      <button class="size-chip" data-v="5" title="5 pt">5</button>
+      <button class="size-chip" data-v="10" title="10 pt">10</button>
+      <button class="size-chip" data-v="20" title="20 pt">20</button>
+      <button class="size-chip" data-v="30" title="30 pt">30</button>
+      <button class="size-chip" data-v="40" title="40 pt">40</button>
+      <button class="size-chip" data-v="50" title="50 pt">50</button>
     </div>
     <div class="stepper">
       <button class="step-btn" data-for="margin" data-step="-1" title="1 pt weniger">−</button>
-      <input type="number" class="px-val pt-in" id="marginRangeVal" min="0" max="120" step="1" value="0" inputmode="numeric" title="Margin in pt — type a value">
+      <input type="number" class="px-val pt-in" id="marginRangeVal" min="0" max="120" step="1" value="0" inputmode="numeric" title="Margin in pt — type a value"><span class="pt-unit">pt</span>
       <button class="step-btn" data-for="margin" data-step="1" title="1 pt mehr">＋</button>
     </div>
     <div class="range-wrap" style="display:none">
@@ -2857,6 +2973,9 @@ html.native-ios .hlp-browser-only { display: none; }
       <div class="splash-rule"></div>
       <div class="splash-tag">Carousels &amp; stories, in seconds</div>
       <button id="splashStart">＋&nbsp;&nbsp;New carousel</button>
+      <!-- Nur sichtbar, wenn im Hintergrund ein Entwurf mit Inhalt liegt —
+           der Weg zurück in den Editor (z. B. nach Zurück-Geste/Logo-Tipp). -->
+      <button id="splashContinue" hidden>↩&nbsp;&nbsp;Continue editing</button>
       <div class="splash-note">beta · projects are saved locally in your browser</div>
     </div>
 
@@ -3033,7 +3152,7 @@ html.native-ios .hlp-browser-only { display: none; }
 //   ?tier=off  → Simulation beenden
 // Die Wahl bleibt in localStorage, der schwebende Umschalter unten links wechselt live.
 const PRO_FEATURES = ['tplStack','tplGrid','tplRecap','framesExtra','textPresets',
-                      'batchExport','hiRes','gradientMask','brandKit'];
+                      'batchExport','hiRes','gradientMask','brandKit','journal'];
 const PF_PLATFORM = window.Capacitor ? 'ios' : 'web';
 let pfIsPro = false;      // iOS: später aus StoreKit-Kauf gelesen
 let pfSimTier = null;     // 'free' | 'pro' | null (nur intern)
@@ -3055,8 +3174,13 @@ function hasFeature(key) {
 // Welche UI-Elemente zu welchem Feature-Key gehören:
 const PRO_UI = [
   ['tplStack',    ['tpl1Btn','tpl2Btn','tpl3Btn']],
-  ['tplGrid',     ['tplGrid4Btn','tplGrid9Btn']],
-  ['framesExtra', ['frames2Btn','frames3Btn','framesCols2Btn']],
+  ['tplGrid',     ['tplGrid4Btn','tplGrid9Btn','tplGridTitleBtn','tplRowsTitleBtn']],
+  ['framesExtra', ['frames2Btn','frames3Btn','framesCols2Btn','framesFacing2Btn','framesFacingRows2Btn']],
+  // Journal: Cover + Artikel bleiben FREI (Erleben + Teilen) — alle anderen
+  // Seiten, die Ausgaben-Sets und der Kopfzeilen-Toggle sind Pro.
+  ['journal', ['jrSet5Btn','jrSet7Btn','jrSet10Btn','jrFeatureBtn','jrQuoteBtn','jrSidebarBtn','jrSpreadBtn',
+               'jrFullBtn','jrGrid4Btn','jrGrid16Btn','jrTriBtn','jrRouteBtn','jrChapterBtn','jrIndexBtn',
+               'jrFinBtn','jrHeadToggleBtn']],
   ['textPresets', ['presetEditorialBtn','presetMagazinBtn']],
   ['batchExport', ['exportAllBtn']],
   ['gradientMask',['maskLabelBtn','maskToggle']]
@@ -3371,6 +3495,7 @@ let currentProjectId = null, currentProjectName = '';
 function serializeState() {
   return {
     mode, activeSlide,
+    journal: (typeof journalMeta !== 'undefined') ? { ...journalMeta } : undefined,
     corners: { round: CORNERS.round, r: CORNERS.r },
     slides: slides.map(s => ({ ...s })),
     photos: photos.map(p => {
@@ -3382,9 +3507,17 @@ function serializeState() {
   };
 }
 let _saveTimer = null;
+// Ausstehenden Autosave SOFORT wegschreiben — bevor die Seite verlassen wird
+// oder in den Hintergrund geht (Zurück-Wischgeste, Tab-Wechsel, App schließen).
+// Ohne das konnten die letzten ~0,7 s Arbeit verloren gehen.
+function flushSaveNow() {
+  if (_saveTimer) { clearTimeout(_saveTimer); _saveTimer = null; idbSet(serializeState()); }
+}
+window.addEventListener('pagehide', flushSaveNow);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flushSaveNow(); });
 function scheduleSave() {
   clearTimeout(_saveTimer);
-  _saveTimer = setTimeout(() => idbSet(serializeState()), 700);
+  _saveTimer = setTimeout(() => { _saveTimer = null; idbSet(serializeState()); }, 700);
 }
 async function restoreState(st) {
   if (!st || !Array.isArray(st.photos)) return false;
@@ -3393,6 +3526,7 @@ async function restoreState(st) {
   slides = (st.slides && st.slides.length ? st.slides : [{ bg: '#F4F1EB' }]).map(s => ({ ...s }));
   activeSlide = Math.min(st.activeSlide || 0, slides.length - 1);
   if (st.corners) { CORNERS.round = !!st.corners.round; if (st.corners.r) CORNERS.r = st.corners.r; }
+  if (st.journal && typeof journalMeta !== 'undefined') Object.assign(journalMeta, st.journal);
   if (typeof syncCornerUI === 'function') syncCornerUI();
   await Promise.all(st.photos.map(p => new Promise(resolve => {
     if (p.kind === 'text' || !p.src) return resolve();
@@ -4011,6 +4145,7 @@ function drawLockBadges() {
 function hitPhoto(lx, ly) {
   for (let i = photos.length - 1; i >= 0; i--) {
     const p = photos[i];
+    if (p.hidden) continue;   // ausgeblendete Elemente sind nicht antippbar
     // Gesperrte Ebenen sind AUSWÄHLBAR (Toolbar, Schloss, Crop) — nur das
     // Verschieben/Skalieren wird in den Gesten-Handlern blockiert.
     if (photosLocked && p.kind !== 'text') continue; // Text-Modus: nur Text bewegbar
@@ -4647,6 +4782,7 @@ function itemDrawsOnSlide(p, i, live) {
 // Zeichnet EIN Objekt (Foto/Text/Logo) auf die Haupt-Leinwand. Der Aufrufer
 // hat bereits auf die Slide geclippt.
 function drawItem(p) {
+  if (p.hidden) return;   // z. B. Journal-Kopf-/Fußzeilen per Toggle ausgeblendet
   ctx.save();
   ctx.translate(p.cx * S, p.cy * S);
   ctx.rotate(p.rot);
@@ -5194,11 +5330,12 @@ canvas.addEventListener('mousedown', e => {
   } else {
     sel          = -1;
     const si     = Math.max(0, Math.min(slides.length - 1, Math.floor(lx / W)));
-    const wasActive = (si === activeSlide);   // war die Slide schon ausgewählt?
     activeSlide  = si;
-    // Foto-Dialog: beim „+" einer leeren Slide ODER beim zweiten Tipp auf die
-    // bereits ausgewählte Slide (Hintergrund/Template). Erster Tipp = nur auswählen.
-    addCandidate = (wasActive || emptyCenterTap(lx, ly)) ? { lx, ly, slide: si, mx: e.clientX, my: e.clientY } : null;
+    // Foto-Dialog NUR beim „+" in der Mitte einer LEEREN Slide. Ein Tipp auf
+    // den Slide-Hintergrund wählt nur aus/ab — er öffnet nie das Add-Menü
+    // (Nutzer-Feedback: das Menü ging bei jedem Slide-Tipp auf, und der
+    // Schließ-Tipp daneben öffnete es sofort wieder).
+    addCandidate = emptyCenterTap(lx, ly) ? { lx, ly, slide: si, mx: e.clientX, my: e.clientY } : null;
   }
   syncBgButtons();
   updateDots();
@@ -5483,10 +5620,9 @@ canvas.addEventListener('touchstart', e => {
       // Let container scroll — but remember this spot in case it turns out to be a tap
       sel          = -1;
       const si     = Math.max(0, Math.min(slides.length - 1, Math.floor(lx / W)));
-      const wasActive = (si === activeSlide);
       activeSlide  = si;
-      // Foto-Dialog: „+" einer leeren Slide ODER zweiter Tipp auf die aktive Slide.
-      addCandidate = (wasActive || emptyCenterTap(lx, ly)) ? { lx, ly, slide: si, mx: t.clientX, my: t.clientY } : null;
+      // Foto-Dialog NUR beim „+" in der Mitte einer LEEREN Slide (siehe Maus-Pfad).
+      addCandidate = emptyCenterTap(lx, ly) ? { lx, ly, slide: si, mx: t.clientX, my: t.clientY } : null;
     }
     syncBgButtons();
     updateDots();
@@ -5811,7 +5947,9 @@ function loadPhotoIntoPlaceholder(file, idx) {
   });
 }
 // Kern (auch aus der Mediathek nutzbar): Bild in einen Platzhalter einsetzen.
-function fillPlaceholderImg(img, idx) {
+// plain = true: ohne Auto-Befüllung des Gegen-Insets und ohne Toast (für das
+// Wieder-Einsetzen der Fotos nach einem Layout-Wechsel).
+function fillPlaceholderImg(img, idx, plain) {
     const ph = photos[idx];
     if (!ph || ph.kind !== 'placeholder') return;
     beginAction();
@@ -5833,7 +5971,7 @@ function fillPlaceholderImg(img, idx) {
     // AUTOMATISCH im (noch leeren) kleinen Feld des nächsten Bandes.
     // (Alle Bänder teilen sich eine frameGroup — Bänder unterscheiden sich
     //  über ihre Mittelhöhe cy, nicht über die Gruppe.)
-    if (photo.role === 'bg' && photo.frameGroup && !photo.tmplN) {
+    if (!plain && photo.role === 'bg' && photo.frameGroup && !photo.tmplN) {
       const slideIdx = Math.floor(photo.cx / W);
       // Achse bestimmen: Bänder unterscheiden sich in cy (gestapelt) oder cx
       // (nebeneinander). Danach richtet sich, welches Inset das „nächste" ist.
@@ -5841,12 +5979,23 @@ function fillPlaceholderImg(img, idx) {
       const cxs = grpBgs.map(b => b.cx), cys = grpBgs.map(b => b.cy);
       const vert = (Math.max(...cxs) - Math.min(...cxs)) > (Math.max(...cys) - Math.min(...cys));
       const key = vert ? (q => q.cx) : (q => q.cy);
-      const kp = key(photo);
+      // Insets ihrem Band über den NÄCHSTGELEGENEN Hintergrund zuordnen (wie
+      // in mirrorFramesInset) — NICHT über die eigene Position: In den
+      // Facing-Layouts sind die Insets zur Mittelnaht verschoben; ein reiner
+      // Positionsvergleich ordnete sie dem falschen Band zu und das Foto
+      // landete im EIGENEN statt im gegenüberliegenden Inset.
+      const bgsSorted = grpBgs.slice().sort((a, b) => key(a) - key(b));
+      const bandOf = (q) => {
+        let bi = 0, bd = 1e9;
+        bgsSorted.forEach((b, i) => { const d = Math.abs(key(b) - key(q)); if (d < bd) { bd = d; bi = i; } });
+        return bi;
+      };
+      const myBand = bandOf(photo);
       const others = photos.filter(q => q.kind === 'placeholder' && q.role === 'inset' && !q.tmplN
-        && Math.floor(q.cx / W) === slideIdx && Math.abs(key(q) - kp) > 1)
-        .sort((a, b) => key(a) - key(b));
+        && q.frameGroup === photo.frameGroup && Math.floor(q.cx / W) === slideIdx && bandOf(q) !== myBand)
+        .sort((a, b) => bandOf(a) - bandOf(b));
       // Zyklisch: das Inset des NÄCHSTEN Bandes (unten bzw. rechts), sonst das erste.
-      const target = others.find(q => key(q) > kp) || others[0];
+      const target = others.find(q => bandOf(q) > myBand) || others[0];
       if (target) {
         const j = photos.indexOf(target);
         const p2 = {
@@ -6382,7 +6531,7 @@ document.addEventListener('paste', (e) => {
 // TEXT ITEMS
 // ═══════════════════════════════════════
 
-const TEXT_FONTS = ['Bodoni Moda', 'Playfair Display', 'DM Serif Display', 'Bricolage Grotesque', 'Archivo', 'Instrument Serif', 'Cormorant Garamond', 'Fraunces', 'Arapey', 'Poppins'];
+const TEXT_FONTS = ['Bodoni Moda', 'Playfair Display', 'DM Serif Display', 'Bricolage Grotesque', 'Archivo', 'Instrument Serif', 'Cormorant Garamond', 'Fraunces', 'Arapey', 'Poppins', 'Young Serif'];
 
 // A text item reuses the same cx/cy/w/h/rot fields as a photo, so all the
 // generic geometry code (hit-testing, drag/rotate/resize, snapping, layer
@@ -6560,8 +6709,7 @@ async function addOutroSlide(dark) {
   activeSlide = idx; sel = -1;
   resizeCanvas(); syncBgButtons(); updateDots(); updateDeleteBtn();
   redraw(); scheduleSave();
-  setTimeout(() => centerActiveSlide(false), 30);
-  setTimeout(() => centerActiveSlide(false), 220);
+  jumpToSlide(idx);
 }
 // (Outro wird nicht mehr über das Add-Menü angeboten, sondern als Einladung
 //  auf der Export-Seite — siehe addOutroAndReexport.)
@@ -6643,14 +6791,52 @@ function fillPlaceholder(idx, forceNative) {
 function framesSlideOccupied(idx) {
   return photos.some(p => slideIndexOf(p) === idx);
 }
-function addFramesLayout(n, axis) {
-  axis = (axis === 'col') ? 'col' : 'row';
-  beginAction();
+// ── Nach JEDER Layout-/Slide-Aktion zuverlässig zur Ziel-Slide springen.
+// Wichtig: erst die Scroll-Rastpunkte aktualisieren, sonst zieht iOS-Scroll-
+// Snap die Ansicht zur alten Slide zurück (deshalb sprang der Screen bei
+// Templates/Frames nicht immer mit, bei „+ Slide" aber schon). ──
+function jumpToSlide(idx) {
+  activeSlide = Math.max(0, Math.min(slides.length - 1, idx));
+  if (typeof syncSnapPoints === 'function') try { syncSnapPoints(); } catch (e) {}
+  setTimeout(() => centerActiveSlide(false), 30);
+  setTimeout(() => centerActiveSlide(false), 340);
+}
+// ── Ziel-Slide für ein neues Layout wählen. Aktive Slide frei → dort.
+// Belegt → nachfragen: Layout der Slide ERSETZEN (vorhandene Fotos wandern
+// der Reihe nach in die neuen Felder, freie Texte bleiben) oder wie bisher
+// auf einer NEUEN Slide anlegen. ──
+function layoutTargetSlide() {
   let idx = activeSlide;
-  if (framesSlideOccupied(idx) && slides.length < 20) {
+  if (!framesSlideOccupied(idx)) return { idx, imgs: [] };
+  if (confirm('Replace the layout on this slide?\nYour photos will move into the new layout.\n(Cancel = add it on a new slide instead)')) {
+    const imgs = [];
+    photos.forEach(p => { if (slideIndexOf(p) === idx && p.kind === 'image' && p.img) imgs.push(p.img); });
+    // Bilder & Platzhalter der Slide entfernen — freie TEXTE bleiben erhalten.
+    photos = photos.filter(p => !(slideIndexOf(p) === idx && (p.kind === 'image' || p.kind === 'placeholder')));
+    sel = -1;
+    return { idx, imgs };
+  }
+  if (slides.length < 20) {
     slides.push({ bg: slides[slides.length - 1].bg });
     idx = slides.length - 1;
   }
+  return { idx, imgs: [] };
+}
+// Nach einem Layout-Wechsel: die eingesammelten Fotos der Reihe nach in die
+// neuen Platzhalter einsetzen (ohne Auto-Inset-Magie, ohne Toast).
+function refillSlidePlaceholders(slideIdx, imgs) {
+  if (!imgs || !imgs.length) return;
+  let k = 0;
+  photos.forEach((p, i) => {
+    if (k >= imgs.length) return;
+    if (p.kind === 'placeholder' && slideIndexOf(p) === slideIdx) fillPlaceholderImg(imgs[k++], i, true);
+  });
+}
+function addFramesLayout(n, axis) {
+  axis = (axis === 'col') ? 'col' : 'row';
+  beginAction();
+  const _t = layoutTargetSlide();   // belegt? → ersetzen oder neue Slide (fragt nach)
+  let idx = _t.idx;
   const cxBase = idx * W;
   const gid = ++frameGroupSeq;           // verbindet die Insets dieser Gruppe (gleiche Größe)
   const firstIdx = photos.length;
@@ -6677,16 +6863,66 @@ function addFramesLayout(n, axis) {
   }
   // Neues Layout: sofort auf die Slide springen, ersten Platzhalter auswählen,
   // Toolbar öffnen — und NACH dem Panel-Umbau erneut zentrieren (sonst überlagert).
+  refillSlidePlaceholders(idx, _t.imgs);   // beim Ersetzen: Fotos in die neuen Felder
   activeSlide = idx; sel = firstIdx; panelHidden = false;
   resizeCanvas(); syncBgButtons(); updateDots(); updateDeleteBtn();
   redraw(); scheduleSave();
-  setTimeout(() => centerActiveSlide(false), 30);
-  setTimeout(() => centerActiveSlide(false), 220);
+  jumpToSlide(idx);
 }
 document.getElementById('frames1Btn').addEventListener('click', () => addFramesLayout(1));
 document.getElementById('frames2Btn').addEventListener('click', () => addFramesLayout(2));
 document.getElementById('frames3Btn').addEventListener('click', () => addFramesLayout(3));
 document.getElementById('framesCols2Btn').addEventListener('click', () => addFramesLayout(2, 'col'));
+
+// Frames · 2 facing: zwei Bänder, die Insets liegen BÜNDIG an der Mittelnaht —
+// zusammen wirken sie wie ein Diptychon. Gedacht für den Klassiker: jedes
+// Motiv einmal groß und einmal als Inset im GEGENÜBERLIEGENDEN Band.
+// axis 'col' (Standard): Spalten nebeneinander, Insets Hochformat 4:5 (aus dem
+// Referenz-Layout ausgemessen). axis 'row': dieselbe Idee um 90° gedreht —
+// Bänder übereinander, Insets Querformat 5:4 an der horizontalen Naht.
+function addFramesFacingLayout(axis) {
+  axis = (axis === 'row') ? 'row' : 'col';
+  beginAction();
+  const _t = layoutTargetSlide();   // belegt? → ersetzen oder neue Slide (fragt nach)
+  let idx = _t.idx;
+  const cxBase = idx * W;
+  const gid = ++frameGroupSeq;
+  const firstIdx = photos.length;
+  if (axis === 'col') {
+    const bandW = W / 2;
+    // Referenz: Inset ≈ 80 % der Spaltenbreite, Hochformat 4:5, vertikal zentriert.
+    const insetW = Math.round(bandW * 0.80);
+    const insetH = Math.round(insetW * 5 / 4);
+    for (let i = 0; i < 2; i++) {
+      const bandCX = cxBase + i * bandW + bandW / 2;
+      // Bündig an der Naht: linkes Inset ENDET in der Slide-Mitte, rechtes BEGINNT dort.
+      const insetCX = cxBase + W / 2 + (i === 0 ? -insetW / 2 : insetW / 2);
+      photos.push({ kind: 'placeholder', role: 'bg',    frameGroup: gid, cx: bandCX,  cy: H / 2, w: bandW,  h: H,      rot: 0, frame: null });
+      // Inset startet OHNE Border — der weiße Rahmen kommt bewusst über das Border-Tool.
+      photos.push({ kind: 'placeholder', role: 'inset', frameGroup: gid, cx: insetCX, cy: H / 2, w: insetW, h: insetH, rot: 0, frame: null });
+    }
+  } else {
+    const bandH = H / 2;
+    // Gedrehte Maße: Inset ≈ 80 % der Bandhöhe, Querformat 5:4, horizontal zentriert.
+    const insetH = Math.round(bandH * 0.80);
+    const insetW = Math.min(Math.round(insetH * 5 / 4), Math.round(W * 0.92));
+    for (let i = 0; i < 2; i++) {
+      const bandCY = i * bandH + bandH / 2;
+      // Bündig an der Naht: oberes Inset ENDET in der Slide-Mitte, unteres BEGINNT dort.
+      const insetCY = H / 2 + (i === 0 ? -insetH / 2 : insetH / 2);
+      photos.push({ kind: 'placeholder', role: 'bg',    frameGroup: gid, cx: cxBase + W / 2, cy: bandCY,  w: W,      h: bandH,  rot: 0, frame: null });
+      // Inset startet OHNE Border — der weiße Rahmen kommt bewusst über das Border-Tool.
+      photos.push({ kind: 'placeholder', role: 'inset', frameGroup: gid, cx: cxBase + W / 2, cy: insetCY, w: insetW, h: insetH, rot: 0, frame: null });
+    }
+  }
+  refillSlidePlaceholders(idx, _t.imgs);   // beim Ersetzen: Fotos in die neuen Felder
+  activeSlide = idx; sel = firstIdx; panelHidden = false;
+  resizeCanvas(); syncBgButtons(); updateDots(); updateDeleteBtn();
+  redraw(); scheduleSave();
+  jumpToSlide(idx);
+}
+document.getElementById('framesFacing2Btn').addEventListener('click', () => addFramesFacingLayout('col'));
+document.getElementById('framesFacingRows2Btn').addEventListener('click', () => addFramesFacingLayout('row'));
 
 // Templates: 1–3 gerahmte Foto-Zellen (Hochformat 2:3), gestapelt, gleicher
 // Außenrand + gleiche Abstände + gleicher Rahmen. Passt sich Post/Story an.
@@ -6694,7 +6930,12 @@ document.getElementById('framesCols2Btn').addEventListener('click', () => addFra
 // gleicher Außenrand + gleiche Abstände. Passt sich Post/Story automatisch an.
 // Klassische Vorlage wie im Magazin: n Foto-Zellen mit ÜBERALL gleichem Rand
 // (Außenabstand = Abstand zwischen den Fotos = B) auf weißem Hintergrund.
-const TPL_BORDERS = [0, 0.015, 0.03, 0.05, 0.07, 0.095]; // Anteile von W je Stufe 0–5
+// Template-Rand-Stufen in GLATTEN pt-Werten (1 pt = 1 px @1080 — W ist in
+// Post UND Story 1080, r·W ergibt also exakt diese pt). Stufe 2 = 30 pt ist
+// der Standard-Außenrand ALLER Templates mit weißem Rand — ein einziger,
+// merkbarer Wert für einen einheitlichen Feed (vorher krumm: 16/32/54/76/103).
+const TPL_MARGIN_PT = 30;
+const TPL_BORDERS = [0, 15, TPL_MARGIN_PT, 55, 75, 100].map(pt => pt / 1080); // Anteile von W je Stufe 0–5
 function tplLevel(B) { // px → nächste Stufe
   let best = 2, bd = 1e9;
   TPL_BORDERS.forEach((r, i) => { const d = Math.abs(r * W - B); if (d < bd) { bd = d; best = i; } });
@@ -6776,11 +7017,8 @@ function addTemplate(n, orient, cols) {
   cols = cols || 1;
   orient = orient || (n === 1 ? 'portrait' : 'landscape');
   beginAction();
-  let idx = activeSlide;
-  if (framesSlideOccupied(idx) && slides.length < 20) {
-    slides.push({ bg: slides[slides.length - 1].bg });
-    idx = slides.length - 1;
-  }
+  const _t = layoutTargetSlide();   // belegt? → ersetzen oder neue Slide (fragt nach)
+  let idx = _t.idx;
   slides[idx].bg = '#ffffff';                     // klassischer weißer Hintergrund
   const cxBase = idx * W;
   const gid = ++frameGroupSeq;
@@ -6796,17 +7034,247 @@ function addTemplate(n, orient, cols) {
   }
   // Neues Layout: Slide zentrieren, erste Zelle auswählen, Toolbar öffnen —
   // nach dem Panel-Umbau erneut zentrieren (sonst Überlagerung).
+  refillSlidePlaceholders(idx, _t.imgs);   // beim Ersetzen: Fotos in die neuen Felder
   activeSlide = idx; sel = firstIdx; panelHidden = false;
   resizeCanvas(); syncBgButtons(); updateDots(); updateDeleteBtn();
   redraw(); scheduleSave();
-  setTimeout(() => centerActiveSlide(false), 30);
-  setTimeout(() => centerActiveSlide(false), 220);
+  jumpToSlide(idx);
 }
 document.getElementById('tpl1Btn').addEventListener('click', () => addTemplate(1));
 document.getElementById('tpl2Btn').addEventListener('click', () => addTemplate(2));
 document.getElementById('tpl3Btn').addEventListener('click', () => addTemplate(3));
 document.getElementById('tplGrid4Btn').addEventListener('click', () => addTemplate(4, 'portrait', 2));
 document.getElementById('tplGrid9Btn').addEventListener('click', () => addTemplate(9, 'portrait', 3));
+
+// Grid + title: Fotos BÜNDIG (nur Außenrand), dazwischen ein weißes Querband
+// mit Schrift-Duo — „the art of / simplicity."-Look aus dem Referenz-Post.
+// cols 2 = Schachbrett mit vier Fotos, cols 1 = zwei Querformat-Fotos
+// (oben/unten). Die Zellen sind bewusst FREIE Platzhalter (kein tmplN/
+// frameGroup): So greift weder Template-Reflow noch Frames-Spiegelung, das
+// Band bleibt beim Verschieben unangetastet, und beide Texte sind ganz
+// normal editier-/verschiebbar.
+function addGridTitleTemplate(cols) {
+  cols = cols === 1 ? 1 : 2;
+  beginAction();
+  const _t = layoutTargetSlide();   // belegt? → ersetzen oder neue Slide (fragt nach)
+  let idx = _t.idx;
+  slides[idx].bg = '#ffffff';                 // das Band IST der Slide-Hintergrund
+  const cxBase = idx * W;
+  const firstIdx = photos.length;
+  const m    = TPL_MARGIN_PT;                 // Standard-Außenrand aller Templates
+  const band = Math.round(H * 0.074);         // Bandhöhe aus dem Referenz-Layout
+  const colW = (W - 2 * m) / cols;
+  const rowH = (H - 2 * m - band) / 2;
+  const cxs = cols === 1
+    ? [cxBase + W / 2]
+    : [cxBase + m + colW / 2, cxBase + W - m - colW / 2];
+  const cys = [m + rowH / 2, H - m - rowH / 2];
+  cys.forEach(cy => cxs.forEach(cx => {
+    photos.push({ kind: 'placeholder', cx, cy, w: colW, h: rowH, rot: 0, frame: null });
+  }));
+  // Schrift-Duo mittig im Band (Bandmitte = Slide-Mitte, da symmetrisch).
+  // Beim ERSETZEN eines Layouts bleiben freie Texte der Slide erhalten —
+  // dann kein zweites Duo einsetzen (sonst doppelte Titel übereinander).
+  const hasText = photos.some(p => p.kind === 'text' && slideIndexOf(p) === idx);
+  if (!hasText) {
+    const c    = H / 2;
+    const sub  = makeTextItem('the art of',  'Archivo',          { weight: 400, size: 30, color: '#5C6670' });
+    const head = makeTextItem('simplicity.', 'Playfair Display', { weight: 500, size: 66, color: '#5C6670' });
+    sub.cx  = cxBase + W / 2; sub.cy  = c - head.h * 0.32;
+    head.cx = cxBase + W / 2; head.cy = c + sub.h * 0.35;
+    photos.push(sub, head);
+  }
+  refillSlidePlaceholders(idx, _t.imgs);   // beim Ersetzen: Fotos in die neuen Felder
+  activeSlide = idx; sel = firstIdx; panelHidden = false;
+  resizeCanvas(); syncBgButtons(); updateDots(); updateDeleteBtn();
+  redraw(); scheduleSave();
+  jumpToSlide(idx);
+}
+document.getElementById('tplGridTitleBtn').addEventListener('click', () => addGridTitleTemplate(2));
+document.getElementById('tplRowsTitleBtn').addEventListener('click', () => addGridTitleTemplate(1));
+
+// ═══════════════════════════════════════
+// JOURNAL — Reisemagazin-Kategorie
+// ═══════════════════════════════════════
+// Konzept: Postfolio_Journal_Konzept.md. Redaktionssystem: Papierfarbe,
+// Kopfzeile (Land/Ort), Fußzeile (Seitenzahl + Journal-Name) — synchron über
+// alle Journal-Slides, per Toggle ausblendbar. Signatur-Font: Young Serif.
+const JR_PAPER = '#F4F1EB', JR_INK = '#2A2826', JR_BODY = '#3A3733', JR_MUTED = '#8A8274';
+let journalMeta = { country: 'AUSTRIA', place: 'ALPBACH', footer: 'POSTFOLIO JOURNAL', show: true };
+
+// Text-Baustein mit fester Position; jr = Rolle für den Kopf-/Fußzeilen-Sync.
+function jrText(txt, font, o) {
+  const t = makeTextItem(txt, font, o);
+  t.cx = o.cx; t.cy = o.cy;
+  if (o.tracking) t.tracking = o.tracking;
+  if (o.jr) { t.jr = o.jr; if (!journalMeta.show) t.hidden = true; }
+  return t;
+}
+function jrPh(cx, cy, w, h) { return { kind: 'placeholder', cx, cy, w, h, rot: 0, frame: null }; }
+
+// Kopf- und Fußzeile einer Journal-Innenseite (Slide idx).
+function jrChrome(idx, items) {
+  const cx0 = idx * W;
+  const pg = String(idx + 1).padStart(2, '0');
+  items.push(
+    jrText(journalMeta.country, 'Archivo', { size: 22, weight: 500, color: JR_MUTED, tracking: 3, cx: cx0 + 60 + String(journalMeta.country).length * 8, cy: 64, jr: 'jhCountry' }),
+    jrText(journalMeta.place,   'Archivo', { size: 22, weight: 600, color: JR_INK,   tracking: 3, cx: cx0 + W - 60 - String(journalMeta.place).length * 8, cy: 64, jr: 'jhPlace' }),
+    jrText(pg, 'Archivo', { size: 20, weight: 500, color: JR_MUTED, tracking: 2, cx: cx0 + 78, cy: H - 44, jr: 'jfPgno' }),
+    jrText(journalMeta.footer, 'Archivo', { size: 20, weight: 500, color: JR_MUTED, tracking: 3, cx: cx0 + W - 60 - String(journalMeta.footer).length * 7, cy: H - 44, jr: 'jfFooter' })
+  );
+}
+
+// Kopf-/Fußzeilen-Texte über alle Journal-Slides synchron halten
+// (aufgerufen aus dem Text-Editor). Seitenzahlen bleiben individuell.
+function syncJournalText(p) {
+  if (!p || !p.jr || p.jr === 'jfPgno') return;
+  if (p.jr === 'jhCountry') journalMeta.country = p.text;
+  if (p.jr === 'jhPlace')   journalMeta.place   = p.text;
+  if (p.jr === 'jfFooter')  journalMeta.footer  = p.text;
+  photos.forEach(q => { if (q !== p && q.jr === p.jr) q.text = p.text; });
+}
+
+// Toggle: Kopf-/Fußzeilen auf ALLEN Journal-Seiten ein-/ausblenden (clean Look).
+function toggleJournalChrome() {
+  beginAction();
+  journalMeta.show = !journalMeta.show;
+  photos.forEach(p => { if (p.jr) p.hidden = !journalMeta.show; });
+  showToast(journalMeta.show ? 'Header & footer shown on all Journal pages' : 'Header & footer hidden — tap again to bring them back');
+  redraw(); scheduleSave();
+}
+
+// Eine Journal-Seite bauen. forceAppend = true (Ausgaben-Sets): ohne Rückfrage
+// ans Ende anhängen; sonst greift der normale Ersetzen/Neue-Slide-Dialog.
+function addJournalPage(kind, forceAppend) {
+  try { Promise.all([document.fonts.load('400 120px "Young Serif"'), document.fonts.load('italic 400 52px "Fraunces"')]).then(() => redraw()); } catch (e) {}
+  beginAction();
+  let t;
+  if (forceAppend) {
+    let idx2 = activeSlide;
+    if (framesSlideOccupied(idx2)) {
+      if (slides.length >= 20) { showToast('Maximum of 20 slides'); return false; }
+      slides.push({}); idx2 = slides.length - 1;
+    }
+    t = { idx: idx2, imgs: [] };
+  } else {
+    t = layoutTargetSlide();
+  }
+  const idx = t.idx;
+  slides[idx].bg = JR_PAPER;
+  const cx0 = idx * W, mid = cx0 + W / 2, m = TPL_MARGIN_PT;
+  const firstIdx = photos.length;
+  const items = [];
+  const g5 = 5;   // kleinste Standard-Border der App (5 pt)
+
+  if (kind === 'cover') {
+    items.push(jrPh(mid, H / 2, W, H));
+    items.push(jrText('NATURE & HIKES', 'Archivo', { size: 26, weight: 500, color: '#FFFFFF', tracking: 8, cx: mid, cy: H * 0.30 }));
+    items.push(jrText('Alpbach', 'Young Serif', { size: 170, weight: 400, color: '#FFFFFF', cx: mid, cy: H * 0.40 }));
+    items.push(jrText('4 DAYS IN THE AUSTRIAN ALPS', 'Archivo', { size: 24, weight: 500, color: '#FFFFFF', tracking: 6, cx: mid, cy: H * 0.485 }));
+    items.push(jrText('@yourname · N° 01', 'Archivo', { size: 22, weight: 400, color: '#FFFFFF', cx: mid, cy: H - 70 }));
+  } else if (kind === 'feature') {
+    jrChrome(idx, items);
+    const fw = W * 0.62, fh = fw * 4 / 3, fy = 130 + fh / 2;
+    items.push(jrPh(mid, fy, fw, fh));
+    items.push(jrText('Man kommt nicht zufällig hierher', 'Young Serif', { size: 42, color: JR_INK, cx: mid, cy: fy + fh / 2 + 70 }));
+    items.push(jrText('Eingebettet im Herzen der Alpen scheint dieses\nBergdorf seinen eigenen Rhythmus gefunden zu haben —\nzwischen Traditionen und Gipfeln.', 'Archivo', { size: 25, weight: 400, color: JR_BODY, cx: mid, cy: fy + fh / 2 + 175 }));
+  } else if (kind === 'article') {
+    jrChrome(idx, items);
+    items.push(jrText('Das Königreich der Wanderer', 'Young Serif', { size: 50, color: JR_INK, cx: mid, cy: 185 }));
+    const aw = W - 2 * m, ah = aw * 10 / 16;
+    items.push(jrPh(mid, 265 + ah / 2, aw, ah));
+    items.push(jrText('In Tirol ist der Berg überall. Von den Almen des\nWiedersberger Horns bis zu den Graten der Gratlspitze\nentfalten sich die Landschaften mit einer fast\nbeunruhigenden Großzügigkeit.\n\nHier erzählen sich die Tage weniger in Kilometern\nals in Momenten.', 'Archivo', { size: 24, weight: 400, color: JR_BODY, cx: mid, cy: 265 + ah + 155 }));
+  } else if (kind === 'quote') {
+    items.push(jrPh(mid, H / 2, W, H));
+    items.push(jrText('Mehr als ein Dorf ist Alpbach\neine Atmosphäre. Ein Ort, an dem\ndie Zeit manchmal langsamer\nzu gehen scheint.', 'Fraunces', { size: 50, italic: true, weight: 400, color: JR_PAPER, cx: mid, cy: H / 2 }));
+  } else if (kind === 'sidebar') {
+    jrChrome(idx, items);
+    const sw = W * 0.56, top = 125, bot = H - 85, ph3 = (bot - top - 30) / 3;
+    for (let i = 0; i < 3; i++) items.push(jrPh(cx0 + m + sw / 2, top + ph3 / 2 + i * (ph3 + 15), sw, ph3));
+    const rx = cx0 + m + sw + 40 + (W - 2 * m - sw - 40) / 2;
+    items.push(jrText('Der Reintalersee', 'Young Serif', { size: 32, color: JR_INK, cx: rx, cy: top + 70 }));
+    items.push(jrText('Mit seinem warmen\nWasser ist der See einer\nder beliebtesten\nBadeplätze des Tals.\n\nUmgeben von Wäldern\nund Bergen bietet er\neine erfrischende Pause.', 'Archivo', { size: 22, weight: 400, color: JR_BODY, cx: rx, cy: top + 330 }));
+  } else if (kind === 'spread') {
+    jrChrome(idx, items);
+    const gw = W - 2 * m, gh = H * 0.335;
+    items.push(jrPh(mid, 130 + gh / 2, gw, gh));
+    items.push(jrPh(mid, 130 + gh + 30 + gh / 2, gw, gh));
+    items.push(jrText('WIEDERSBERGER HORN — 6:12 AM', 'Archivo', { size: 18, weight: 500, color: JR_MUTED, tracking: 4, cx: cx0 + m + 220, cy: 130 + 2 * gh + 70 }));
+  } else if (kind === 'full') {
+    items.push(jrPh(mid, H / 2, W - 2 * g5, H - 2 * g5));
+  } else if (kind === 'grid4') {
+    const cw = (W - 3 * g5) / 2, ch = (H - 3 * g5) / 2;
+    [[g5 + cw / 2, g5 + ch / 2], [W - g5 - cw / 2, g5 + ch / 2], [g5 + cw / 2, H - g5 - ch / 2], [W - g5 - cw / 2, H - g5 - ch / 2]]
+      .forEach(([x, y]) => items.push(jrPh(cx0 + x, y, cw, ch)));
+  } else if (kind === 'grid16') {
+    const cw = (W - 5 * g5) / 4, ch = (H - 5 * g5) / 4;
+    for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++)
+      items.push(jrPh(cx0 + g5 + c * (cw + g5) + cw / 2, g5 + r * (ch + g5) + ch / 2, cw, ch));
+  } else if (kind === 'triptych') {
+    jrChrome(idx, items);
+    const tw = (W - 2 * m - 40) / 3, th = tw * 4 / 3, ty = 160 + th / 2;
+    const caps = ['MORGENLICHT', 'AM GRAT', 'BLAUE STUNDE'];
+    for (let i = 0; i < 3; i++) {
+      const x = cx0 + m + tw / 2 + i * (tw + 20);
+      items.push(jrPh(x, ty, tw, th));
+      items.push(jrText(caps[i], 'Archivo', { size: 16, weight: 500, color: JR_MUTED, tracking: 3, cx: x, cy: ty + th / 2 + 34 }));
+    }
+    items.push(jrText('Drei Momente, ein Tag', 'Young Serif', { size: 40, color: JR_INK, cx: mid, cy: ty + th / 2 + 130 }));
+  } else if (kind === 'route') {
+    jrChrome(idx, items);
+    items.push(jrText('Die Route', 'Young Serif', { size: 52, color: JR_INK, cx: mid, cy: 195 }));
+    items.push(jrText('TAG 1 — Ankunft im Tal, erste Runde durchs Dorf\n\nTAG 2 — Wiedersberger Horn zum Sonnenaufgang\n\nTAG 3 — Gratlspitze-Überschreitung\n\nTAG 4 — Lama-Trekking und Abreise', 'Archivo', { size: 25, weight: 400, color: JR_BODY, cx: mid, cy: 480 }));
+    const rh = H * 0.22;
+    items.push(jrPh(mid, H - 85 - rh / 2, W - 2 * m, rh));
+  } else if (kind === 'chapter') {
+    items.push(jrText('KAPITEL', 'Archivo', { size: 24, weight: 500, color: JR_MUTED, tracking: 8, cx: mid, cy: H * 0.355 }));
+    items.push(jrText('02', 'Young Serif', { size: 220, color: JR_INK, cx: mid, cy: H * 0.46 }));
+    items.push(jrText('Das Königreich der Wanderer', 'Fraunces', { size: 38, italic: true, weight: 400, color: JR_BODY, cx: mid, cy: H * 0.575 }));
+  } else if (kind === 'index') {
+    jrChrome(idx, items);
+    items.push(jrText('Die Spots', 'Young Serif', { size: 48, color: JR_INK, cx: mid, cy: 195 }));
+    items.push(jrText('01  Wiedersberger Horn — Sonnenaufgang\n\n02  Reintalersee — Baden\n\n03  Gratlspitze — Gratwanderung\n\n04  Dorfkirche — Blaue Stunde\n\n05  Lama-Farm — Mit Kindern', 'Archivo', { size: 25, weight: 400, color: JR_BODY, cx: mid, cy: H * 0.5 }));
+  } else if (kind === 'fin') {
+    jrChrome(idx, items);
+    items.push(jrText('Danke fürs Blättern.', 'Young Serif', { size: 62, color: JR_INK, cx: mid, cy: H * 0.42 }));
+    items.push(jrText('ALLE SPOTS & ROUTEN IN DER CAPTION', 'Archivo', { size: 22, weight: 500, color: JR_MUTED, tracking: 5, cx: mid, cy: H * 0.52 }));
+    items.push(jrText('@yourname', 'Archivo', { size: 22, weight: 400, color: JR_MUTED, cx: mid, cy: H * 0.57 }));
+  }
+
+  photos.push(...items);
+  refillSlidePlaceholders(idx, t.imgs);
+  activeSlide = idx; sel = firstIdx; panelHidden = false;
+  resizeCanvas(); syncBgButtons(); updateDots(); updateDeleteBtn();
+  redraw(); scheduleSave();
+  jumpToSlide(idx);
+  return true;
+}
+
+// Fertige Ausgaben: aufeinander abgestimmte Seitenfolgen, ein Tipp.
+const JR_SETS = {
+  mini:    ['cover', 'article', 'full', 'quote', 'fin'],
+  classic: ['cover', 'feature', 'spread', 'article', 'quote', 'grid4', 'fin'],
+  guide:   ['cover', 'route', 'feature', 'article', 'full', 'quote', 'triptych', 'spread', 'index', 'fin']
+};
+function addJournalIssue(name) {
+  const kinds = JR_SETS[name];
+  if (!kinds) return;
+  const occ0 = framesSlideOccupied(activeSlide);
+  const need = kinds.length - (occ0 ? 0 : 1);
+  if (slides.length + need > 20) { showToast('Not enough slides left — an issue needs ' + kinds.length + ' (max 20 total)'); return; }
+  kinds.forEach((k, i) => addJournalPage(k, i > 0 || occ0));
+  showToast('Issue created — edit any text with a double-tap');
+}
+
+[['jrCoverBtn', 'cover'], ['jrFeatureBtn', 'feature'], ['jrArticleBtn', 'article'], ['jrQuoteBtn', 'quote'],
+ ['jrSidebarBtn', 'sidebar'], ['jrSpreadBtn', 'spread'], ['jrFullBtn', 'full'], ['jrGrid4Btn', 'grid4'],
+ ['jrGrid16Btn', 'grid16'], ['jrTriBtn', 'triptych'], ['jrRouteBtn', 'route'], ['jrChapterBtn', 'chapter'],
+ ['jrIndexBtn', 'index'], ['jrFinBtn', 'fin']].forEach(([id, k]) =>
+  document.getElementById(id).addEventListener('click', () => addJournalPage(k)));
+document.getElementById('jrSet5Btn').addEventListener('click', () => addJournalIssue('mini'));
+document.getElementById('jrSet7Btn').addEventListener('click', () => addJournalIssue('classic'));
+document.getElementById('jrSet10Btn').addEventListener('click', () => addJournalIssue('guide'));
+document.getElementById('jrHeadToggleBtn').addEventListener('click', () => toggleJournalChrome());
 
 // Ratio ändert ALLE Fotos/Zellen der aktiven Slide (Hoch-/Querformat), ordnet sie
 // als gemeinsame Vorlage neu an. Behebt auch das „Foto verschwindet"-Problem bei 1.
@@ -6975,6 +7443,8 @@ document.getElementById('textContentInput').addEventListener('input', function()
   if (sel < 0 || sel >= photos.length || photos[sel].kind !== 'text') return;
   beginAction('text');
   photos[sel].text = this.value;
+  // Journal: Kopf-/Fußzeilen-Texte über alle Journal-Slides synchron halten.
+  if (typeof syncJournalText === 'function') syncJournalText(photos[sel]);
   redraw();
 });
 
@@ -8050,7 +8520,7 @@ function applyFrameWidthUI(fw) {
   redraw();
 }
 // Rast-Striche auf der Slider-Spur (Standard-Stärken) + magnetisches Snapping.
-const RANGE_TICKS = [8, 18, 30, 40, 52];
+const RANGE_TICKS = [5, 10, 20, 30, 40, 50];   // = die pt-Preset-Chips
 const RANGE_MAX = 120, THUMB_W = 18, THUMB_W_TOUCH = 28;
 function rangeThumbW() { return window.innerWidth <= 600 ? THUMB_W_TOUCH : THUMB_W; }
 function buildRangeTicks() {
@@ -9997,7 +10467,13 @@ document.getElementById('newBtn').addEventListener('click', () => {
 // Standard-Leerzustand. loadSaved() ist asynchron, weil die Bilder aus ihren
 // DataURLs neu dekodiert werden müssen.
 // Splash schließen (Einstieg in den Editor)
-function showSplash() { document.getElementById('splash').classList.remove('hidden'); showHomeView('overview'); renderHome(); }
+function showSplash() {
+  document.getElementById('splash').classList.remove('hidden');
+  // „Continue editing" nur zeigen, wenn hinter dem Splash ein Entwurf mit
+  // Inhalt liegt — sonst gäbe es vom Startmenü keinen Weg zurück zum Entwurf.
+  document.getElementById('splashContinue').hidden = photos.length === 0;
+  showHomeView('overview'); renderHome();
+}
 function hideSplash() { document.getElementById('splash').classList.add('hidden'); setTimeout(() => positionEmptyAddBtn(), 60); }
 
 let pendingFolder = '';                 // Ordner, in den das nächste NEUE Carousel gespeichert wird
@@ -10016,6 +10492,11 @@ function relTime(ts) {
   return Math.round(d / (365 * day)) + 'y';
 }
 function homeStartCarousel(folder) {
+  // Ungespeicherten Entwurf mit Inhalt NIE stillschweigend überschreiben —
+  // genau so ging Nutzern nach einer versehentlichen Zurück-Geste der ganze
+  // Entwurf verloren („New carousel" hat den Autosave sofort geleert).
+  if (photos.length > 0 && !currentProjectId
+      && !confirm('Start a new carousel?\nYour current draft will be replaced.')) return;
   pendingFolder = folder || '';
   currentProjectId = null; currentProjectName = '';
   // Frisches, leeres Projekt (wie „New")
@@ -10233,6 +10714,7 @@ document.getElementById('homeTabOverview').addEventListener('click', () => showH
 document.getElementById('homeTabProjects').addEventListener('click', () => showHomeView('projects'));
 document.getElementById('homeBack').addEventListener('click', () => showHomeView('projects'));
 document.getElementById('splashStart').addEventListener('click', () => homeStartCarousel(''));
+document.getElementById('splashContinue').addEventListener('click', () => hideSplash());
 // Logo im Editor → zurück zum Startbildschirm
 document.getElementById('brandBlock').addEventListener('click', showSplash);
 
@@ -10264,6 +10746,22 @@ window.addEventListener('resize', () => positionEmptyAddBtn());
   renderHome();   // Startseite (Recent + Ordner) befüllen
   // Bestehendes Projekt mit Inhalt → direkt in den Editor, Splash überspringen.
   if (restored && photos.length > 0) document.getElementById('splash').classList.add('hidden');
+
+  // ── Zurück-Wischgesten-Schutz (iOS/Android) ──
+  // Ein versehentliches Wischen von der Bildschirmkante löst sonst die
+  // Browser-Navigation aus und wirft den Nutzer aus dem Editor. Wir legen
+  // einen Puffer-Eintrag in die History: Die erste Zurück-Geste zeigt nur
+  // das Startmenü (Entwurf bleibt gespeichert im Hintergrund), erst eine
+  // weitere Geste vom Startmenü aus verlässt die Seite wirklich.
+  try { history.pushState({ pf: 1 }, ''); } catch (e) {}
+  window.addEventListener('popstate', () => {
+    flushSaveNow();   // nichts von den letzten ~0,7 s verlieren
+    const editorOpen = document.getElementById('splash').classList.contains('hidden');
+    if (editorOpen) {
+      showSplash();
+      try { history.pushState({ pf: 1 }, ''); } catch (e) {}
+    }
+  });
 })();
 </script>
 <!-- GoatCounter: anonyme Besucherzählung, keine Cookies, keine persönlichen Daten -->
