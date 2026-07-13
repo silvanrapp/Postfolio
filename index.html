@@ -2258,6 +2258,14 @@ html.native-ios .hlp-browser-only { display: none; }
       <div class="tm-level" data-lvl="templates" hidden>
         <button class="tm-back" type="button">‹ Back</button>
         <div class="jr-grid">
+          <button id="tplFullBtn" class="jr-card tm-item" title="One photo, full page, 5 pt white border — free">
+            <span class="jr-pv" style="background:#fff;"><span class="jp4" style="position:absolute; inset:2.5%;"></span></span>
+            <span class="tm-txt"><b>Full page</b><small>1 photo · 5 pt border</small></span>
+          </button>
+          <button id="tplDuoBtn" class="jr-card tm-item" title="Two landscape photos stacked, 5 pt white border and seam — free">
+            <span class="jr-pv" style="background:#fff;"><span class="jp1" style="position:absolute; left:2.5%; right:2.5%; top:2.5%; height:46.2%;"></span><span class="jp2" style="position:absolute; left:2.5%; right:2.5%; bottom:2.5%; height:46.2%;"></span></span>
+            <span class="tm-txt"><b>Duo</b><small>2 landscape · 5 pt border</small></span>
+          </button>
           <button id="tpl1Btn" class="jr-card tm-item" title="One framed photo (2:3)">
             <span class="jr-pv" style="background:#fff;"><span class="jp1" style="position:absolute; left:26%; right:26%; top:21%; bottom:21%;"></span></span>
             <span class="tm-txt"><b>1 photo</b><small>Single framed 2:3</small></span>
@@ -7293,6 +7301,32 @@ function addGridTitleTemplate(cols) {
 }
 document.getElementById('tplGridTitleBtn').addEventListener('click', () => addGridTitleTemplate(2));
 document.getElementById('tplRowsTitleBtn').addEventListener('click', () => addGridTitleTemplate(1));
+
+// Schlichte Basis-Templates (FREI, kein proFeat): Vollseite bzw. zwei
+// Querformate übereinander — 5 pt Standard-Border ringsum und an der Naht.
+function addSimpleTemplate(n) {
+  beginAction();
+  const _t = layoutTargetSlide();
+  const idx = _t.idx;
+  slides[idx].bg = '#ffffff';
+  const cx0 = idx * W, mid = cx0 + W / 2;
+  const g = 5;   // kleinste Standard-Border der App (5 pt)
+  const firstIdx = photos.length;
+  if (n === 1) {
+    photos.push(jrPh(mid, H / 2, W - 2 * g, H - 2 * g));
+  } else {
+    const ph = (H - 3 * g) / 2;
+    photos.push(jrPh(mid, g + ph / 2, W - 2 * g, ph));
+    photos.push(jrPh(mid, H - g - ph / 2, W - 2 * g, ph));
+  }
+  refillSlidePlaceholders(idx, _t.imgs);
+  activeSlide = idx; sel = firstIdx; panelHidden = false;
+  resizeCanvas(); syncBgButtons(); updateDots(); updateDeleteBtn();
+  redraw(); scheduleSave();
+  jumpToSlide(idx);
+}
+document.getElementById('tplFullBtn').addEventListener('click', () => addSimpleTemplate(1));
+document.getElementById('tplDuoBtn').addEventListener('click', () => addSimpleTemplate(2));
 
 // ═══════════════════════════════════════
 // JOURNAL — Reisemagazin-Kategorie
