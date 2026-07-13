@@ -727,8 +727,39 @@ details.hlp-sec[open] .hlp-chev { transform: rotate(180deg); }
   box-shadow: 0 10px 28px rgba(0,0,0,0.1);
 }
 #textMenu.show { display: block; }
-/* Journal-Ebene hat viele Einträge → innerhalb des Popups scrollen */
-#textMenu .tm-level[data-lvl="journal"] { max-height: min(62vh, 520px); overflow-y: auto; -webkit-overflow-scrolling: touch; }
+/* Journal-Ebene: visuelles Karten-Grid mit Seiten-Vorschauen (Papier +
+   gedeckte Foto-Töne) — Newbies sehen sofort, was jedes Template ist. */
+#textMenu .tm-level[data-lvl="journal"] { max-height: min(66vh, 560px); overflow-y: auto; -webkit-overflow-scrolling: touch; width: min(560px, calc(100vw - 48px)); }
+#textMenu.tm-center.tm-journal { max-width: min(580px, calc(100vw - 24px)); }
+.jr-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 4px 2px 8px; }
+.jr-sechead { grid-column: 1 / -1; font-size: 10.5px; letter-spacing: 0.08em; color: var(--muted); margin: 4px 2px 0; text-transform: uppercase; }
+#textMenu .jr-card { display: block; width: 100%; padding: 0; border: none; background: transparent; cursor: pointer; text-align: center; height: auto; }
+#textMenu .jr-card .jr-pv { display: block; width: 100%; aspect-ratio: 4 / 5; background: #F4F1EB; border: 1px solid #E0DACB; border-radius: 7px; overflow: hidden; position: relative; }
+#textMenu .jr-card:hover .jr-pv { border-color: #B4AC9C; }
+#textMenu .jr-card .tm-txt { display: block; margin-top: 5px; }
+#textMenu .jr-card .tm-txt b { display: block; font-size: 11.5px; font-weight: 600; color: var(--text); }
+#textMenu .jr-card .tm-txt small { display: block; font-size: 10px; color: var(--muted); margin-top: 1px; }
+.jp1 { background: #AEB6AB; } .jp2 { background: #93A3A6; } .jp3 { background: #C4BBA8; } .jp4 { background: #6E7F82; } .jp5 { background: #8A9589; }
+.jr-run { position: absolute; top: 5px; left: 7px; right: 7px; display: flex; justify-content: space-between; font-size: 4.5px; letter-spacing: 0.06em; color: #8A8274; }
+.jr-run b { color: #2A2826; font-weight: 600; }
+.jr-fno { position: absolute; bottom: 4px; left: 7px; right: 7px; display: flex; justify-content: space-between; font-size: 4px; letter-spacing: 0.06em; color: #9B948A; }
+.jr-ser { font-family: 'Young Serif', Georgia, serif; color: #2A2826; }
+.jr-bar { height: 2px; background: #CFC8B8; border-radius: 1px; }
+/* Journal-Toggles: Karten-Pills mit Mini-Seiten-Glyphe + Status-Punkt */
+.jr-tgl {
+  display: flex; align-items: center; gap: 9px;
+  height: auto; padding: 8px 12px 8px 10px;
+  background: var(--surface); color: var(--text);
+  border: 1px solid var(--line); border-radius: 12px;
+  box-shadow: var(--shadow-ctl, none); cursor: pointer;
+}
+.jr-tgl-txt { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.2; font-size: 12.5px; font-weight: 600; }
+.jr-tgl-txt small { font-size: 10px; font-weight: 400; color: var(--muted); letter-spacing: 0.03em; }
+.jr-tgl-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--line); margin-left: 2px; transition: background .15s ease; }
+.jr-tgl.sel { border-color: var(--dark); }
+.jr-tgl.sel .jr-tgl-dot { background: #2FA36B; }
+.jr-tgl:not(.sel) { opacity: 0.72; }
+.jr-tgl:not(.sel) .jr-tgl-txt small::after { content: " · off"; }
 #textMenu { padding: 6px; min-width: 248px; }
 .tm-item {
   display: flex; align-items: center; gap: 11px;
@@ -2238,81 +2269,85 @@ html.native-ios .hlp-browser-only { display: none; }
         </button>
       </div>
 
-      <!-- Ebene 1: Journal — Reisemagazin-Seiten & fertige Ausgaben -->
+      <!-- Ebene 1: Journal — Reisemagazin-Seiten & fertige Ausgaben.
+           Visuelles Karten-Grid: jede Karte ist eine Mini-Vorschau der Seite
+           (Papier + gedeckte Foto-Töne), damit Neulinge sofort sehen, was
+           sich hinter jedem Template verbirgt. IDs unverändert (Listener/Pro). -->
       <div class="tm-level" data-lvl="journal" hidden>
         <button class="tm-back" type="button">‹ Back</button>
-        <button id="jrSet5Btn" class="tm-item" title="Complete 5-page issue: cover, article, full page, quote, fin">
-          <span class="tm-prev" style="font-family:'Young Serif',serif;font-size:15px">5</span>
-          <span class="tm-txt"><b>Issue · Mini</b><small>5 matched pages, one tap</small></span>
-        </button>
-        <button id="jrSet7Btn" class="tm-item" title="Complete 7-page issue: cover, feature, spread, article, quote, grid, fin">
-          <span class="tm-prev" style="font-family:'Young Serif',serif;font-size:15px">7</span>
-          <span class="tm-txt"><b>Issue · Classic</b><small>7 matched pages, one tap</small></span>
-        </button>
-        <button id="jrSet10Btn" class="tm-item" title="Complete 10-page guide issue incl. route and spot index">
-          <span class="tm-prev" style="font-family:'Young Serif',serif;font-size:15px">10</span>
-          <span class="tm-txt"><b>Issue · Guide</b><small>10 pages incl. route &amp; spots</small></span>
-        </button>
-        <button id="jrCoverBtn" class="tm-item" title="Full-bleed photo with big serif title">
-          <span class="tm-prev" style="font-family:'Young Serif',serif;font-size:13px">Aa</span>
-          <span class="tm-txt"><b>Cover</b><small>Title page</small></span>
-        </button>
-        <button id="jrFeatureBtn" class="tm-item" title="Portrait photo, serif title and body text">
-          <span class="tm-prev"><svg viewBox="0 0 24 30" width="17" height="21" aria-hidden="true"><rect x="6.5" y="5" width="11" height="13" fill="none" stroke="#2A2826" stroke-width="1.4"/><line x1="6.5" y1="21.5" x2="17.5" y2="21.5" stroke="#9B948A" stroke-width="1.4"/><line x1="6.5" y1="24.5" x2="15" y2="24.5" stroke="#9B948A" stroke-width="1.4"/></svg></span>
-          <span class="tm-txt"><b>Feature</b><small>Photo + running text</small></span>
-        </button>
-        <button id="jrArticleBtn" class="tm-item" title="Headline, landscape photo and body text">
-          <span class="tm-prev"><svg viewBox="0 0 24 30" width="17" height="21" aria-hidden="true"><line x1="3" y1="4.5" x2="14" y2="4.5" stroke="#2A2826" stroke-width="1.8"/><rect x="3" y="8" width="18" height="11" fill="none" stroke="#2A2826" stroke-width="1.4"/><line x1="3" y1="22.5" x2="21" y2="22.5" stroke="#9B948A" stroke-width="1.4"/><line x1="3" y1="25.5" x2="17" y2="25.5" stroke="#9B948A" stroke-width="1.4"/></svg></span>
-          <span class="tm-txt"><b>Article</b><small>Headline · photo · text</small></span>
-        </button>
-        <button id="jrQuoteBtn" class="tm-item" title="Full-bleed photo with a centered serif quote">
-          <span class="tm-prev" style="font-family:Fraunces,serif;font-style:italic;font-size:16px">„"</span>
-          <span class="tm-txt"><b>Quote</b><small>Atmosphere page</small></span>
-        </button>
-        <button id="jrSidebarBtn" class="tm-item" title="Three stacked photos with a text column">
-          <span class="tm-prev"><svg viewBox="0 0 24 30" width="17" height="21" aria-hidden="true"><rect x="3" y="3" width="11" height="7" fill="none" stroke="#2A2826" stroke-width="1.3"/><rect x="3" y="11.5" width="11" height="7" fill="none" stroke="#2A2826" stroke-width="1.3"/><rect x="3" y="20" width="11" height="7" fill="none" stroke="#2A2826" stroke-width="1.3"/><line x1="16.5" y1="5" x2="21" y2="5" stroke="#9B948A" stroke-width="1.4"/><line x1="16.5" y1="8.5" x2="21" y2="8.5" stroke="#9B948A" stroke-width="1.4"/><line x1="16.5" y1="12" x2="21" y2="12" stroke="#9B948A" stroke-width="1.4"/></svg></span>
-          <span class="tm-txt"><b>Sidebar</b><small>3 photos + text column</small></span>
-        </button>
-        <button id="jrSpreadBtn" class="tm-item" title="Two landscape photos with a caption">
-          <span class="tm-prev"><svg viewBox="0 0 24 30" width="17" height="21" aria-hidden="true"><rect x="3" y="4" width="18" height="9.5" fill="none" stroke="#2A2826" stroke-width="1.4"/><rect x="3" y="16" width="18" height="9.5" fill="none" stroke="#2A2826" stroke-width="1.4"/></svg></span>
-          <span class="tm-txt"><b>Spread</b><small>2 photos + caption</small></span>
-        </button>
-        <button id="jrFullBtn" class="tm-item" title="One photo, full page, 5 pt border">
-          <span class="tm-prev"><svg viewBox="0 0 24 30" width="17" height="21" aria-hidden="true"><rect x="2.5" y="2.5" width="19" height="25" fill="none" stroke="#2A2826" stroke-width="1.5"/></svg></span>
-          <span class="tm-txt"><b>Full page</b><small>1 photo · 5 pt border</small></span>
-        </button>
-        <button id="jrGrid4Btn" class="tm-item" title="Four photos, flush grid, 5 pt border">
-          <span class="tm-prev"><svg viewBox="0 0 24 30" width="17" height="21" aria-hidden="true"><rect x="2.5" y="2.5" width="9" height="12" fill="none" stroke="#2A2826" stroke-width="1.3"/><rect x="12.5" y="2.5" width="9" height="12" fill="none" stroke="#2A2826" stroke-width="1.3"/><rect x="2.5" y="15.5" width="9" height="12" fill="none" stroke="#2A2826" stroke-width="1.3"/><rect x="12.5" y="15.5" width="9" height="12" fill="none" stroke="#2A2826" stroke-width="1.3"/></svg></span>
-          <span class="tm-txt"><b>Grid 2×2</b><small>4 photos · 5 pt border</small></span>
-        </button>
-        <button id="jrGrid16Btn" class="tm-item" title="Sixteen photos like a film contact sheet">
-          <span class="tm-prev" style="font-family:Archivo,sans-serif;font-size:11px;letter-spacing:1px">▤</span>
-          <span class="tm-txt"><b>Contact sheet 4×4</b><small>16 photos · recap</small></span>
-        </button>
-        <button id="jrTriBtn" class="tm-item" title="Three portrait photos side by side with captions">
-          <span class="tm-prev"><svg viewBox="0 0 24 30" width="17" height="21" aria-hidden="true"><rect x="2.5" y="8" width="5.5" height="11" fill="none" stroke="#2A2826" stroke-width="1.3"/><rect x="9.2" y="8" width="5.5" height="11" fill="none" stroke="#2A2826" stroke-width="1.3"/><rect x="16" y="8" width="5.5" height="11" fill="none" stroke="#2A2826" stroke-width="1.3"/></svg></span>
-          <span class="tm-txt"><b>Triptych</b><small>3 portraits + captions</small></span>
-        </button>
-        <button id="jrRouteBtn" class="tm-item" title="Day-by-day itinerary with a photo">
-          <span class="tm-prev" style="font-family:'Young Serif',serif;font-size:11px">1–4</span>
-          <span class="tm-txt"><b>Route</b><small>Day-by-day guide</small></span>
-        </button>
-        <button id="jrChapterBtn" class="tm-item" title="Typographic chapter divider">
-          <span class="tm-prev" style="font-family:'Young Serif',serif;font-size:15px">02</span>
-          <span class="tm-txt"><b>Chapter</b><small>Typo divider page</small></span>
-        </button>
-        <button id="jrIndexBtn" class="tm-item" title="Numbered list of spots">
-          <span class="tm-prev" style="font-family:Archivo,sans-serif;font-size:11px">01<br>02</span>
-          <span class="tm-txt"><b>Spot index</b><small>Save-worthy list page</small></span>
-        </button>
-        <button id="jrFinBtn" class="tm-item" title="Quiet closing page">
-          <span class="tm-prev" style="font-family:'Young Serif',serif;font-size:12px">Fin</span>
-          <span class="tm-txt"><b>Fin</b><small>Closing page</small></span>
-        </button>
-        <button id="jrHeadToggleBtn" class="tm-item" title="Show or hide the running header, footer and page numbers on all Journal pages">
-          <span class="tm-prev" style="font-family:Archivo,sans-serif;font-size:14px">⊟</span>
-          <span class="tm-txt"><b>Header &amp; footer</b><small>Show / hide on all pages</small></span>
-        </button>
+        <div class="jr-grid">
+          <div class="jr-sechead">Complete issues — one tap</div>
+          <button id="jrSet5Btn" class="jr-card tm-item" title="Complete 5-page issue: cover, article, full page, quote, fin">
+            <span class="jr-pv"><span style="position:absolute; inset:12% 22% 12% 14%; background:#fff; border:1px solid #E0DACB; border-radius:3px;"></span><span style="position:absolute; inset:9% 16% 15% 20%; background:#fff; border:1px solid #E0DACB; border-radius:3px;"></span><span class="jp1" style="position:absolute; inset:6% 10% 18% 26%; border-radius:3px;"></span><span class="jr-ser" style="position:absolute; left:0; right:0; bottom:26%; text-align:center; font-size:22px; color:#fff;">5</span></span>
+            <span class="tm-txt"><b>Issue · Mini</b><small>5 matched pages</small></span>
+          </button>
+          <button id="jrSet7Btn" class="jr-card tm-item" title="Complete 7-page issue: cover, feature, spread, article, quote, grid, fin">
+            <span class="jr-pv"><span style="position:absolute; inset:12% 22% 12% 14%; background:#fff; border:1px solid #E0DACB; border-radius:3px;"></span><span style="position:absolute; inset:9% 16% 15% 20%; background:#fff; border:1px solid #E0DACB; border-radius:3px;"></span><span class="jp2" style="position:absolute; inset:6% 10% 18% 26%; border-radius:3px;"></span><span class="jr-ser" style="position:absolute; left:0; right:0; bottom:26%; text-align:center; font-size:22px; color:#fff;">7</span></span>
+            <span class="tm-txt"><b>Issue · Classic</b><small>7 matched pages</small></span>
+          </button>
+          <button id="jrSet10Btn" class="jr-card tm-item" title="Complete 10-page guide issue incl. route and spot index">
+            <span class="jr-pv"><span style="position:absolute; inset:12% 22% 12% 14%; background:#fff; border:1px solid #E0DACB; border-radius:3px;"></span><span style="position:absolute; inset:9% 16% 15% 20%; background:#fff; border:1px solid #E0DACB; border-radius:3px;"></span><span class="jp4" style="position:absolute; inset:6% 10% 18% 26%; border-radius:3px;"></span><span class="jr-ser" style="position:absolute; left:0; right:0; bottom:26%; text-align:center; font-size:20px; color:#fff;">10</span></span>
+            <span class="tm-txt"><b>Issue · Guide</b><small>10 pages · route &amp; spots</small></span>
+          </button>
+
+          <div class="jr-sechead">Single pages</div>
+          <button id="jrCoverBtn" class="jr-card tm-item" title="Full-bleed photo with big serif title">
+            <span class="jr-pv"><span class="jp1" style="position:absolute; inset:0;"></span><span style="position:absolute; left:0; right:0; top:30%; text-align:center; color:#fff; font-size:4px; letter-spacing:0.14em;">NATURE &amp; HIKES</span><span class="jr-ser" style="position:absolute; left:0; right:0; top:36%; text-align:center; color:#fff; font-size:15px;">Alpbach</span><span style="position:absolute; left:38%; right:38%; top:57%; height:1px; background:#fff;"></span><span style="position:absolute; left:0; right:0; top:61%; text-align:center; color:#fff; font-size:3.5px; letter-spacing:0.12em;">4 TAGE IN DEN ALPEN</span><span style="position:absolute; left:0; right:0; bottom:5%; text-align:center; color:#fff; font-size:3.5px;">@you · N° 01</span></span>
+            <span class="tm-txt"><b>Cover</b><small>Title page</small></span>
+          </button>
+          <button id="jrFeatureBtn" class="jr-card tm-item" title="Portrait photo, serif title and body text">
+            <span class="jr-pv"><span class="jr-run"><span>ÖSTERREICH</span><b>ALPBACH</b></span><span class="jp2" style="position:absolute; left:24%; right:24%; top:14%; height:44%;"></span><span class="jr-ser" style="position:absolute; left:10%; top:62%; font-size:6px;">Man kommt nicht zufällig</span><span class="jr-bar" style="position:absolute; left:10%; right:34%; top:72%;"></span><span class="jr-bar" style="position:absolute; left:10%; right:40%; top:77%;"></span><span class="jr-bar" style="position:absolute; left:10%; right:52%; top:82%;"></span><span class="jr-fno"><span>03</span><span>POSTFOLIO JOURNAL</span></span></span>
+            <span class="tm-txt"><b>Feature</b><small>Photo + running text</small></span>
+          </button>
+          <button id="jrArticleBtn" class="jr-card tm-item" title="Headline, landscape photo and body text">
+            <span class="jr-pv"><span class="jr-run"><span>ÖSTERREICH</span><b>ALPBACH</b></span><span class="jr-ser" style="position:absolute; left:8%; top:12%; font-size:6.5px;">Das Königreich</span><span class="jp1" style="position:absolute; left:8%; right:8%; top:22%; height:38%;"></span><span class="jr-bar" style="position:absolute; left:8%; right:8%; top:66%;"></span><span class="jr-bar" style="position:absolute; left:8%; right:12%; top:71%;"></span><span class="jr-bar" style="position:absolute; left:8%; right:8%; top:76%;"></span><span class="jr-bar" style="position:absolute; left:8%; right:30%; top:81%;"></span><span class="jr-fno"><span>06</span><span>POSTFOLIO JOURNAL</span></span></span>
+            <span class="tm-txt"><b>Article</b><small>Headline · photo · text</small></span>
+          </button>
+          <button id="jrQuoteBtn" class="jr-card tm-item" title="Full-bleed photo with a centered serif quote">
+            <span class="jr-pv"><span class="jp4" style="position:absolute; inset:0;"></span><span style="position:absolute; left:14%; right:14%; top:38%; text-align:center; color:#F4F1EB; font-family:Fraunces,serif; font-style:italic; font-size:6.5px; line-height:1.6;">Mehr als ein Dorf ist<br>Alpbach eine Atmosphäre.</span><span style="position:absolute; left:44%; right:44%; top:60%; height:1px; background:#F4F1EB;"></span></span>
+            <span class="tm-txt"><b>Quote</b><small>Atmosphere page</small></span>
+          </button>
+          <button id="jrSidebarBtn" class="jr-card tm-item" title="Three stacked photos with a text column">
+            <span class="jr-pv"><span class="jr-run"><span>ÖSTERREICH</span><b>ALPBACH</b></span><span class="jp1" style="position:absolute; left:8%; top:12%; width:52%; height:24%;"></span><span class="jp2" style="position:absolute; left:8%; top:38%; width:52%; height:24%;"></span><span class="jp3" style="position:absolute; left:8%; top:64%; width:52%; height:24%;"></span><span class="jr-ser" style="position:absolute; left:66%; top:16%; font-size:5.5px;">Der See</span><span class="jr-bar" style="position:absolute; left:66%; right:8%; top:26%;"></span><span class="jr-bar" style="position:absolute; left:66%; right:10%; top:31%;"></span><span class="jr-bar" style="position:absolute; left:66%; right:8%; top:36%;"></span><span class="jr-bar" style="position:absolute; left:66%; right:14%; top:41%;"></span><span class="jr-fno"><span>17</span><span>POSTFOLIO JOURNAL</span></span></span>
+            <span class="tm-txt"><b>Sidebar</b><small>3 photos + text column</small></span>
+          </button>
+          <button id="jrSpreadBtn" class="jr-card tm-item" title="Two landscape photos with a caption">
+            <span class="jr-pv"><span class="jr-run"><span>ÖSTERREICH</span><b>ALPBACH</b></span><span class="jp5" style="position:absolute; left:8%; right:8%; top:12%; height:34%;"></span><span class="jp3" style="position:absolute; left:8%; right:8%; top:49%; height:34%;"></span><span style="position:absolute; left:8%; top:86%; font-size:3.5px; letter-spacing:0.1em; color:#8A8274;">WIEDERSBERGER HORN — 6:12</span><span class="jr-fno"><span>08</span><span>POSTFOLIO JOURNAL</span></span></span>
+            <span class="tm-txt"><b>Spread</b><small>2 photos + caption</small></span>
+          </button>
+          <button id="jrFullBtn" class="jr-card tm-item" title="One photo, full page, 5 pt border">
+            <span class="jr-pv"><span class="jp2" style="position:absolute; inset:2.5%;"></span></span>
+            <span class="tm-txt"><b>Full page</b><small>1 photo · 5 pt border</small></span>
+          </button>
+          <button id="jrGrid4Btn" class="jr-card tm-item" title="Four photos, flush grid, 5 pt border">
+            <span class="jr-pv"><span class="jp1" style="position:absolute; left:2.5%; top:2.5%; width:46.5%; height:46.5%;"></span><span class="jp2" style="position:absolute; right:2.5%; top:2.5%; width:46.5%; height:46.5%;"></span><span class="jp3" style="position:absolute; left:2.5%; bottom:2.5%; width:46.5%; height:46.5%;"></span><span class="jp5" style="position:absolute; right:2.5%; bottom:2.5%; width:46.5%; height:46.5%;"></span></span>
+            <span class="tm-txt"><b>Grid 2×2</b><small>4 photos · 5 pt border</small></span>
+          </button>
+          <button id="jrGrid16Btn" class="jr-card tm-item" title="Sixteen photos like a film contact sheet">
+            <span class="jr-pv"><span style="position:absolute; inset:2.5%; display:grid; grid-template-columns:repeat(4,1fr); grid-template-rows:repeat(4,1fr); gap:4%;"><span class="jp1"></span><span class="jp2"></span><span class="jp3"></span><span class="jp5"></span><span class="jp4"></span><span class="jp1"></span><span class="jp5"></span><span class="jp2"></span><span class="jp3"></span><span class="jp5"></span><span class="jp2"></span><span class="jp4"></span><span class="jp2"></span><span class="jp3"></span><span class="jp1"></span><span class="jp5"></span></span></span>
+            <span class="tm-txt"><b>Contact sheet</b><small>4×4 · recap</small></span>
+          </button>
+          <button id="jrTriBtn" class="jr-card tm-item" title="Three portrait photos side by side with captions">
+            <span class="jr-pv"><span class="jr-run"><span>ÖSTERREICH</span><b>ALPBACH</b></span><span class="jp1" style="position:absolute; left:8%; top:15%; width:26%; height:42%;"></span><span class="jp2" style="position:absolute; left:37%; top:15%; width:26%; height:42%;"></span><span class="jp3" style="position:absolute; left:66%; top:15%; width:26%; height:42%;"></span><span class="jr-bar" style="position:absolute; left:12%; width:16%; top:61%;"></span><span class="jr-bar" style="position:absolute; left:41%; width:16%; top:61%;"></span><span class="jr-bar" style="position:absolute; left:70%; width:16%; top:61%;"></span><span class="jr-ser" style="position:absolute; left:0; right:0; top:70%; text-align:center; font-size:6px;">Drei Momente, ein Tag</span><span class="jr-fno"><span>11</span><span>POSTFOLIO JOURNAL</span></span></span>
+            <span class="tm-txt"><b>Triptych</b><small>3 portraits + captions</small></span>
+          </button>
+          <button id="jrRouteBtn" class="jr-card tm-item" title="Day-by-day itinerary with a photo">
+            <span class="jr-pv"><span class="jr-run"><span>ÖSTERREICH</span><b>ALPBACH</b></span><span class="jr-ser" style="position:absolute; left:8%; top:12%; font-size:7px;">Die Route</span><span class="jr-ser" style="position:absolute; left:8%; top:26%; font-size:4px; color:#8A8274;">TAG 1</span><span class="jr-bar" style="position:absolute; left:24%; right:12%; top:27.5%;"></span><span class="jr-ser" style="position:absolute; left:8%; top:34%; font-size:4px; color:#8A8274;">TAG 2</span><span class="jr-bar" style="position:absolute; left:24%; right:20%; top:35.5%;"></span><span class="jr-ser" style="position:absolute; left:8%; top:42%; font-size:4px; color:#8A8274;">TAG 3</span><span class="jr-bar" style="position:absolute; left:24%; right:16%; top:43.5%;"></span><span class="jr-ser" style="position:absolute; left:8%; top:50%; font-size:4px; color:#8A8274;">TAG 4</span><span class="jr-bar" style="position:absolute; left:24%; right:26%; top:51.5%;"></span><span class="jp1" style="position:absolute; left:8%; right:8%; top:60%; height:26%;"></span><span class="jr-fno"><span>05</span><span>POSTFOLIO JOURNAL</span></span></span>
+            <span class="tm-txt"><b>Route</b><small>Day-by-day guide</small></span>
+          </button>
+          <button id="jrChapterBtn" class="jr-card tm-item" title="Typographic chapter divider">
+            <span class="jr-pv"><span style="position:absolute; left:0; right:0; top:30%; text-align:center; font-size:4px; letter-spacing:0.18em; color:#8A8274;">KAPITEL</span><span class="jr-ser" style="position:absolute; left:0; right:0; top:36%; text-align:center; font-size:20px;">02</span><span style="position:absolute; left:44%; right:44%; top:62%; height:1px; background:#B4AC9C;"></span><span style="position:absolute; left:0; right:0; top:66%; text-align:center; font-family:Fraunces,serif; font-style:italic; font-size:5px; color:#3A3733;">Das Königreich der Wanderer</span></span>
+            <span class="tm-txt"><b>Chapter</b><small>Typo divider page</small></span>
+          </button>
+          <button id="jrIndexBtn" class="jr-card tm-item" title="Numbered list of spots">
+            <span class="jr-pv"><span class="jr-run"><span>ÖSTERREICH</span><b>ALPBACH</b></span><span class="jr-ser" style="position:absolute; left:8%; top:12%; font-size:7px;">Die Spots</span><span class="jr-ser" style="position:absolute; left:8%; top:28%; font-size:4.5px;">01</span><span class="jr-bar" style="position:absolute; left:20%; right:30%; top:29.5%;"></span><span class="jr-ser" style="position:absolute; left:8%; top:37%; font-size:4.5px;">02</span><span class="jr-bar" style="position:absolute; left:20%; right:24%; top:38.5%;"></span><span class="jr-ser" style="position:absolute; left:8%; top:46%; font-size:4.5px;">03</span><span class="jr-bar" style="position:absolute; left:20%; right:34%; top:47.5%;"></span><span class="jr-ser" style="position:absolute; left:8%; top:55%; font-size:4.5px;">04</span><span class="jr-bar" style="position:absolute; left:20%; right:28%; top:56.5%;"></span><span class="jr-ser" style="position:absolute; left:8%; top:64%; font-size:4.5px;">05</span><span class="jr-bar" style="position:absolute; left:20%; right:38%; top:65.5%;"></span><span class="jr-fno"><span>19</span><span>POSTFOLIO JOURNAL</span></span></span>
+            <span class="tm-txt"><b>Spot index</b><small>Save-worthy list</small></span>
+          </button>
+          <button id="jrFinBtn" class="jr-card tm-item" title="Quiet closing page">
+            <span class="jr-pv"><span class="jr-run"><span>ÖSTERREICH</span><b>ALPBACH</b></span><span class="jr-ser" style="position:absolute; left:0; right:0; top:40%; text-align:center; font-size:8px;">Danke fürs Blättern.</span><span style="position:absolute; left:44%; right:44%; top:54%; height:1px; background:#B4AC9C;"></span><span style="position:absolute; left:0; right:0; top:59%; text-align:center; font-size:3.5px; letter-spacing:0.12em; color:#8A8274;">ALLE SPOTS IN DER CAPTION</span><span class="jr-fno"><span>20</span><span>FIN</span></span></span>
+            <span class="tm-txt"><b>Fin</b><small>Closing page</small></span>
+          </button>
+        </div>
       </div>
 
     </div>
@@ -2409,6 +2444,10 @@ html.native-ios .hlp-browser-only { display: none; }
     <button class="acc-chip tool-btn" data-sec="secFont" data-ctx="txt" title="Font">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 20 12 4l7 16"/><path d="M8 14h8"/></svg>
       <span>Font</span>
+    </button>
+    <button class="acc-chip tool-btn" data-sec="secJournal" data-ctx="both" title="Journal header &amp; footer">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M7 7h10"/><path d="M7 17h10"/></svg>
+      <span>Journal</span>
     </button>
     <button class="acc-chip tool-btn" data-sec="secStyle" data-ctx="txt" title="Style">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4h7a4 4 0 0 1 0 8H6z"/><path d="M6 12h8a4 4 0 0 1 0 8H6z"/></svg>
@@ -2517,6 +2556,23 @@ html.native-ios .hlp-browser-only { display: none; }
     <input type="text" id="frameHexInput" class="hex-input" maxlength="7" placeholder="#hex" autocomplete="off" autocapitalize="off" spellcheck="false" title="Type any hex color">
   </div>
   </div><!-- /secBorder -->
+
+  <!-- ▼ Journal-Sektion: Kopf- und Fußzeile GETRENNT ein-/ausblenden —
+       wirkt auf ALLE Journal-Seiten des Projekts (clean Look per Tipp). -->
+  <div class="acc-sec" id="secJournal" style="display:none">
+    <div class="row">
+      <button id="jrHeadBtn" class="jr-tgl" title="Show / hide the running header (country · place) on all Journal pages">
+        <svg viewBox="0 0 20 25" width="16" height="20" aria-hidden="true"><rect x="1.5" y="1.5" width="17" height="22" rx="2" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.45"/><line x1="4.5" y1="6" x2="15.5" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <span class="jr-tgl-txt">Header<small>Country · Place</small></span>
+        <span class="jr-tgl-dot" aria-hidden="true"></span>
+      </button>
+      <button id="jrFootBtn" class="jr-tgl" title="Show / hide page number &amp; journal name on all Journal pages">
+        <svg viewBox="0 0 20 25" width="16" height="20" aria-hidden="true"><rect x="1.5" y="1.5" width="17" height="22" rx="2" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.45"/><line x1="4.5" y1="19" x2="15.5" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <span class="jr-tgl-txt">Footer<small>Page № · Name</small></span>
+        <span class="jr-tgl-dot" aria-hidden="true"></span>
+      </button>
+    </div>
+  </div>
 
   <!-- ▼ Margin-Sektion -->
   <div class="acc-sec" id="secMargin" style="display:none">
@@ -3180,7 +3236,7 @@ const PRO_UI = [
   // Seiten, die Ausgaben-Sets und der Kopfzeilen-Toggle sind Pro.
   ['journal', ['jrSet5Btn','jrSet7Btn','jrSet10Btn','jrFeatureBtn','jrQuoteBtn','jrSidebarBtn','jrSpreadBtn',
                'jrFullBtn','jrGrid4Btn','jrGrid16Btn','jrTriBtn','jrRouteBtn','jrChapterBtn','jrIndexBtn',
-               'jrFinBtn','jrHeadToggleBtn']],
+               'jrFinBtn','jrHeadBtn','jrFootBtn']],
   ['textPresets', ['presetEditorialBtn','presetMagazinBtn']],
   ['batchExport', ['exportAllBtn']],
   ['gradientMask',['maskLabelBtn','maskToggle']]
@@ -3526,7 +3582,15 @@ async function restoreState(st) {
   slides = (st.slides && st.slides.length ? st.slides : [{ bg: '#F4F1EB' }]).map(s => ({ ...s }));
   activeSlide = Math.min(st.activeSlide || 0, slides.length - 1);
   if (st.corners) { CORNERS.round = !!st.corners.round; if (st.corners.r) CORNERS.r = st.corners.r; }
-  if (st.journal && typeof journalMeta !== 'undefined') Object.assign(journalMeta, st.journal);
+  if (st.journal && typeof journalMeta !== 'undefined') {
+    Object.assign(journalMeta, st.journal);
+    // Migration: früher gab es nur EIN gemeinsames show-Flag.
+    if (typeof journalMeta.show !== 'undefined') {
+      journalMeta.showHead = journalMeta.showFoot = !!journalMeta.show;
+      delete journalMeta.show;
+    }
+    if (typeof syncJournalUI === 'function') syncJournalUI();
+  }
   if (typeof syncCornerUI === 'function') syncCornerUI();
   await Promise.all(st.photos.map(p => new Promise(resolve => {
     if (p.kind === 'text' || !p.src) return resolve();
@@ -4548,9 +4612,20 @@ function drawPlaceholderItem(c, p, scale) {
   c.lineWidth = 0.75 * DPR;
   c.strokeRect(x, y, w, h);
   c.setLineDash([]);
-  const pl = Math.min(w, h) * 0.10;
-  c.strokeStyle = 'rgba(255,255,255,0.85)';   // „+" ebenfalls zweifarbig
+  // Sichtbarer „+"-Chip in der Mitte = das TIPP-ZIEL zum Befüllen. Nur Tipps
+  // im zentralen Bereich öffnen Picker/Library (siehe phHotspot) — die Ränder
+  // bleiben frei zum Auswählen, Verschieben und Wischen.
+  const pr = Math.max(14 * DPR, Math.min(w, h) * 0.14);
+  c.beginPath(); c.arc(0, 0, pr, 0, Math.PI * 2);
+  c.fillStyle = 'rgba(255,255,255,0.92)';
+  c.fill();
+  c.strokeStyle = 'rgba(42,40,38,0.30)';
+  c.lineWidth = 1 * DPR;
+  c.stroke();
+  const pl = pr * 0.45;
+  c.strokeStyle = 'rgba(42,40,38,0.85)';
   c.lineWidth = 2.5 * DPR;
+  c.lineCap = 'round';
   c.beginPath();
   c.moveTo(-pl, 0); c.lineTo(pl, 0);
   c.moveTo(0, -pl); c.lineTo(0, pl);
@@ -5275,11 +5350,25 @@ document.getElementById('emptyAddBtn').addEventListener('click', (e) => {
   openAddFlow();
 });
 
+// ── Platzhalter-„+"-Feld: Nur der ZENTRALE Bereich (50 % × 50 %, also 25 %
+// Rand rundum frei) öffnet Library/Picker. Start im Feld verschiebt NIE etwas
+// → der Tipp öffnet zuverlässig, auch mit zitterndem Finger (14-px-Toleranz).
+// Die Ränder bleiben zum Auswählen, Verschieben und Slide-Wischen.
+function phHotspot(p, lx, ly) {
+  const dx = lx - p.cx, dy = ly - p.cy;
+  const cos = Math.cos(-(p.rot || 0)), sin = Math.sin(-(p.rot || 0));
+  const rx = dx * cos - dy * sin, ry = dx * sin + dy * cos;
+  // Mindestens 44 pt Tipp-Ziel (Apple-Richtwert), sonst 25 % der Kantenlänge.
+  const hx = Math.max(44, p.w * 0.25), hy = Math.max(44, p.h * 0.25);
+  return Math.abs(rx) <= hx && Math.abs(ry) <= hy;
+}
+let phCenterArm = null;   // { idx, mx, my } — Geste startete im „+"-Feld
+
 canvas.addEventListener('mousedown', e => {
   // Pipette aktiv → ausschließlich Farbe picken, keine Auswahl/Verschiebung.
   if (pickingFrameColor || pickingBgColor || pickingOutline || pickingTextColor || pickingGridGap) { e.preventDefault(); doPick(e.clientX, e.clientY); return; }
   const { lx, ly } = clientToLogical(e.clientX, e.clientY);
-  addCandidate = null;
+  addCandidate = null; phCenterArm = null;
   if (typeof hideSplitAsk === 'function') hideSplitAsk();   // neue Interaktion → Pill weg
   pressX = e.clientX; pressY = e.clientY;
 
@@ -5309,13 +5398,17 @@ canvas.addEventListener('mousedown', e => {
     activeSlide  = Math.max(0, Math.min(slides.length - 1, Math.floor(photos[sel].cx / W)));
     if (photos[hit].locked) {
       // Gesperrt (z. B. Frames-Feld): auswählen ja, verschieben nein.
-      // Leerer gesperrter Platzhalter → direkt den Foto-Picker öffnen.
+      // Leerer gesperrter Platzhalter → Picker NUR über das zentrale „+".
       dragMode = null;
-      if (photos[hit].kind === 'placeholder') {
+      if (photos[hit].kind === 'placeholder' && phHotspot(photos[hit], lx, ly)) {
         syncBgButtons(); updateDots(); updateDeleteBtn(); redraw();
         fillPlaceholder(hit);
         return;
       }
+    } else if (photos[hit].kind === 'placeholder' && phHotspot(photos[hit], lx, ly)) {
+      // Start im „+"-Feld → nie verschieben; mouseup öffnet den Picker.
+      dragMode = null;
+      phCenterArm = { idx: hit, mx: e.clientX, my: e.clientY };
     } else {
       dragMode     = 'move';
       armUndo      = true;
@@ -5407,14 +5500,16 @@ window.addEventListener('mousemove', e => {
 
 window.addEventListener('mouseup', e => {
   const wasDragging = !!dragMode;
-  // Tap (ohne Ziehen) auf einen leeren Platzhalter → Datei zum Befüllen wählen.
-  // Ein einziger Tap genügt (kein Vorab-Auswählen nötig) — nur echtes Ziehen
-  // (größere Bewegung) verschiebt die Zelle stattdessen.
-  if (dragMode === 'move' && sel >= 0 && photos[sel] && photos[sel].kind === 'placeholder'
-      && Math.hypot(e.clientX - dragStartMX, e.clientY - dragStartMY) < 6) {
-    dragMode = null; guides = []; armUndo = false;
-    fillPlaceholder(sel);
-    return;
+  // Klick startete im „+"-Feld eines Platzhalters → Picker öffnen (großzügige
+  // 14-px-Toleranz, weil aus dem Feld heraus ohnehin nie verschoben wird).
+  if (phCenterArm) {
+    const a = phCenterArm; phCenterArm = null;
+    if (Math.hypot(e.clientX - a.mx, e.clientY - a.my) < 14
+        && photos[a.idx] && photos[a.idx].kind === 'placeholder') {
+      dragMode = null; guides = []; armUndo = false;
+      fillPlaceholder(a.idx);
+      return;
+    }
   }
   // (Crop öffnet auf dem Desktop per DOPPELKLICK — siehe dblclick-Handler.
   //  Einfacher Klick wählt nur aus und zentriert die Slide.)
@@ -5559,7 +5654,7 @@ canvas.addEventListener('touchstart', e => {
   if (e.touches.length === 1) {
     const t = e.touches[0];
     const { lx, ly } = clientToLogical(t.clientX, t.clientY);
-    addCandidate = null;
+    addCandidate = null; phCenterArm = null;
     if (typeof hideSplitAsk === 'function') hideSplitAsk();   // neue Interaktion → Pill weg
     pressX = t.clientX; pressY = t.clientY;
 
@@ -5600,11 +5695,15 @@ canvas.addEventListener('touchstart', e => {
       if (photos[hit].locked) {
         // Gesperrt: ausgewählt bleiben, aber nicht verschieben.
         dragMode = null;
-        if (photos[hit].kind === 'placeholder') {
+        if (photos[hit].kind === 'placeholder' && phHotspot(photos[hit], lx, ly)) {
           syncBgButtons(); updateDots(); updateDeleteBtn(); redraw();
           fillPlaceholder(hit);
           return;
         }
+      } else if (photos[hit].kind === 'placeholder' && phHotspot(photos[hit], lx, ly)) {
+        // Start im „+"-Feld → nie verschieben; touchend öffnet den Picker.
+        dragMode = null;
+        phCenterArm = { idx: hit, mx: t.clientX, my: t.clientY };
       } else {
         dragMode    = 'move';
         armUndo     = true;
@@ -5635,6 +5734,7 @@ canvas.addEventListener('touchstart', e => {
     dragMode = null;
     addCandidate = null;
     selCandidate = null;
+    phCenterArm = null;
     const t1 = e.touches[0], t2 = e.touches[1];
     const mx = (t1.clientX + t2.clientX) / 2;
     const my = (t1.clientY + t2.clientY) / 2;
@@ -5740,13 +5840,17 @@ canvas.addEventListener('touchend', e => {
   }
   if (e.touches.length < 2) pinchData = null;
   if (e.touches.length === 0) {
-    // Tap (ohne Ziehen) auf einen leeren Platzhalter → Datei zum Befüllen wählen.
+    // Tipp startete im „+"-Feld eines Platzhalters → Picker öffnen (großzügige
+    // Toleranz, weil aus dem Feld heraus ohnehin nie verschoben wird).
     const ct0 = e.changedTouches[0];
-    if (dragMode === 'move' && sel >= 0 && photos[sel] && photos[sel].kind === 'placeholder'
-        && ct0 && Math.hypot(ct0.clientX - dragStartMX, ct0.clientY - dragStartMY) < 8) {
-      dragMode = null; guides = []; armUndo = false; addCandidate = null;
-      fillPlaceholder(sel);
-      return;
+    if (phCenterArm) {
+      const a = phCenterArm; phCenterArm = null;
+      if (ct0 && Math.hypot(ct0.clientX - a.mx, ct0.clientY - a.my) < 14
+          && photos[a.idx] && photos[a.idx].kind === 'placeholder') {
+        dragMode = null; guides = []; armUndo = false; addCandidate = null;
+        fillPlaceholder(a.idx);
+        return;
+      }
     }
     // DOPPELTIPP (zwei Tipps < 320 ms) auf ein Foto → großes Crop-Overlay.
     // Ein einfacher Tipp wählt nur aus (auch wenn das Foto schon gewählt war).
@@ -5782,7 +5886,11 @@ canvas.addEventListener('touchend', e => {
         activeSlide = Math.max(0, Math.min(slides.length - 1, Math.floor(photos[idx].cx / W)));
         _dblTapT = Date.now(); _dblTapSel = sel;   // zweiter Tipp kurz danach = Crop
         syncBgButtons(); updateDots(); updateDeleteBtn(); redraw();
-        if (photos[idx].kind === 'placeholder') { fillPlaceholder(idx); return; }
+        if (photos[idx].kind === 'placeholder') {
+          // Picker nur beim Tipp aufs zentrale „+" — der Rand wählt nur aus.
+          const lp = clientToLogical(ct.clientX, ct.clientY);
+          if (phHotspot(photos[idx], lp.lx, lp.ly)) { fillPlaceholder(idx); return; }
+        }
         centerSlideNowAndAfterLayout();
         return;
       }
@@ -7100,14 +7208,18 @@ document.getElementById('tplRowsTitleBtn').addEventListener('click', () => addGr
 // Kopfzeile (Land/Ort), Fußzeile (Seitenzahl + Journal-Name) — synchron über
 // alle Journal-Slides, per Toggle ausblendbar. Signatur-Font: Young Serif.
 const JR_PAPER = '#F4F1EB', JR_INK = '#2A2826', JR_BODY = '#3A3733', JR_MUTED = '#8A8274';
-let journalMeta = { country: 'AUSTRIA', place: 'ALPBACH', footer: 'POSTFOLIO JOURNAL', show: true };
+let journalMeta = { country: 'AUSTRIA', place: 'ALPBACH', footer: 'POSTFOLIO JOURNAL', showHead: true, showFoot: true };
+function jrIsHead(role) { return role === 'jhCountry' || role === 'jhPlace'; }
 
 // Text-Baustein mit fester Position; jr = Rolle für den Kopf-/Fußzeilen-Sync.
 function jrText(txt, font, o) {
   const t = makeTextItem(txt, font, o);
   t.cx = o.cx; t.cy = o.cy;
   if (o.tracking) t.tracking = o.tracking;
-  if (o.jr) { t.jr = o.jr; if (!journalMeta.show) t.hidden = true; }
+  if (o.jr) {
+    t.jr = o.jr;
+    if (jrIsHead(o.jr) ? !journalMeta.showHead : !journalMeta.showFoot) t.hidden = true;
+  }
   return t;
 }
 function jrPh(cx, cy, w, h) { return { kind: 'placeholder', cx, cy, w, h, rot: 0, frame: null }; }
@@ -7134,14 +7246,23 @@ function syncJournalText(p) {
   photos.forEach(q => { if (q !== p && q.jr === p.jr) q.text = p.text; });
 }
 
-// Toggle: Kopf-/Fußzeilen auf ALLEN Journal-Seiten ein-/ausblenden (clean Look).
-function toggleJournalChrome() {
+// Kopf- ODER Fußzeile auf ALLEN Journal-Seiten ein-/ausblenden (clean Look).
+// Getrennt schaltbar — sitzt als „Journal"-Sektion in der Toolbar.
+function setJournalChrome(part, on) {
   beginAction();
-  journalMeta.show = !journalMeta.show;
-  photos.forEach(p => { if (p.jr) p.hidden = !journalMeta.show; });
-  showToast(journalMeta.show ? 'Header & footer shown on all Journal pages' : 'Header & footer hidden — tap again to bring them back');
-  redraw(); scheduleSave();
+  if (part === 'head') journalMeta.showHead = on; else journalMeta.showFoot = on;
+  photos.forEach(p => { if (p.jr && (jrIsHead(p.jr) === (part === 'head'))) p.hidden = !on; });
+  if (sel >= 0 && photos[sel] && photos[sel].hidden) { sel = -1; updateDeleteBtn(); }
+  syncJournalUI(); redraw(); scheduleSave();
 }
+function syncJournalUI() {
+  const hb = document.getElementById('jrHeadBtn'), fb = document.getElementById('jrFootBtn');
+  if (hb) hb.classList.toggle('sel', !!journalMeta.showHead);
+  if (fb) fb.classList.toggle('sel', !!journalMeta.showFoot);
+}
+document.getElementById('jrHeadBtn').addEventListener('click', () => setJournalChrome('head', !journalMeta.showHead));
+document.getElementById('jrFootBtn').addEventListener('click', () => setJournalChrome('foot', !journalMeta.showFoot));
+syncJournalUI();
 
 // Eine Journal-Seite bauen. forceAppend = true (Ausgaben-Sets): ohne Rückfrage
 // ans Ende anhängen; sonst greift der normale Ersetzen/Neue-Slide-Dialog.
@@ -7274,7 +7395,6 @@ function addJournalIssue(name) {
 document.getElementById('jrSet5Btn').addEventListener('click', () => addJournalIssue('mini'));
 document.getElementById('jrSet7Btn').addEventListener('click', () => addJournalIssue('classic'));
 document.getElementById('jrSet10Btn').addEventListener('click', () => addJournalIssue('guide'));
-document.getElementById('jrHeadToggleBtn').addEventListener('click', () => toggleJournalChrome());
 
 // Ratio ändert ALLE Fotos/Zellen der aktiven Slide (Hoch-/Querformat), ordnet sie
 // als gemeinsame Vorlage neu an. Behebt auch das „Foto verschwindet"-Problem bei 1.
@@ -7409,6 +7529,7 @@ const _textMenu = document.getElementById('textMenu');
 const _textToggleBtn = document.getElementById('textToggle');
 function showTextLevel(lvl) {
   _textMenu.querySelectorAll('.tm-level').forEach(l => { l.hidden = (l.dataset.lvl !== lvl); });
+  _textMenu.classList.toggle('tm-journal', lvl === 'journal');   // Journal-Grid ist breiter
   positionMenu(_textMenu, _textToggleBtn);   // Höhe änderte sich → neu positionieren
 }
 _textToggleBtn.addEventListener('click', (e) => {
@@ -7881,6 +8002,11 @@ function updateDeleteBtn() {
   // Library-Schnellgriff: immer wenn etwas ausgewählt ist (v. a. leere Felder)
   document.getElementById('libraryBtn').classList.toggle('show', hasSel);
   setSectionAvail('secLayer', hasSel);
+  // Journal-Sektion (Header/Footer-Toggles): sobald etwas ausgewählt ist und
+  // die aktive Slide Journal-Kopf-/Fußzeilen trägt.
+  setSectionAvail('secJournal', hasSel && typeof slideIndexOf === 'function'
+    && photos.some(q => q.jr && slideIndexOf(q) === activeSlide));
+  if (typeof syncJournalUI === 'function') syncJournalUI();
   // Akkordeon: welche Sektionen sind für diese Auswahl überhaupt verfügbar?
   // Border: bei normalen Fotos, Template-Zellen und den INNEREN Frame-Fotos (Inset) —
   // NICHT beim Frames-Hintergrund.
