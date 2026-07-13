@@ -1008,7 +1008,7 @@ canvas.picking-color { cursor: crosshair; }
 .tpos-row .label { min-width: 12px; flex: 0 0 auto; }
 .tpos-row input[type=range] { flex: 1 1 auto; min-width: 0; width: auto; }
 .tpos-val { flex: 0 0 auto; min-width: 40px; text-align: right; font-size: 11px; color: var(--muted); }
-#trackVal { font-size: 11px; color: var(--muted); min-width: 26px; text-align: right; }
+#trackVal, #leadVal { font-size: 11px; color: var(--muted); min-width: 26px; text-align: right; }
 #outlineVal { font-size: 11px; color: var(--muted); min-width: 26px; text-align: right; }
 /* Slider schmaler (extreme Dicken unnötig) — lässt Platz für die Pfeile daneben */
 #outlineInput { flex: 1 1 90px; min-width: 70px; max-width: 150px; }
@@ -2740,8 +2740,12 @@ html.native-ios .hlp-browser-only { display: none; }
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg>
       <span>Margin</span>
     </button>
-    <button class="acc-chip tool-btn" data-sec="secJournal" data-ctx="both" title="Page — palette, pipette, b/w switch, header &amp; footer">
+    <button class="acc-chip tool-btn" data-sec="secJournal" data-ctx="both" title="Palette — colors, pipette, b/w switch">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="13.5" cy="6.5" r="1.2"/><circle cx="17.5" cy="10.5" r="1.2"/><circle cx="8.5" cy="7.5" r="1.2"/><circle cx="6.5" cy="12" r="1.2"/><path d="M12 2a10 10 0 1 0 0 20 1.8 1.8 0 0 0 1.3-3 1.8 1.8 0 0 1 1.3-3H17a5 5 0 0 0 5-5c0-5-4.5-9-10-9z"/></svg>
+      <span>Palette</span>
+    </button>
+    <button class="acc-chip tool-btn" data-sec="secChrome" data-ctx="both" title="Page — header &amp; footer on all pages">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M7 7h10"/><path d="M7 17h10"/></svg>
       <span>Page</span>
     </button>
     <button class="acc-chip tool-btn" data-sec="secBlur" data-ctx="img" title="Blur">
@@ -2886,6 +2890,11 @@ html.native-ios .hlp-browser-only { display: none; }
       <input type="color" id="palColorPick" class="color-pick" value="#C6F53C" title="Pick any ACCENT color (type, chips, labels)">
       <button id="palMonoBtn" type="button" title="All photos on this slide: black & white on/off">S/W</button>
     </div>
+  </div>
+
+  <!-- ▼ Page-Sektion: Kopf- und Fußzeile GETRENNT ein-/ausblenden —
+       wirkt auf ALLE Seiten des Projekts (Land/Ort · Seitenzahl/Name). -->
+  <div class="acc-sec" id="secChrome" style="display:none">
     <div class="row">
       <button id="jrHeadBtn" class="jr-tgl" title="Show / hide the running header (country · place) on ALL pages (adds them where missing)">
         <svg viewBox="0 0 20 25" width="16" height="20" aria-hidden="true"><rect x="1.5" y="1.5" width="17" height="22" rx="2" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.45"/><line x1="4.5" y1="6" x2="15.5" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
@@ -3144,6 +3153,11 @@ html.native-ios .hlp-browser-only { display: none; }
       <span class="tc-track-ico" aria-hidden="true">A<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin:0 2px;"><path d="M3 12h18"/><path d="M7 8l-4 4 4 4"/><path d="M17 8l4 4-4 4"/></svg>A</span>
       <input type="range" id="trackInput" min="-10" max="120" step="1" value="0" title="Letter spacing">
       <span id="trackVal">0</span>
+    </div>
+    <div class="tc-row" id="tc-lead-row">
+      <span class="tc-track-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin:0 2px;"><path d="M12 3v18"/><path d="M8 7l4-4 4 4"/><path d="M8 17l4 4 4-4"/></svg></span>
+      <input type="range" id="leadInput" min="60" max="220" step="5" value="100" title="Line spacing">
+      <span id="leadVal">100</span>
     </div>
     </div><!-- /secSpacing -->
     <div class="acc-sec" id="secOutline" style="display:none">
@@ -4813,7 +4827,12 @@ function checkEqualSpacingH(p) {
 function drawTextContent(c, p, scale) {
   const lines = String(p.text || '').split('\n');
   const lineCount = Math.max(1, lines.length);
-  const fontSize = Math.max(4, (p.h / lineCount) * 0.78);
+  // Zeilenabstand (p.leading, Standard 1): Schriftgröße hängt an der BASIS-
+  // Zeilenhöhe, die Zeilen rücken mit leading auseinander/zusammen. Bei
+  // leading = 1 identisch zum alten Verhalten (h / lineCount).
+  const leading = p.leading || 1;
+  const baseLine = p.h / (1 + (lineCount - 1) * leading);
+  const fontSize = Math.max(4, baseLine * 0.78);
   const weight = p.bold ? 700 : (p.weight || 300);
   const style = p.italic ? 'italic' : 'normal';
   c.font = `${style} ${weight} ${Math.round(fontSize * scale)}px "${p.fontFamily}", sans-serif`;
@@ -4830,7 +4849,7 @@ function drawTextContent(c, p, scale) {
   const trackPx = (p.tracking || 0) * scale;
   if (hasLS) c.letterSpacing = trackPx + 'px';
   const manualTrack = hasLS ? 0 : trackPx;   // nur ohne native Unterstützung manuell
-  const lineHeight = p.h / lineCount;
+  const lineY = i => (-p.h / 2 + baseLine * 0.5 + baseLine * leading * i) * scale;
   const underlineOffset = fontSize * scale * 0.34;
   const underlineThickness = Math.max(1, fontSize * scale * 0.045);
   // Zeichnet eine Zeile zentriert; bei manualTrack Zeichen für Zeichen mit Abstand.
@@ -4859,7 +4878,7 @@ function drawTextContent(c, p, scale) {
       c.fillStyle = olCol;
       for (let s = Math.round(ol); s >= 1; s--) {
         lines.forEach((line, i) => {
-          const ly = (-p.h / 2 + lineHeight * (i + 0.5)) * scale;
+          const ly = lineY(i);
           drawLine(line, ax + dx * s, ly + dy * s, false);
         });
       }
@@ -4867,14 +4886,14 @@ function drawTextContent(c, p, scale) {
       c.strokeStyle = olCol;
       c.lineWidth = ol * 2; c.lineJoin = 'round'; c.lineCap = 'round';
       lines.forEach((line, i) => {
-        const ly = (-p.h / 2 + lineHeight * (i + 0.5)) * scale;
+        const ly = lineY(i);
         drawLine(line, ax, ly, true);
       });
     }
     c.fillStyle = p.color; // für die eigentliche Füllung zurücksetzen
   }
   lines.forEach((line, i) => {
-    const ly = (-p.h / 2 + lineHeight * (i + 0.5)) * scale;
+    const ly = lineY(i);
     drawLine(line, ax, ly, false);
     if (p.underline) {
       const lw = lineWidthOf(line);
@@ -4890,7 +4909,7 @@ function drawTextContent(c, p, scale) {
 function measureTextWidth(p) {
   const lines = String(p.text || '').split('\n');
   const lineCount = Math.max(1, lines.length);
-  const fontSize = Math.max(4, (p.h / lineCount) * 0.78);
+  const fontSize = Math.max(4, (p.h / (1 + (lineCount - 1) * (p.leading || 1))) * 0.78);
   const weight = p.bold ? 700 : (p.weight || 300);
   const style = p.italic ? 'italic' : 'normal';
   ctx.save();
@@ -6606,6 +6625,15 @@ function fillPlaceholderImg(img, idx, plain) {
     photo.crop = adjustCropToAspect(photo, ph.w / ph.h);
     photos[idx] = photo;
     sel = idx;
+    // NUR Arthouse: Nach dem Einfügen eines Fotos direkt die Palette-Sektion
+    // öffnen — dort sitzt der S/W-Schalter (Fotos starten hier in Mono, der
+    // Nutzer soll sofort sehen, dass er zurück auf Farbe kann). Bei allen
+    // anderen Kategorien bleibt das Verhalten unverändert.
+    if ((slides[Math.floor(photo.cx / W)] || {}).palFam === 'arthouse' && typeof renderAccordion === 'function') {
+      openSec = 'secJournal';
+      panelHidden = false;
+      renderAccordion();
+    }
     // Frames-Look: Der Klassiker sind ZWEI Fotos für alle vier Felder —
     // Hintergrund A + kleines Inset B, dann Hintergrund B + kleines Inset A.
     // Nach dem Befüllen eines Hintergrunds landet dasselbe Foto deshalb
@@ -8860,11 +8888,11 @@ function addArthousePage(kind, forceAppend) {
     // CHECK!-Vorlage: Meta-Zeile, Riesenwort HINTER dem Foto, Zähler unten.
     items.push(jrText('+', 'Space Mono', { size: 30, weight: 400, color: AH_INK, cx: cx0 + 80, cy: 84 }));
     items.push(jrText('+', 'Space Mono', { size: 30, weight: 400, color: AH_INK, cx: cx0 + W - 80, cy: 84 }));
-    items.push(jrText('Title -\nCheck!', 'Space Mono', { size: 18, weight: 400, color: AH_INK, cx: cx0 + 150, cy: 575 }));
-    items.push(jrText('Date -\n13.07.26', 'Space Mono', { size: 18, weight: 400, color: AH_INK, cx: cx0 + 340, cy: 575 }));
-    items.push(jrText('Time -\n6:42 PM', 'Space Mono', { size: 18, weight: 400, color: AH_INK, cx: cx0 + 515, cy: 575 }));
-    items.push(jrText('Poster -\nEveryday', 'Space Mono', { size: 18, weight: 400, color: AH_INK, cx: cx0 + W - 150, cy: 575 }));
-    items.push(jrText('CHECK!', 'Anton', { size: 340, weight: 400, color: AH_RED, cx: mid, cy: 770 }));
+    items.push(jrText('Title -\nCheck!', 'Space Mono', { size: 18, weight: 400, color: AH_INK, cx: cx0 + 150, cy: 520 }));
+    items.push(jrText('Date -\n13.07.26', 'Space Mono', { size: 18, weight: 400, color: AH_INK, cx: cx0 + 340, cy: 520 }));
+    items.push(jrText('Time -\n6:42 PM', 'Space Mono', { size: 18, weight: 400, color: AH_INK, cx: cx0 + 515, cy: 520 }));
+    items.push(jrText('Poster -\nEveryday', 'Space Mono', { size: 18, weight: 400, color: AH_INK, cx: cx0 + W - 150, cy: 520 }));
+    items.push(jrText('CHECK!', 'Anton', { size: 340, weight: 400, color: AH_RED, cx: mid, cy: 720 }));
     items.push(mph(mid, 1035, 840, 470));
     items.push(jrText('270 / 365', 'Space Mono', { size: 24, weight: 400, color: AH_RED, tracking: 2, cx: mid, cy: H - 48 }));
   } else if (kind === 'zeichen') {
@@ -9282,6 +9310,20 @@ document.getElementById('trackInput').addEventListener('input', function() {
   redraw();
   scheduleSave();
 });
+// Zeilenabstand: Schriftgröße bleibt konstant, die Box wächst/schrumpft
+// um die Mitte — leading 1.0 = 100 %.
+document.getElementById('leadInput').addEventListener('input', function() {
+  if (sel < 0 || sel >= photos.length || photos[sel].kind !== 'text') return;
+  beginAction('lead');
+  const p = photos[sel];
+  const n = Math.max(1, String(p.text || '').split('\n').length);
+  const base = p.h / (1 + (n - 1) * (p.leading || 1));
+  p.leading = Math.max(0.6, (parseInt(this.value, 10) || 100) / 100);
+  p.h = base * (1 + (n - 1) * p.leading);
+  document.getElementById('leadVal').textContent = Math.round(p.leading * 100);
+  redraw();
+  scheduleSave();
+});
 
 // ── Text-Outline (Kontur) ──
 document.getElementById('outlineInput').addEventListener('input', function() {
@@ -9380,6 +9422,11 @@ function syncTextUI() {
   const ti = document.getElementById('trackInput');
   if (document.activeElement !== ti) ti.value = tr;
   document.getElementById('trackVal').textContent = tr;
+  const ld = Math.round((p.leading || 1) * 100);
+  const li = document.getElementById('leadInput');
+  if (li && document.activeElement !== li) li.value = ld;
+  const lv = document.getElementById('leadVal');
+  if (lv) lv.textContent = ld;
   syncOutlineUI();
 }
 
@@ -9650,6 +9697,7 @@ function updateDeleteBtn() {
   // Seiten-Sektion (Header/Footer-Toggles): immer verfügbar, sobald etwas
   // ausgewählt ist — beim Einschalten werden fehlende Zeilen überall ergänzt.
   setSectionAvail('secJournal', hasSel);
+  setSectionAvail('secChrome', hasSel);
   if (typeof syncJournalUI === 'function') syncJournalUI();
   // Akkordeon: welche Sektionen sind für diese Auswahl überhaupt verfügbar?
   // Border: bei normalen Fotos, Template-Zellen und den INNEREN Frame-Fotos (Inset) —
