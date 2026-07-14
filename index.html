@@ -1169,7 +1169,8 @@ canvas.picking-color { cursor: crosshair; }
 .blend-mini-back svg { width: 15px; height: 15px; display: block; }
 .blend-sub-head .label { flex: 1 1 auto; }
 #opacityInput, #dimInput, #maskAngleInput, #maskPosInput, #maskFeatherInput { flex: 1 1 auto; min-width: 0; }
-#opacityVal, #dimVal, #maskAngleVal { font-size: 11px; color: var(--muted); min-width: 34px; text-align: right; }
+#opacityVal, #dimVal, #resizeVal, #maskAngleVal { font-size: 11px; color: var(--muted); min-width: 34px; text-align: right; }
+#resizeInput { flex: 1 1 auto; min-width: 0; }
 #maskCtrl { display: flex; flex-direction: column; gap: 8px; }
 .mask-dir-btn {
   background: transparent; color: var(--text); border: 1px solid var(--line);
@@ -2236,7 +2237,7 @@ html.native-ios .hlp-browser-only { display: none; }
         </button>
         <button class="tm-cat" data-go="framestyle" title="Labels, text frames & color blocks over the photo (test)">
           <span class="tm-ico" style="font-family:'Space Mono',monospace;font-size:14px">F</span>
-          <span class="tm-txt"><b>Neon</b><small>Labels &amp; blocks &middot; Test</small></span>
+          <span class="tm-txt"><b>Frame 'n' Neon</b><small>Labels &amp; blocks &middot; Test</small></span>
           <span class="tm-arr" aria-hidden="true">&rsaquo;</span>
         </button>
         <button class="tm-cat" data-go="arthouse" title="Red poster editorial — b/w photos, signal-red type (test)">
@@ -2571,7 +2572,7 @@ html.native-ios .hlp-browser-only { display: none; }
         <button class="tm-back" type="button">&lsaquo; Back</button>
         <div class="jr-grid">
           <div class="jr-sechead">Complete issues — one tap</div><button id="frSet5Btn" class="jr-card tm-item" title="Complete 5-page issue in a matched order"><span class="jr-pv" style="background:#23282D;"><span style="position:absolute; inset:12% 22% 12% 14%; background:#C6F53C; opacity:0.5; border-radius:3px;"></span><span style="position:absolute; inset:9% 16% 15% 20%; background:#C6F53C; opacity:0.75; border-radius:3px;"></span><span style="position:absolute; inset:6% 10% 18% 26%; background:#C6F53C; border-radius:3px;"></span><span style="position:absolute; left:26%; right:10%; top:24%; text-align:center; font-family:Archivo,sans-serif; font-weight:900; font-size:20px; color:#171512;">5</span></span><span class="tm-txt"><b>Issue &middot; 5</b><small>Mini · matched pages</small></span></button><button id="frSet7Btn" class="jr-card tm-item" title="Complete 7-page issue in a matched order"><span class="jr-pv" style="background:#23282D;"><span style="position:absolute; inset:12% 22% 12% 14%; background:#2438C4; opacity:0.5; border-radius:3px;"></span><span style="position:absolute; inset:9% 16% 15% 20%; background:#2438C4; opacity:0.75; border-radius:3px;"></span><span style="position:absolute; inset:6% 10% 18% 26%; background:#2438C4; border-radius:3px;"></span><span style="position:absolute; left:26%; right:10%; top:24%; text-align:center; font-family:Archivo,sans-serif; font-weight:900; font-size:20px; color:#C6F53C;">7</span></span><span class="tm-txt"><b>Issue &middot; 7</b><small>Klassik · with dossier</small></span></button><button id="frSet9Btn" class="jr-card tm-item" title="Complete 9-page issue in a matched order"><span class="jr-pv" style="background:#23282D;"><span style="position:absolute; inset:12% 22% 12% 14%; background:#3A3F45; opacity:0.5; border-radius:3px;"></span><span style="position:absolute; inset:9% 16% 15% 20%; background:#3A3F45; opacity:0.75; border-radius:3px;"></span><span style="position:absolute; inset:6% 10% 18% 26%; background:#3A3F45; border-radius:3px;"></span><span style="position:absolute; left:26%; right:10%; top:24%; text-align:center; font-family:Archivo,sans-serif; font-weight:900; font-size:20px; color:#C6F53C;">9</span></span><span class="tm-txt"><b>Issue &middot; 9</b><small>Gross · full issue</small></span></button>
-          <div class="jr-sechead">Frame — labels &amp; blocks</div>
+          <div class="jr-sechead">Frame 'n' Neon — labels &amp; blocks</div>
           <button id="frSpezBtn" class="jr-card tm-item" title="Full-bleed photo with neon spec labels">
             <span class="jr-pv" style="background:#2E3A42;"><span class="jp4" style="position:absolute; inset:0; opacity:0.6;"></span><span style="position:absolute; left:6%; top:4%; background:#C6F53C; padding:1px 2px; font-family:'Space Mono',monospace; font-size:3px; color:#171512;">H&Uuml;TTE &#8470; 12 / 1.860 M</span><span style="position:absolute; right:6%; bottom:10%; background:#C6F53C; padding:1px 2px; font-family:'Space Mono',monospace; font-size:3px; color:#171512;">47.28&deg;N &mdash; 11.94&deg;O</span><span style="position:absolute; right:7%; top:4%; font-family:'Space Mono',monospace; font-size:5px; color:#C6F53C;">+</span><span style="position:absolute; left:7%; bottom:22%; font-family:'Space Mono',monospace; font-size:5px; color:#C6F53C;">+</span><span style="position:absolute; left:7%; right:20%; top:66%; font-family:Archivo,sans-serif; font-weight:700; font-size:6.5px; line-height:1.15; color:#F4F1EB;">OBEN IST DIE LUFT EHRLICHER</span></span>
             <span class="tm-txt"><b>Spez</b><small>Neon spec labels</small></span>
@@ -2746,6 +2747,10 @@ html.native-ios .hlp-browser-only { display: none; }
     <button id="cropBtn" class="tool-btn" title="Crop">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M18 22V8a2 2 0 0 0-2-2H2"/></svg>
       <span>Crop</span>
+    </button>
+    <button class="acc-chip tool-btn" data-sec="secResize" data-ctx="both" title="Resize — same as dragging the red corner dot">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="10" height="10" rx="1"/><path d="M13 13l8 8"/><path d="M21 15v6h-6"/></svg>
+      <span>Resize</span>
     </button>
     <button class="acc-chip tool-btn" data-sec="secZoom" data-ctx="img" title="Zoom photo inside its frame">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/><path d="M11 8v6"/><path d="M8 11h6"/></svg>
@@ -2948,6 +2953,16 @@ html.native-ios .hlp-browser-only { display: none; }
         <span class="jr-tgl-txt">Footer<small>Page № · Name</small></span>
         <span class="jr-tgl-dot" aria-hidden="true"></span>
       </button>
+    </div>
+  </div>
+
+  <!-- ▼ Resize-Sektion: skaliert das gewählte Element um seine Mitte —
+       identisch zum Ziehen am roten Eck-Punkt (100 % = aktuelle Größe). -->
+  <div class="acc-sec" id="secResize" style="display:none">
+    <div class="row">
+      <span class="label">Size</span>
+      <input type="range" id="resizeInput" min="25" max="250" step="1" value="100" title="Resize (100% = current size)">
+      <span id="resizeVal">100</span>
     </div>
   </div>
 
@@ -4722,6 +4737,10 @@ function pushGuide(type, pos, kind) {
 // corrected scale that makes that edge land exactly on the boundary.
 function applyResizeGuides(p, scale) {
   guides = [];
+  // Feinerer Magnet als beim Verschieben (30): Mit 30 sprang der rote Punkt
+  // nahe der Kante immer auf randlos — dünne Borders (5–25 pt) waren per
+  // Resize unerreichbar. 8 pt rastet noch, lässt aber Feinarbeit zu.
+  const RSNAP = 8;
   const rotNorm = ((p.rot % (Math.PI*2)) + Math.PI*2) % (Math.PI*2);
   const nearAxis = rotNorm < 0.09 || rotNorm > Math.PI*2 - 0.09
                 || Math.abs(rotNorm - Math.PI) < 0.09;
@@ -4744,7 +4763,7 @@ function applyResizeGuides(p, scale) {
 
   let best = null; // { error, scale, axis, pos }
   const consider = (err, candidateScale, axis, pos) => {
-    if (candidateScale > 0 && err < SNAP && (!best || err < best.error)) {
+    if (candidateScale > 0 && err < RSNAP && (!best || err < best.error)) {
       best = { error: err, scale: candidateScale, axis, pos };
     }
   };
@@ -5483,6 +5502,10 @@ function renderNow() {
 
     guides.forEach(g => {
       if (g.type === 'v' || g.type === 'h') {
+        // Aufgeräumt (Silvan, 14.07.26): Nur das FADENKREUZ (center) wird
+        // gezeichnet — edge-/align-Snaps rasten weiter ein, aber ohne Linien.
+        // Die grünen Abstands-Pfeile (spacing-h/-v) bleiben sichtbar.
+        if (g.kind !== 'center') return;
         const style = GUIDE_STYLE[g.kind] || GUIDE_STYLE.edge;
         ctx.globalAlpha = 0.85;
         ctx.strokeStyle = style.color;
@@ -7927,6 +7950,28 @@ function jrPh(cx, cy, w, h) {
   const dx = cx - Math.floor(cx / W) * W;
   return { kind: 'placeholder', cx, cy, w, h, rot: 0, frame: null, home: { dx, cy, w, h } };
 }
+// Die Kategorie-Templates sind im 4:5-Designraum (H0 = 1350) entworfen.
+// Im Story-Format (9:16) verteilt dieser Schritt die Elemente auf die volle
+// Höhe: Vollhöhen-Flächen strecken, Kopfzeile bleibt oben, Fußzeile klebt
+// unten, alles dazwischen wird mittig zentriert.
+function realH() { return H; }
+function fitItemsToHeight(items, Hreal) {
+  const H0 = 1350;
+  if (!Hreal || Hreal === H0) return;
+  const off = (Hreal - H0) / 2;
+  items.forEach(it => {
+    if (it.kind !== 'text' && it.h >= H0 * 0.92) {
+      it.h += Hreal - H0;
+      it.cy = Hreal / 2;
+      if (it.home) { it.home.h = it.h; it.home.cy = it.cy; }
+      return;
+    }
+    if (it.cy <= 150) { /* Kopfzeile bleibt oben */ }
+    else if (it.cy >= H0 - 150) it.cy += Hreal - H0;
+    else it.cy += off;
+    if (it.home) it.home.cy = it.cy;
+  });
+}
 function jrRect(cx, cy, w, h, o) {
   o = o || {};
   return { kind: 'rect', cx, cy, w, h, rot: o.rot || 0, shape: o.shape || 'rect',
@@ -8375,6 +8420,7 @@ function addArchivePage(kind, forceAppend) {
   const cx0 = idx * W, mid = cx0 + W / 2;
   const firstIdx = photos.length;
   const items = [];
+  const H = 1350;   // Design-Raum 4:5 — Story-Verteilung macht fitItemsToHeight unten
 
   if (kind === 'cover') {
     items.push(jrText('AUSGABE 07', 'Space Mono', { size: 24, weight: 400, color: AR_INK, tracking: 3, cx: cx0 + 155, cy: 82 }));
@@ -8475,6 +8521,7 @@ function addArchivePage(kind, forceAppend) {
   // Try-before-buy wie im Journal: Pro-Seiten taggen — die Sperre sitzt am
   // EXPORT (runExport prüft proFeat). Ausgabe + Vollbild bleiben frei.
   if (kind !== 'cover' && kind !== 'voll') items.forEach(it => { it.proFeat = 'archive'; });
+  fitItemsToHeight(items, realH());
   photos.push(...items);
   refillSlidePlaceholders(idx, t.imgs);
   activeSlide = idx; sel = firstIdx; panelHidden = false;
@@ -8515,6 +8562,7 @@ function addStatementPage(kind, forceAppend) {
   const cx0 = idx * W, mid = cx0 + W / 2;
   const firstIdx = photos.length;
   const items = [];
+  const H = 1350;   // Design-Raum 4:5 — Story-Verteilung macht fitItemsToHeight unten
 
   if (kind === 'maskiert') {
     // SIGNATURE: Foto läuft IN den Buchstaben (Engine-Feature maskWord).
@@ -8615,6 +8663,7 @@ function addStatementPage(kind, forceAppend) {
 
   // Claim + Foto bleiben frei (Erleben + Teilen), Rest ist Pro (Export-Guard).
   if (kind !== 'claim' && kind !== 'foto') items.forEach(it => { it.proFeat = 'statement'; });
+  fitItemsToHeight(items, realH());
   photos.push(...items);
   refillSlidePlaceholders(idx, t.imgs);
   activeSlide = idx; sel = firstIdx; panelHidden = false;
@@ -8726,6 +8775,7 @@ function addFramePage(kind, forceAppend) {
   const cx0 = idx * W, mid = cx0 + W / 2;
   const firstIdx = photos.length;
   const items = [];
+  const H = 1350;   // Design-Raum 4:5 — Story-Verteilung macht fitItemsToHeight unten
 
   if (kind === 'spez') {
     // Neon-Spec-Look (Eyewear-Vorlage): dünner Neon-Rahmen auf dem Vollbild-
@@ -8914,6 +8964,7 @@ function addFramePage(kind, forceAppend) {
 
   // Titel + Spez bleiben frei (Signature-Look), Rest ist Pro (Export-Guard).
   if (kind !== 'titel' && kind !== 'spez') items.forEach(it => { it.proFeat = 'framestyle'; });
+  fitItemsToHeight(items, realH());
   photos.push(...items);
   refillSlidePlaceholders(idx, t.imgs);
   activeSlide = idx; sel = firstIdx; panelHidden = false;
@@ -8992,6 +9043,7 @@ function addArthousePage(kind, forceAppend) {
   const cx0 = idx * W, mid = cx0 + W / 2;
   const firstIdx = photos.length;
   const items = [];
+  const H = 1350;   // Design-Raum 4:5 — Story-Verteilung macht fitItemsToHeight unten
   // S/W-Platzhalter: Arthouse-Standard.
   const mph = (x, y, w2, h2) => { const q = jrPh(x, y, w2, h2); q.mono = true; return q; };
 
@@ -9157,6 +9209,7 @@ function addArthousePage(kind, forceAppend) {
 
   // Zeichen + Unschärfe bleiben frei (Signature + Foto-Seite), Rest Pro.
   if (kind !== 'zeichen' && kind !== 'unschaerfe') items.forEach(it => { it.proFeat = 'arthouse'; });
+  fitItemsToHeight(items, realH());
   photos.push(...items);
   refillSlidePlaceholders(idx, t.imgs);
   activeSlide = idx; sel = firstIdx; panelHidden = false;
@@ -9825,6 +9878,7 @@ function updateDeleteBtn() {
   // ausgewählt ist — beim Einschalten werden fehlende Zeilen überall ergänzt.
   setSectionAvail('secJournal', hasSel);
   setSectionAvail('secChrome', hasSel);
+  setSectionAvail('secResize', hasSel);
   if (typeof syncJournalUI === 'function') syncJournalUI();
   // Akkordeon: welche Sektionen sind für diese Auswahl überhaupt verfügbar?
   // Border: bei normalen Fotos, Template-Zellen und den INNEREN Frame-Fotos (Inset) —
@@ -10175,6 +10229,39 @@ document.getElementById('opacityInput').addEventListener('input', function() {
 });
 // Dim: schwarzer Layer ÜBER dem Foto (unabhängig vom Hintergrund) — das
 // Gegenstück zur Opacity (die lässt den Hintergrund DURCHscheinen).
+// Resize-Regler: wie der rote Eck-Punkt, nur präzise — skaliert um die Mitte.
+// Basisgröße wird beim ersten Ziehen gemerkt und beim Loslassen neu geeicht.
+let _rszBase = null;
+document.getElementById('resizeInput').addEventListener('input', function() {
+  if (sel < 0 || sel >= photos.length) return;
+  const p = photos[sel];
+  if (p.locked) return;
+  beginAction('resizeTool');
+  if (!_rszBase || _rszBase.p !== p) _rszBase = { p, w: p.w, h: p.h };
+  const f = Math.max(0.25, (parseInt(this.value, 10) || 100) / 100);
+  p.w = Math.max(20, _rszBase.w * f);
+  p.h = Math.max(20, _rszBase.h * f);
+  // In der eigenen Slide halten: Der Regler skaliert um die Mitte — ohne
+  // Klammer wüchse die Box über die Slide-Kante und würde dort abgeschnitten.
+  // Größer als die Slide → mittig zentrieren (sauberer Vollbleed-Überstand).
+  if (Math.abs(p.rot || 0) < 0.09) {
+    const si = Math.floor(p.cx / W);
+    if (p.w <= W) p.cx = Math.min(si * W + W - p.w / 2, Math.max(si * W + p.w / 2, p.cx));
+    else p.cx = si * W + W / 2;
+    if (p.h <= H) p.cy = Math.min(H - p.h / 2, Math.max(p.h / 2, p.cy));
+    else p.cy = H / 2;
+  }
+  p.fitted = false;
+  document.getElementById('resizeVal').textContent = Math.round(f * 100);
+  syncFrameGroupInsets(p);
+  if (p.tmplN) reflowTemplateFromCell(p);
+  redraw(); scheduleSave();
+});
+document.getElementById('resizeInput').addEventListener('change', function() {
+  _rszBase = null;
+  this.value = 100;
+  document.getElementById('resizeVal').textContent = 100;
+});
 document.getElementById('dimInput').addEventListener('input', function() {
   const p = curImg(); if (!p) return;
   beginAction('dim');
@@ -12345,7 +12432,8 @@ function maybeOfferSplit(idx) {
   const p = photos[idx];
   if (p.kind !== 'image' || p.locked || p.frameGroup || p.tmplN) return;
   if (Math.abs(p.rot || 0) > 0.09) return;
-  if (p.w / Math.max(1, p.h) < 1.25) return;              // nur Querformat
+  // Jede Ausrichtung erlaubt (auch Hochformat) — wer weit über die Kante
+  // schiebt, will splitten; der Crop passt sich beim Split ohnehin an.
   if (Math.round(p.w / W) >= 2) return;                   // ist schon Panorama
   const s = Math.max(0, Math.min(slides.length - 1, Math.floor(p.cx / W)));
   const overR = (p.cx + p.w / 2) - (s + 1) * W;
