@@ -12627,8 +12627,8 @@ function doSplitAcross() {
   activeSlide = left; sel = photos.indexOf(p);
   resizeCanvas(); syncBgButtons(); updateDots(); updateDeleteBtn();
   redraw(); scheduleSave();
-  // Überblick: rauszoomen + Trennlinie sofort mittig (neue autoZoom-Logik).
-  setTimeout(() => { autoZoomForSlide(); updateSeamBtn(); }, 60);
+  // Überblick: rauszoomen, sodass BEIDE Slides sichtbar sind, Trennlinie mittig.
+  setTimeout(() => { _azHoldSlide = -1; autoZoomForSlide(); updateSeamBtn(); }, 60);
 }
 document.getElementById('splitAskYes').addEventListener('click', doSplitAcross);
 document.getElementById('splitAskNo').addEventListener('click', hideSplitAsk);
@@ -12677,10 +12677,19 @@ function slideSpanAt(i) {
   let best = null;
   for (const p of photos) {
     if (p.kind !== 'image' || Math.abs(p.rot || 0) > 0.09) continue;
-    const span = Math.round(p.w / W);
+    // Ein Foto zählt als „über mehrere Slides", wenn es bewusst gesplittet wurde
+    // (panoSpan) ODER breiter als ~2 Slides ist. Ein leicht übergroßes Einzel-
+    // foto löst so KEINEN Panorama-Überblick aus.
+    const isPano = (p.panoSpan >= 2) || (Math.round(p.w / W) >= 2);
+    if (!isPano) continue;
+    // Tatsächlich berührte Slides (Überlappung > 25 % Slide-Breite) bestimmen —
+    // so wird auch ein schmales, mittig auf der Naht sitzendes Foto erkannt.
+    const l = p.cx - p.w / 2, r = p.cx + p.w / 2;
+    const start = Math.max(0, Math.floor((l + W * 0.25) / W));
+    const end   = Math.min(slides.length - 1, Math.ceil((r - W * 0.25) / W) - 1);
+    const span  = end - start + 1;
     if (span < 2) continue;
-    const start = Math.round((p.cx - p.w / 2) / W);
-    if (i >= start && i < start + span && (!best || span > best.span)) best = { start, span };
+    if (i >= start && i <= end && (!best || span > best.span)) best = { start, span };
   }
   return best;
 }
