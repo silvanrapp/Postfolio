@@ -1385,13 +1385,21 @@ canvas {
    (alle Teile sichtbar, rausgezoomt) und Einzel-Slide-Ansicht. */
 #seamBtn {
   position: fixed; z-index: 62; display: none;
-  width: 34px; height: 34px; padding: 0; border-radius: 50%;
+  width: 42px; height: 42px; padding: 0; border-radius: 50%;
   align-items: center; justify-content: center;
   background: var(--accent); border: none; color: #fff;
   box-shadow: 0 3px 12px rgba(209,1,1,0.35);
 }
 #seamBtn.show { display: flex; }
-#seamBtn svg { width: 16px; height: 16px; display: none; }
+/* Kurzer Aufmerksamkeits-Puls, sobald der Umschalter erscheint — damit klar
+   ist: hier tippen, um BEIDE Slides gemeinsam im Bild zu haben. */
+#seamBtn.show { animation: seamPulse 1.6s ease-out 2; }
+@keyframes seamPulse {
+  0%   { box-shadow: 0 3px 12px rgba(209,1,1,0.35), 0 0 0 0 rgba(209,1,1,0.45); }
+  70%  { box-shadow: 0 3px 12px rgba(209,1,1,0.35), 0 0 0 12px rgba(209,1,1,0); }
+  100% { box-shadow: 0 3px 12px rgba(209,1,1,0.35), 0 0 0 0 rgba(209,1,1,0); }
+}
+#seamBtn svg { width: 22px; height: 22px; display: none; }
 #seamBtn.toSingle .sb-single { display: block; }
 #seamBtn:not(.toSingle) .sb-over { display: block; }
 /* „Split across 2 slides?"-Pill: erscheint, wenn ein Querformat-Foto über die
@@ -3291,9 +3299,11 @@ html.native-ios .hlp-browser-only { display: none; }
 <div id="slideStrip" aria-label="Slides"></div>
 <div id="stripIns" aria-hidden="true"></div>
 <!-- Split-Ansicht-Umschalter: Überblick (alle Panorama-Teile) ↔ Einzel-Slide -->
-<button id="seamBtn" title="Ansicht wechseln" aria-label="Ansicht wechseln">
-  <svg class="sb-single" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="4.5" width="10" height="15" rx="2"/></svg>
-  <svg class="sb-over" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="6" width="8" height="12" rx="1.5"/><rect x="12.5" y="6" width="8" height="12" rx="1.5"/></svg>
+<button id="seamBtn" title="Beide Slides zeigen / Einzel-Slide" aria-label="Beide Slides zeigen oder Einzel-Slide">
+  <!-- Aktion „zurück zu Einzel-Slide" (rein-zoomen): eine Slide + Plus-Lupe -->
+  <svg class="sb-single" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="4" width="12" height="16" rx="2"/><path d="M12 9v6M9 12h6"/></svg>
+  <!-- Aktion „beide Slides zeigen" (raus-zoomen): zwei Slides + Auswärtspfeile -->
+  <svg class="sb-over" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6.5" width="7.5" height="11" rx="1.5"/><rect x="13.5" y="6.5" width="7.5" height="11" rx="1.5"/><path d="M9 3.2 6 3.2 6 6.2M15 3.2 18 3.2 18 6.2"/></svg>
 </button>
 
 <!-- Frage-Pill: Querformat-Foto über die rechte Slide-Kante gezogen → Split anbieten -->
@@ -6245,6 +6255,9 @@ window.addEventListener('mouseup', e => {
     addCandidate = null;
   }
   if (wasDragging) scheduleSave();
+  // Foto liegt nach dem Ziehen über ≥ 2 Slides? → automatisch rauszoomen, damit
+  // beide Slides sichtbar sind und man es direkt anordnen kann.
+  if (wasDragging && sel >= 0 && photos[sel] && autoZoomIfPhotoSpans(photos[sel])) { redraw(); return; }
   // Klick (kaum Bewegung): Wurde ein Foto angeklickt, dessen Slide zur aktiven
   // machen und mittig in den Bildschirm holen (Toolbar öffnet ohnehin).
   if (Math.hypot(e.clientX - pressX, e.clientY - pressY) < 8) {
@@ -6619,7 +6632,13 @@ canvas.addEventListener('touchend', e => {
     }
     // Foto über eine Kante gezogen? → Split-Angebot zeigen (nur einmal, wenn es
     // noch kein Panorama ist — siehe maybeOfferSplit).
-    if (dragMode === 'move' && sel >= 0 && ct0 && Math.hypot(ct0.clientX - dragStartMX, ct0.clientY - dragStartMY) >= 8) maybeOfferSplit(sel);
+    if (dragMode === 'move' && sel >= 0 && ct0 && Math.hypot(ct0.clientX - dragStartMX, ct0.clientY - dragStartMY) >= 8) {
+      maybeOfferSplit(sel);
+      // Läuft das Foto jetzt über ≥ 2 Slides? → rauszoomen, beide Slides zeigen.
+      if (photos[sel] && autoZoomIfPhotoSpans(photos[sel])) {
+        dragMode = null; guides = []; armUndo = false; scheduleSave(); redraw(); return;
+      }
+    }
     dragMode = null; guides = []; armUndo = false;
     // Tipp auf ein bisher NICHT ausgewähltes Element → jetzt auswählen
     // (nur wenn der Finger nicht gewischt hat).
@@ -12677,13 +12696,10 @@ function slideSpanAt(i) {
   let best = null;
   for (const p of photos) {
     if (p.kind !== 'image' || Math.abs(p.rot || 0) > 0.09) continue;
-    // Ein Foto zählt als „über mehrere Slides", wenn es bewusst gesplittet wurde
-    // (panoSpan) ODER breiter als ~2 Slides ist. Ein leicht übergroßes Einzel-
-    // foto löst so KEINEN Panorama-Überblick aus.
-    const isPano = (p.panoSpan >= 2) || (Math.round(p.w / W) >= 2);
-    if (!isPano) continue;
-    // Tatsächlich berührte Slides (Überlappung > 25 % Slide-Breite) bestimmen —
-    // so wird auch ein schmales, mittig auf der Naht sitzendes Foto erkannt.
+    // Rein geometrisch: über welche Slides läuft das Foto tatsächlich? Ein Foto,
+    // das mittig auf einer Naht sitzt (auch schmales Hochformat), überlappt zwei
+    // Slides deutlich → zählt als Panorama. Ein normales Einzelfoto (≈1 Slide)
+    // überlappt keine Nachbar-Slide nennenswert und bleibt außen vor.
     const l = p.cx - p.w / 2, r = p.cx + p.w / 2;
     const start = Math.max(0, Math.floor((l + W * 0.25) / W));
     const end   = Math.min(slides.length - 1, Math.ceil((r - W * 0.25) / W) - 1);
@@ -12701,7 +12717,9 @@ function autoZoomForSlide() {
   if (activeSlide !== _azHoldSlide) _azHoldSlide = -1;
   if (sp) {
     // Auf einer Panorama-Slide: so weit rauszoomen, dass alle Teile sichtbar sind.
-    const fitZ = zoom * (wrap.clientWidth * 0.92) / (sp.span * W * DSCALE);
+    // Lieber etwas MEHR Rand (0.82) als zu wenig — beide Slides sollen sicher
+    // komplett im Bild sein, mit Luft zum Anordnen.
+    const fitZ = zoom * (wrap.clientWidth * 0.82) / (sp.span * W * DSCALE);
     // Ziel: Gruppenmitte = Trennlinie (bei 2 Slides) exakt auf Screenmitte.
     const seamTarget = () => Math.max(0, devSnap(edgePad() + (sp.start * W + sp.span * W / 2) * DSCALE - wrap.clientWidth / 2));
     if (fitZ < zoom - 0.01) {
@@ -12737,6 +12755,20 @@ function autoZoomForSlide() {
     }
   }
   return false;
+}
+
+// Nach einer Geste: Läuft das (gerade bewegte) Foto über ≥ 2 Slides, sofort so
+// weit rauszoomen, dass BEIDE Slides im Bild sind — man kann es dann direkt
+// über die Naht anordnen. Wird bei jedem Drag-Ende aufgerufen.
+function autoZoomIfPhotoSpans(p) {
+  if (!p || p.kind !== 'image') return false;
+  const l = p.cx - p.w / 2, r = p.cx + p.w / 2;
+  const start = Math.max(0, Math.floor((l + W * 0.25) / W));
+  const end   = Math.min(slides.length - 1, Math.ceil((r - W * 0.25) / W) - 1);
+  if (end - start + 1 < 2) return false;             // spannt nicht über 2 Slides
+  if (activeSlide < start || activeSlide > end) { activeSlide = start; if (typeof updateDots === 'function') updateDots(); }
+  _azHoldSlide = -1;
+  return autoZoomForSlide();
 }
 
 wrap.addEventListener('scroll', () => {
