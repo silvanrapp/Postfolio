@@ -2174,6 +2174,7 @@ html.native-ios .hlp-browser-only { display: none; }
     <button id="formatToggle" title="Choose format">Post 4:5 ▾</button>
     <div id="formatMenu">
       <button class="mode-btn sel" data-mode="post">Post 4:5</button>
+      <button class="mode-btn" data-mode="post34">Post 3:4</button>
       <button class="mode-btn" data-mode="story">Story 9:16</button>
     </div>
   </div>
@@ -3704,8 +3705,11 @@ const PRO_UI = [
 // guides, export) reads these two variables live, so switching format
 // re-derives everything automatically. See setMode() below.
 const MODES = {
-  post:  { w: 1080, h: 1350, label: 'Post 4:5'   },
-  story: { w: 1080, h: 1920, label: 'Story 9:16' }
+  post:   { w: 1080, h: 1350, label: 'Post 4:5'   },
+  // Instagram unterstützt seit Mai 2025 natives 3:4 (füllt die Grid-Kachel
+  // exakt, ohne Beschnitt) — Templates verteilen sich über fitItemsToHeight.
+  post34: { w: 1080, h: 1440, label: 'Post 3:4'   },
+  story:  { w: 1080, h: 1920, label: 'Story 9:16' }
 };
 let mode = 'post';
 let W = MODES[mode].w, H = MODES[mode].h;
@@ -4303,7 +4307,7 @@ function setMode(key) {
 function syncModeButtons() {
   document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('sel', b.dataset.mode === mode));
   const ft = document.getElementById('formatToggle');
-  if (ft) ft.textContent = (mode === 'post' ? 'Post' : 'Story') + ' ▾';
+  if (ft) ft.textContent = (mode === 'story' ? 'Story' : mode === 'post34' ? 'Post 3:4' : 'Post') + ' ▾';
 }
 
 document.querySelectorAll('.mode-btn').forEach(btn => {
