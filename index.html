@@ -78,11 +78,24 @@ body {
   /* Standalone (Home-Screen-App): Header unter der iOS-Statusleiste beginnen.
      Im Browser ist safe-area-inset-top 0 — ändert dort also nichts. */
   padding-top: calc(16px + env(safe-area-inset-top, 0px));
-  padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  /* Etwas mehr Luft zum Home-Indikator: seitliches Slide-Wischen in Daumen-
+     Nähe löst sonst leicht den App-Wechsler aus (15.07.26). */
+  padding-bottom: calc(30px + env(safe-area-inset-bottom, 0px));
   gap: 14px;
   overflow: hidden;
   overscroll-behavior: none;
   touch-action: none;        /* keine Browser-Pinch-Zoom/-Pan-Gesten auf der Seite */
+  /* Kein Text-Markieren per Langdruck (iOS-Callout „Copy/Look Up/Translate")
+     — die App ist ein Editor, keine Webseite. Eingabefelder bleiben unten
+     ausdrücklich selektierbar. */
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+input, textarea, [contenteditable] {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
 }
 /* Eine durchgehende obere Leiste: Marke links (groß) · Tools · Aktionen rechts */
 #topBar {
@@ -1774,6 +1787,7 @@ html.native-ios .hlp-browser-only { display: none; }
   position: fixed; z-index: 60; display: none;
   width: 220px; height: 220px; transform: translate(-50%, -50%);
   border-radius: 20px; cursor: pointer; background: transparent;
+  border: none; padding: 0; -webkit-appearance: none; appearance: none;
 }
 #emptyAddBtn.show { display: block; }
 
@@ -2249,7 +2263,7 @@ html.native-ios .hlp-browser-only { display: none; }
           <span class="tm-arr" aria-hidden="true">&rsaquo;</span>
         </button>
         <button class="tm-cat" data-go="arthouse" title="Red poster editorial — b/w photos, signal-red type (test)">
-          <span class="tm-ico" style="font-family:Archivo,sans-serif;font-weight:900;font-size:14px;color:#A82820">A.</span>
+          <span class="tm-ico" style="font-family:Archivo,sans-serif;font-weight:900;font-size:14px;color:#D10101">A.</span>
           <span class="tm-txt"><b>Arthouse</b><small>B/W + signal red &middot; Test</small></span>
           <span class="tm-arr" aria-hidden="true">&rsaquo;</span>
         </button>
@@ -2283,7 +2297,7 @@ html.native-ios .hlp-browser-only { display: none; }
             <span class="tm-txt"><b>Spec</b><small>Label + Archivo Black</small></span>
           </button>
           <button id="presetArthouseBtn" class="jr-card tm-item" title="Arthouse duo: mono number over a signal-red claim">
-            <span class="jr-pv" style="background:#EFEBE4;"><span style="position:absolute; left:0; right:0; top:37.5%; text-align:center; font-family:'Space Mono',monospace; font-size:3.5px; letter-spacing:0.08em; color:#A82820;">001 &mdash; AW 26/27</span><span style="position:absolute; left:0; right:0; top:43.5%; text-align:center; font-family:Archivo,sans-serif; font-weight:900; font-size:10px; color:#A82820;">THIS IS IT</span></span>
+            <span class="jr-pv" style="background:#EFEBE4;"><span style="position:absolute; left:0; right:0; top:37.5%; text-align:center; font-family:'Space Mono',monospace; font-size:3.5px; letter-spacing:0.08em; color:#D10101;">001 &mdash; AW 26/27</span><span style="position:absolute; left:0; right:0; top:43.5%; text-align:center; font-family:Archivo,sans-serif; font-weight:900; font-size:10px; color:#D10101;">THIS IS IT</span></span>
             <span class="tm-txt"><b>Arthouse</b><small>Number + red claim</small></span>
           </button>
         </div>
@@ -2645,54 +2659,54 @@ html.native-ios .hlp-browser-only { display: none; }
       <div class="tm-level" data-lvl="arthouse" data-back="tplcats" hidden>
         <button class="tm-back" type="button">&lsaquo; Back</button>
         <div class="jr-grid">
-          <div class="jr-sechead">Complete issues — one tap</div><button id="ahSet5Btn" class="jr-card tm-item" title="Complete 5-page arthouse issue in a matched order"><span class="jr-pv" style="background:#EFEBE4;"><span style="position:absolute; inset:12% 22% 12% 14%; background:#E8E6E1; border-radius:3px;"></span><span style="position:absolute; inset:9% 16% 15% 20%; background:#DAD6CC; border-radius:3px;"></span><span style="position:absolute; inset:6% 10% 18% 26%; background:#A82820; border-radius:3px;"></span><span style="position:absolute; left:26%; right:10%; top:22%; text-align:center; font-family:Anton,sans-serif; font-size:22px; color:#EFEBE4;">5</span></span><span class="tm-txt"><b>Issue &middot; 5</b><small>Mini &middot; matched pages</small></span></button><button id="ahSet7Btn" class="jr-card tm-item" title="Complete 7-page arthouse issue in a matched order"><span class="jr-pv" style="background:#EFEBE4;"><span style="position:absolute; inset:12% 22% 12% 14%; background:#E8E6E1; border-radius:3px;"></span><span style="position:absolute; inset:9% 16% 15% 20%; background:#DAD6CC; border-radius:3px;"></span><span style="position:absolute; inset:6% 10% 18% 26%; background:#A82820; border-radius:3px;"></span><span style="position:absolute; left:26%; right:10%; top:22%; text-align:center; font-family:Anton,sans-serif; font-size:22px; color:#EFEBE4;">7</span></span><span class="tm-txt"><b>Issue &middot; 7</b><small>Klassik &middot; with essay</small></span></button><button id="ahSet9Btn" class="jr-card tm-item" title="Complete 9-page arthouse issue in a matched order"><span class="jr-pv" style="background:#EFEBE4;"><span style="position:absolute; inset:12% 22% 12% 14%; background:#E8E6E1; border-radius:3px;"></span><span style="position:absolute; inset:9% 16% 15% 20%; background:#DAD6CC; border-radius:3px;"></span><span style="position:absolute; inset:6% 10% 18% 26%; background:#A82820; border-radius:3px;"></span><span style="position:absolute; left:26%; right:10%; top:22%; text-align:center; font-family:Anton,sans-serif; font-size:22px; color:#EFEBE4;">9</span></span><span class="tm-txt"><b>Issue &middot; 9</b><small>Gross &middot; full issue</small></span></button>
+          <div class="jr-sechead">Complete issues — one tap</div><button id="ahSet5Btn" class="jr-card tm-item" title="Complete 5-page arthouse issue in a matched order"><span class="jr-pv" style="background:#EFEBE4;"><span style="position:absolute; inset:12% 22% 12% 14%; background:#E8E6E1; border-radius:3px;"></span><span style="position:absolute; inset:9% 16% 15% 20%; background:#DAD6CC; border-radius:3px;"></span><span style="position:absolute; inset:6% 10% 18% 26%; background:#D10101; border-radius:3px;"></span><span style="position:absolute; left:26%; right:10%; top:22%; text-align:center; font-family:Anton,sans-serif; font-size:22px; color:#EFEBE4;">5</span></span><span class="tm-txt"><b>Issue &middot; 5</b><small>Mini &middot; matched pages</small></span></button><button id="ahSet7Btn" class="jr-card tm-item" title="Complete 7-page arthouse issue in a matched order"><span class="jr-pv" style="background:#EFEBE4;"><span style="position:absolute; inset:12% 22% 12% 14%; background:#E8E6E1; border-radius:3px;"></span><span style="position:absolute; inset:9% 16% 15% 20%; background:#DAD6CC; border-radius:3px;"></span><span style="position:absolute; inset:6% 10% 18% 26%; background:#D10101; border-radius:3px;"></span><span style="position:absolute; left:26%; right:10%; top:22%; text-align:center; font-family:Anton,sans-serif; font-size:22px; color:#EFEBE4;">7</span></span><span class="tm-txt"><b>Issue &middot; 7</b><small>Klassik &middot; with essay</small></span></button><button id="ahSet9Btn" class="jr-card tm-item" title="Complete 9-page arthouse issue in a matched order"><span class="jr-pv" style="background:#EFEBE4;"><span style="position:absolute; inset:12% 22% 12% 14%; background:#E8E6E1; border-radius:3px;"></span><span style="position:absolute; inset:9% 16% 15% 20%; background:#DAD6CC; border-radius:3px;"></span><span style="position:absolute; inset:6% 10% 18% 26%; background:#D10101; border-radius:3px;"></span><span style="position:absolute; left:26%; right:10%; top:22%; text-align:center; font-family:Anton,sans-serif; font-size:22px; color:#EFEBE4;">9</span></span><span class="tm-txt"><b>Issue &middot; 9</b><small>Gross &middot; full issue</small></span></button>
           <div class="jr-sechead">Arthouse — b/w photos, signal red</div>
           <button id="ahKollageBtn" class="jr-card tm-item" title="Photo grid crossed by three giant red words">
-            <span class="jr-pv" style="background:#EFEBE4;"><span class="jp4" style="position:absolute; left:24%; top:14%; width:26%; height:26%; filter:grayscale(1);"></span><span class="jp2" style="position:absolute; left:56%; top:20%; width:34%; height:36%; filter:grayscale(1);"></span><span class="jp1" style="position:absolute; left:10%; top:44%; width:36%; height:22%; filter:grayscale(1);"></span><span style="position:absolute; left:8%; top:6%; font-family:Archivo,sans-serif; font-weight:900; font-size:14px; color:#A82820;">WE</span><span style="position:absolute; left:0; right:0; top:40%; text-align:center; font-family:Archivo,sans-serif; font-weight:900; font-size:14px; color:#A82820;">RUN</span><span class="jp5" style="position:absolute; left:60%; top:56%; width:28%; height:26%; filter:grayscale(1);"></span><span style="position:absolute; left:12%; top:72%; font-family:Archivo,sans-serif; font-weight:900; font-size:14px; color:#A82820;">NYC</span></span>
+            <span class="jr-pv" style="background:#EFEBE4;"><span class="jp4" style="position:absolute; left:24%; top:14%; width:26%; height:26%; filter:grayscale(1);"></span><span class="jp2" style="position:absolute; left:56%; top:20%; width:34%; height:36%; filter:grayscale(1);"></span><span class="jp1" style="position:absolute; left:10%; top:44%; width:36%; height:22%; filter:grayscale(1);"></span><span style="position:absolute; left:8%; top:6%; font-family:Archivo,sans-serif; font-weight:900; font-size:14px; color:#D10101;">WE</span><span style="position:absolute; left:0; right:0; top:40%; text-align:center; font-family:Archivo,sans-serif; font-weight:900; font-size:14px; color:#D10101;">RUN</span><span class="jp5" style="position:absolute; left:60%; top:56%; width:28%; height:26%; filter:grayscale(1);"></span><span style="position:absolute; left:12%; top:72%; font-family:Archivo,sans-serif; font-weight:900; font-size:14px; color:#D10101;">NYC</span></span>
             <span class="tm-txt"><b>Kollage</b><small>Grid + red words</small></span>
           </button>
           <button id="ahSchachBtn" class="jr-card tm-item" title="Giant word behind the photo, meta row, counter">
-            <span class="jr-pv" style="background:#EFEBE4;"><span style="position:absolute; left:6%; top:3%; font-family:'Space Mono',monospace; font-size:5px; color:#171512;">+</span><span style="position:absolute; right:6%; top:3%; font-family:'Space Mono',monospace; font-size:5px; color:#171512;">+</span><span style="position:absolute; left:8%; top:36%; font-family:'Space Mono',monospace; font-size:2.8px; color:#171512;">Title - Date - Time -</span><span style="position:absolute; left:0; right:0; top:42%; text-align:center; font-family:Anton,sans-serif; font-size:19px; color:#A82820;">CHECK!</span><span class="jp4" style="position:absolute; left:11%; right:11%; top:58%; height:32%; filter:grayscale(1);"></span><span style="position:absolute; left:0; right:0; bottom:2.5%; text-align:center; font-family:'Space Mono',monospace; font-size:3.5px; color:#A82820;">270 / 365</span></span>
+            <span class="jr-pv" style="background:#EFEBE4;"><span style="position:absolute; left:6%; top:3%; font-family:'Space Mono',monospace; font-size:5px; color:#171512;">+</span><span style="position:absolute; right:6%; top:3%; font-family:'Space Mono',monospace; font-size:5px; color:#171512;">+</span><span style="position:absolute; left:8%; top:36%; font-family:'Space Mono',monospace; font-size:2.8px; color:#171512;">Title - Date - Time -</span><span style="position:absolute; left:0; right:0; top:42%; text-align:center; font-family:Anton,sans-serif; font-size:19px; color:#D10101;">CHECK!</span><span class="jp4" style="position:absolute; left:11%; right:11%; top:58%; height:32%; filter:grayscale(1);"></span><span style="position:absolute; left:0; right:0; bottom:2.5%; text-align:center; font-family:'Space Mono',monospace; font-size:3.5px; color:#D10101;">270 / 365</span></span>
             <span class="tm-txt"><b>Schach</b><small>Word behind photo</small></span>
           </button>
           <button id="ahZeichenBtn" class="jr-card tm-item" title="Solid red, black giant type only — free">
-            <span class="jr-pv" style="background:#A82820;"><span style="position:absolute; right:7%; top:4%; font-family:'Space Mono',monospace; font-size:3.5px; color:#171512;">001</span><span style="position:absolute; left:8%; top:10%; font-family:Archivo,sans-serif; font-weight:900; font-size:10.5px; line-height:1.02; color:#171512;">IF YOU'RE<br>WAITING<br>FOR A<br>SIGN</span><span style="position:absolute; left:7%; bottom:5%; font-family:'Space Mono',monospace; font-size:3px; color:#171512;">AW 26/27</span><span style="position:absolute; right:6%; bottom:4%; font-family:Archivo,sans-serif; font-weight:900; font-size:8px; color:#171512;">THIS IS IT</span></span>
+            <span class="jr-pv" style="background:#D10101;"><span style="position:absolute; right:7%; top:4%; font-family:'Space Mono',monospace; font-size:3.5px; color:#171512;">001</span><span style="position:absolute; left:8%; top:10%; font-family:Archivo,sans-serif; font-weight:900; font-size:10.5px; line-height:1.02; color:#171512;">IF YOU'RE<br>WAITING<br>FOR A<br>SIGN</span><span style="position:absolute; left:7%; bottom:5%; font-family:'Space Mono',monospace; font-size:3px; color:#171512;">AW 26/27</span><span style="position:absolute; right:6%; bottom:4%; font-family:Archivo,sans-serif; font-weight:900; font-size:8px; color:#171512;">THIS IS IT</span></span>
             <span class="tm-txt"><b>Zeichen</b><small>Red poster &middot; type only</small></span>
           </button>
           <button id="ahWohinBtn" class="jr-card tm-item" title="Scattered red words, b/w strips, rotated marginalia">
-            <span class="jr-pv" style="background:#EFEBE4;"><span class="jp4" style="position:absolute; left:6%; top:9%; width:20%; height:11%; filter:grayscale(1);"></span><span style="position:absolute; right:8%; top:11%; font-family:Anton,sans-serif; font-size:13px; color:#A82820;">WHERE</span><span class="jp2" style="position:absolute; right:6%; top:28%; width:32%; height:15%; filter:grayscale(1);"></span><span style="position:absolute; left:8%; top:37%; font-family:Anton,sans-serif; font-size:13px; color:#A82820;">ARE</span><span class="jp1" style="position:absolute; left:8%; top:60%; width:26%; height:26%; filter:grayscale(1);"></span><span style="position:absolute; right:12%; top:58%; font-family:Anton,sans-serif; font-size:13px; color:#A82820;">YOU</span><span style="position:absolute; left:16%; top:80%; font-family:Anton,sans-serif; font-size:11px; color:#A82820;">GOING?</span><span style="position:absolute; left:2.5%; top:30%; font-family:'Space Mono',monospace; font-size:2.8px; color:#8C877D; writing-mode:vertical-rl; transform:rotate(180deg);">FUJIFILM &mdash; XT20</span></span>
+            <span class="jr-pv" style="background:#EFEBE4;"><span class="jp4" style="position:absolute; left:6%; top:9%; width:20%; height:11%; filter:grayscale(1);"></span><span style="position:absolute; right:8%; top:11%; font-family:Anton,sans-serif; font-size:13px; color:#D10101;">WHERE</span><span class="jp2" style="position:absolute; right:6%; top:28%; width:32%; height:15%; filter:grayscale(1);"></span><span style="position:absolute; left:8%; top:37%; font-family:Anton,sans-serif; font-size:13px; color:#D10101;">ARE</span><span class="jp1" style="position:absolute; left:8%; top:60%; width:26%; height:26%; filter:grayscale(1);"></span><span style="position:absolute; right:12%; top:58%; font-family:Anton,sans-serif; font-size:13px; color:#D10101;">YOU</span><span style="position:absolute; left:16%; top:80%; font-family:Anton,sans-serif; font-size:11px; color:#D10101;">GOING?</span><span style="position:absolute; left:2.5%; top:30%; font-family:'Space Mono',monospace; font-size:2.8px; color:#8C877D; writing-mode:vertical-rl; transform:rotate(180deg);">FUJIFILM &mdash; XT20</span></span>
             <span class="tm-txt"><b>Wohin</b><small>Scattered poster</small></span>
           </button>
           <button id="ahTraeneBtn" class="jr-card tm-item" title="Collage, quote, giant word with period, three columns">
-            <span class="jr-pv" style="background:#E8E6E1;"><span style="position:absolute; right:7%; top:4%; font-family:'Space Mono',monospace; font-size:3px; color:#A82820;">&#9679; &#9679; &#9679;</span><span class="jp4" style="position:absolute; left:12%; top:9%; width:16%; height:10%; filter:grayscale(1);"></span><span class="jp2" style="position:absolute; left:46%; right:8%; top:9%; height:44%; filter:grayscale(1);"></span><span style="position:absolute; left:9%; top:28%; font-family:Fraunces,serif; font-style:italic; font-size:4px; line-height:1.5; color:#171512;">"Emotion leaks when<br>pressure has nowhere<br>left to go."</span><span style="position:absolute; left:6%; top:50%; font-family:Anton,sans-serif; font-size:20px; color:#A82820;">TEAR.</span><span style="position:absolute; left:8%; top:78%; font-family:Archivo,sans-serif; font-weight:700; font-size:3.5px; color:#171512;">1 &mdash; RESISTANCE</span><span style="position:absolute; left:40%; top:78%; font-family:Archivo,sans-serif; font-weight:700; font-size:3.5px; color:#171512;">2 &mdash; ANXIETY</span><span style="position:absolute; left:72%; top:78%; font-family:Archivo,sans-serif; font-weight:700; font-size:3.5px; color:#171512;">3 &mdash; SILENCE</span></span>
+            <span class="jr-pv" style="background:#E8E6E1;"><span style="position:absolute; right:7%; top:4%; font-family:'Space Mono',monospace; font-size:3px; color:#D10101;">&#9679; &#9679; &#9679;</span><span class="jp4" style="position:absolute; left:12%; top:9%; width:16%; height:10%; filter:grayscale(1);"></span><span class="jp2" style="position:absolute; left:46%; right:8%; top:9%; height:44%; filter:grayscale(1);"></span><span style="position:absolute; left:9%; top:28%; font-family:Fraunces,serif; font-style:italic; font-size:4px; line-height:1.5; color:#171512;">"Emotion leaks when<br>pressure has nowhere<br>left to go."</span><span style="position:absolute; left:6%; top:50%; font-family:Anton,sans-serif; font-size:20px; color:#D10101;">TEAR.</span><span style="position:absolute; left:8%; top:78%; font-family:Archivo,sans-serif; font-weight:700; font-size:3.5px; color:#171512;">1 &mdash; RESISTANCE</span><span style="position:absolute; left:40%; top:78%; font-family:Archivo,sans-serif; font-weight:700; font-size:3.5px; color:#171512;">2 &mdash; ANXIETY</span><span style="position:absolute; left:72%; top:78%; font-family:Archivo,sans-serif; font-weight:700; font-size:3.5px; color:#171512;">3 &mdash; SILENCE</span></span>
             <span class="tm-txt"><b>Tr&auml;ne</b><small>Poster essay</small></span>
           </button>
           <button id="ahStimmeBtn" class="jr-card tm-item" title="B/W full-bleed with red testimonial text floating over it">
-            <span class="jr-pv" style="background:#EFEBE4;"><span class="jp4" style="position:absolute; inset:0; filter:grayscale(1);"></span><span style="position:absolute; left:7%; top:4%; font-family:'Space Mono',monospace; font-size:3px; color:#A82820;">FAVOURITE</span><span style="position:absolute; right:7%; top:4%; font-family:'Space Mono',monospace; font-size:3px; color:#A82820;">TESTIMONIAL</span><span style="position:absolute; left:9%; right:9%; top:22%; font-family:Archivo,sans-serif; font-size:3.8px; line-height:1.6; color:#A82820;">I only wanted to keep a few summer photos. Now I have a magazine &mdash; made in twenty minutes, on my phone. The pages feel like a studio of my own.</span><span style="position:absolute; right:9%; top:56%; font-family:'Space Mono',monospace; font-size:3px; color:#A82820;">MARLENE T.</span><span style="position:absolute; left:7%; bottom:5%; font-family:'Space Mono',monospace; font-size:3px; color:#A82820;">FEB</span><span style="position:absolute; right:7%; bottom:5%; font-family:'Space Mono',monospace; font-size:3px; color:#A82820;">2026</span></span>
+            <span class="jr-pv" style="background:#EFEBE4;"><span class="jp4" style="position:absolute; inset:0; filter:grayscale(1);"></span><span style="position:absolute; left:7%; top:4%; font-family:'Space Mono',monospace; font-size:3px; color:#D10101;">FAVOURITE</span><span style="position:absolute; right:7%; top:4%; font-family:'Space Mono',monospace; font-size:3px; color:#D10101;">TESTIMONIAL</span><span style="position:absolute; left:9%; right:9%; top:22%; font-family:Archivo,sans-serif; font-size:3.8px; line-height:1.6; color:#D10101;">I only wanted to keep a few summer photos. Now I have a magazine &mdash; made in twenty minutes, on my phone. The pages feel like a studio of my own.</span><span style="position:absolute; right:9%; top:56%; font-family:'Space Mono',monospace; font-size:3px; color:#D10101;">MARLENE T.</span><span style="position:absolute; left:7%; bottom:5%; font-family:'Space Mono',monospace; font-size:3px; color:#D10101;">FEB</span><span style="position:absolute; right:7%; bottom:5%; font-family:'Space Mono',monospace; font-size:3px; color:#D10101;">2026</span></span>
             <span class="tm-txt"><b>Stimme</b><small>Red text on b/w</small></span>
           </button>
           <button id="ahJaBtn" class="jr-card tm-item" title="Two photos, giant JA. and small red body text">
-            <span class="jr-pv" style="background:#EFEBE4;"><span class="jp4" style="position:absolute; left:18%; top:6%; width:18%; height:12%; filter:grayscale(1);"></span><span class="jp2" style="position:absolute; left:42%; right:8%; top:10%; width:auto; height:42%; filter:grayscale(1);"></span><span style="position:absolute; left:4%; top:44%; font-family:Archivo,sans-serif; font-weight:900; font-size:30px; color:#A82820;">YES.</span><span style="position:absolute; left:8%; right:20%; top:84%; font-family:Archivo,sans-serif; font-size:3.2px; line-height:1.6; color:#A82820;">We believe true growth happens where pictures are allowed to stay. Not in the feed &mdash; in your head.</span></span>
+            <span class="jr-pv" style="background:#EFEBE4;"><span class="jp4" style="position:absolute; left:18%; top:6%; width:18%; height:12%; filter:grayscale(1);"></span><span class="jp2" style="position:absolute; left:42%; right:8%; top:10%; width:auto; height:42%; filter:grayscale(1);"></span><span style="position:absolute; left:4%; top:44%; font-family:Archivo,sans-serif; font-weight:900; font-size:30px; color:#D10101;">YES.</span><span style="position:absolute; left:8%; right:20%; top:84%; font-family:Archivo,sans-serif; font-size:3.2px; line-height:1.6; color:#D10101;">We believe true growth happens where pictures are allowed to stay. Not in the feed &mdash; in your head.</span></span>
             <span class="tm-txt"><b>Ja</b><small>Giant word + body</small></span>
           </button>
           <button id="ahUnschaerfeBtn" class="jr-card tm-item" title="Blurred b/w full-bleed with red caps statement — free">
-            <span class="jr-pv" style="background:#171512;"><span class="jp4" style="position:absolute; inset:0; filter:grayscale(1) blur(1.5px); opacity:0.8;"></span><span style="position:absolute; left:8%; right:8%; top:38%; text-align:center; font-family:Archivo,sans-serif; font-weight:700; font-size:4.5px; line-height:1.6; letter-spacing:0.1em; color:#A82820;">BECAUSE MEMORY STARTS WHEN THE PICTURE BEGINS TO BLUR.</span><span style="position:absolute; left:0; right:0; bottom:8%; text-align:center; font-family:'Space Mono',monospace; font-size:2.8px; letter-spacing:0.1em; color:#A82820;">POSTFOLIO &mdash; ARTHOUSE</span></span>
+            <span class="jr-pv" style="background:#171512;"><span class="jp4" style="position:absolute; inset:0; filter:grayscale(1) blur(1.5px); opacity:0.8;"></span><span style="position:absolute; left:8%; right:8%; top:38%; text-align:center; font-family:Archivo,sans-serif; font-weight:700; font-size:4.5px; line-height:1.6; letter-spacing:0.1em; color:#D10101;">BECAUSE MEMORY STARTS WHEN THE PICTURE BEGINS TO BLUR.</span><span style="position:absolute; left:0; right:0; bottom:8%; text-align:center; font-family:'Space Mono',monospace; font-size:2.8px; letter-spacing:0.1em; color:#D10101;">POSTFOLIO &mdash; ARTHOUSE</span></span>
             <span class="tm-txt"><b>Unsch&auml;rfe</b><small>Blur + red statement</small></span>
           </button>
           <button id="ahNachspannBtn" class="jr-card tm-item" title="Photo left, credits sidebar right, title across the edge">
-            <span class="jr-pv" style="background:#EFEBE4;"><span class="jp4" style="position:absolute; left:0; top:0; bottom:0; width:70%; filter:grayscale(1);"></span><span style="position:absolute; left:48%; top:5%; font-family:Archivo,sans-serif; font-weight:700; font-size:8px; color:#A82820;">afterglow.</span><span style="position:absolute; left:73%; right:4%; top:16%; font-family:'Space Mono',monospace; font-size:2.6px; color:#8C877D;">Photographed &amp; lived by</span><span style="position:absolute; left:73%; right:4%; top:21%; font-family:Archivo,sans-serif; font-weight:700; font-size:3.5px; color:#171512;">@YOU</span><span style="position:absolute; left:73%; right:4%; top:46%; font-family:Fraunces,serif; font-style:italic; font-size:3.2px; line-height:1.5; color:#171512;">"A summer that feels like a film."</span><span style="position:absolute; left:73%; right:4%; top:70%; font-family:Fraunces,serif; font-style:italic; font-size:3.2px; line-height:1.5; color:#171512;">"You do not leave. You just arrive somewhere else."</span></span>
+            <span class="jr-pv" style="background:#EFEBE4;"><span class="jp4" style="position:absolute; left:0; top:0; bottom:0; width:70%; filter:grayscale(1);"></span><span style="position:absolute; left:48%; top:5%; font-family:Archivo,sans-serif; font-weight:700; font-size:8px; color:#D10101;">afterglow.</span><span style="position:absolute; left:73%; right:4%; top:16%; font-family:'Space Mono',monospace; font-size:2.6px; color:#8C877D;">Photographed &amp; lived by</span><span style="position:absolute; left:73%; right:4%; top:21%; font-family:Archivo,sans-serif; font-weight:700; font-size:3.5px; color:#171512;">@YOU</span><span style="position:absolute; left:73%; right:4%; top:46%; font-family:Fraunces,serif; font-style:italic; font-size:3.2px; line-height:1.5; color:#171512;">"A summer that feels like a film."</span><span style="position:absolute; left:73%; right:4%; top:70%; font-family:Fraunces,serif; font-style:italic; font-size:3.2px; line-height:1.5; color:#171512;">"You do not leave. You just arrive somewhere else."</span></span>
             <span class="tm-txt"><b>Nachspann</b><small>Photo + credits bar</small></span>
           </button>
           <button id="ahEinsBtn" class="jr-card tm-item" title="One large b/w photo, quiet header and footer">
-            <span class="jr-pv" style="background:#EFEBE4;"><span style="position:absolute; left:7%; top:3.5%; font-family:'Space Mono',monospace; font-size:3px; letter-spacing:0.15em; color:#8C877D;">ARTHOUSE</span><span style="position:absolute; right:7%; top:3.5%; font-family:'Space Mono',monospace; font-size:3px; color:#A82820;">&#8470; 07</span><span class="jp4" style="position:absolute; left:9%; right:9%; top:9%; height:74%; filter:grayscale(1);"></span><span style="position:absolute; left:0; right:0; top:86%; text-align:center; font-family:'Space Mono',monospace; font-size:2.8px; letter-spacing:0.15em; color:#A82820;">STILL &mdash; 06:12</span><span style="position:absolute; left:0; right:0; bottom:3%; text-align:center; font-family:'Space Mono',monospace; font-size:2.8px; letter-spacing:0.2em; color:#8C877D;">POSTFOLIO</span></span>
+            <span class="jr-pv" style="background:#EFEBE4;"><span style="position:absolute; left:7%; top:3.5%; font-family:'Space Mono',monospace; font-size:3px; letter-spacing:0.15em; color:#8C877D;">ARTHOUSE</span><span style="position:absolute; right:7%; top:3.5%; font-family:'Space Mono',monospace; font-size:3px; color:#D10101;">&#8470; 07</span><span class="jp4" style="position:absolute; left:9%; right:9%; top:9%; height:74%; filter:grayscale(1);"></span><span style="position:absolute; left:0; right:0; top:86%; text-align:center; font-family:'Space Mono',monospace; font-size:2.8px; letter-spacing:0.15em; color:#D10101;">STILL &mdash; 06:12</span><span style="position:absolute; left:0; right:0; bottom:3%; text-align:center; font-family:'Space Mono',monospace; font-size:2.8px; letter-spacing:0.2em; color:#8C877D;">POSTFOLIO</span></span>
             <span class="tm-txt"><b>Eins</b><small>Single b/w photo</small></span>
           </button>
           <button id="ahVierBtn" class="jr-card tm-item" title="2×2 b/w grid with paper gutters">
-            <span class="jr-pv" style="background:#EFEBE4;"><span style="position:absolute; left:7%; top:3.5%; font-family:'Space Mono',monospace; font-size:3px; letter-spacing:0.15em; color:#8C877D;">CONTACT</span><span style="position:absolute; right:7%; top:3.5%; font-family:'Space Mono',monospace; font-size:3px; color:#A82820;">4 / 4</span><span class="jp1" style="position:absolute; left:7%; top:10%; width:41%; height:37%; filter:grayscale(1);"></span><span class="jp2" style="position:absolute; right:7%; top:10%; width:41%; height:37%; filter:grayscale(1);"></span><span class="jp3" style="position:absolute; left:7%; top:51%; width:41%; height:37%; filter:grayscale(1);"></span><span class="jp5" style="position:absolute; right:7%; top:51%; width:41%; height:37%; filter:grayscale(1);"></span><span style="position:absolute; left:0; right:0; bottom:3%; text-align:center; font-family:'Space Mono',monospace; font-size:2.8px; letter-spacing:0.15em; color:#8C877D;">POSTFOLIO ARTHOUSE</span></span>
+            <span class="jr-pv" style="background:#EFEBE4;"><span style="position:absolute; left:7%; top:3.5%; font-family:'Space Mono',monospace; font-size:3px; letter-spacing:0.15em; color:#8C877D;">CONTACT</span><span style="position:absolute; right:7%; top:3.5%; font-family:'Space Mono',monospace; font-size:3px; color:#D10101;">4 / 4</span><span class="jp1" style="position:absolute; left:7%; top:10%; width:41%; height:37%; filter:grayscale(1);"></span><span class="jp2" style="position:absolute; right:7%; top:10%; width:41%; height:37%; filter:grayscale(1);"></span><span class="jp3" style="position:absolute; left:7%; top:51%; width:41%; height:37%; filter:grayscale(1);"></span><span class="jp5" style="position:absolute; right:7%; top:51%; width:41%; height:37%; filter:grayscale(1);"></span><span style="position:absolute; left:0; right:0; bottom:3%; text-align:center; font-family:'Space Mono',monospace; font-size:2.8px; letter-spacing:0.15em; color:#8C877D;">POSTFOLIO ARTHOUSE</span></span>
             <span class="tm-txt"><b>Vier</b><small>2&times;2 b/w grid</small></span>
           </button>
           <button id="ahReiheBtn" class="jr-card tm-item" title="Two stacked b/w landscapes with a red time mark between">
-            <span class="jr-pv" style="background:#EFEBE4;"><span style="position:absolute; left:7%; top:3.5%; font-family:'Space Mono',monospace; font-size:3px; letter-spacing:0.15em; color:#8C877D;">TWO LIGHTS</span><span style="position:absolute; right:7%; top:3.5%; font-family:'Space Mono',monospace; font-size:3px; color:#A82820;">&#8470; 12</span><span class="jp4" style="position:absolute; left:9%; right:9%; top:10%; height:36%; filter:grayscale(1);"></span><span style="position:absolute; left:0; right:0; top:48.5%; text-align:center; font-family:'Space Mono',monospace; font-size:2.8px; letter-spacing:0.15em; color:#A82820;">06:12 &mdash; 21:32</span><span class="jp2" style="position:absolute; left:9%; right:9%; top:53%; height:36%; filter:grayscale(1);"></span><span style="position:absolute; left:0; right:0; bottom:3%; text-align:center; font-family:'Space Mono',monospace; font-size:2.8px; letter-spacing:0.15em; color:#8C877D;">POSTFOLIO ARTHOUSE</span></span>
+            <span class="jr-pv" style="background:#EFEBE4;"><span style="position:absolute; left:7%; top:3.5%; font-family:'Space Mono',monospace; font-size:3px; letter-spacing:0.15em; color:#8C877D;">TWO LIGHTS</span><span style="position:absolute; right:7%; top:3.5%; font-family:'Space Mono',monospace; font-size:3px; color:#D10101;">&#8470; 12</span><span class="jp4" style="position:absolute; left:9%; right:9%; top:10%; height:36%; filter:grayscale(1);"></span><span style="position:absolute; left:0; right:0; top:48.5%; text-align:center; font-family:'Space Mono',monospace; font-size:2.8px; letter-spacing:0.15em; color:#D10101;">06:12 &mdash; 21:32</span><span class="jp2" style="position:absolute; left:9%; right:9%; top:53%; height:36%; filter:grayscale(1);"></span><span style="position:absolute; left:0; right:0; bottom:3%; text-align:center; font-family:'Space Mono',monospace; font-size:2.8px; letter-spacing:0.15em; color:#8C877D;">POSTFOLIO ARTHOUSE</span></span>
             <span class="tm-txt"><b>Reihe</b><small>1&times;2 b/w stack</small></span>
           </button>
         </div>
@@ -3615,7 +3629,10 @@ html.native-ios .hlp-browser-only { display: none; }
 <!-- Native „Tap to add"-Fläche: echtes <label for="fileInput"> über der Mitte der
      leeren aktiven Slide. Tippen öffnet den Dateidialog NATIV (zuverlässig auf iOS,
      im Gegensatz zum programmatischen click). Position setzt JS. -->
-<label id="emptyAddBtn" for="fileInput" aria-label="Foto hinzufügen"></label>
+<!-- Bewusst BUTTON statt <label for="fileInput">: iOS öffnete über die
+     Label-Aktivierung teils direkt den nativen Foto-Picker — jetzt öffnet
+     EIN Tipp aufs „+" immer zuerst das mittige Auswahl-Menü. -->
+<button id="emptyAddBtn" type="button" aria-label="Add to this slide"></button>
 
 <!-- Farb-Lupe: zeigt beim Pipettieren die Pixel unter dem Finger/Cursor -->
 <div id="loupe">
@@ -5511,14 +5528,22 @@ function drawPhotoLayer(c, p, src, sx, sy, sw, sh, dw, dh) {
 // dafür `panoSpan`. Ältere Projekte ohne `panoSpan` werden an der Breite
 // erkannt (ungedreht + deutlich breiter als eine Slide).
 function slideSpan(p) {
-  let span = p.panoSpan || 1;
-  if (span < 2 && !p.rot && p.w > W * 1.6) {
-    const guess = Math.round(p.w / W);
-    if (guess >= 2) span = guess;
+  // Frei über Slide-Kanten (14.07.26): Ein Element zeichnet DAUERHAFT auf
+  // jeder Slide, die es tatsächlich überdeckt — nicht mehr nur auf seiner
+  // Mittelpunkt-Slide. Damit bleibt ein über die Kante gezogenes Foto auch
+  // nach dem Loslassen beidseitig sichtbar (Panorama-Gefühl beim Export).
+  // Gedrehte Elemente zählen mit ihrer gedrehten Hüllbox. TEXTE bleiben auf
+  // ihrer Slide (ihre Box-Breite ist bei Mehrzeilern überschätzt — sie würden
+  // sonst fälschlich auf Nachbar-Slides durchscheinen).
+  if (p.kind === 'text' || p.kind === 'logo') { const i = slideIndexOf(p); return [i, i]; }
+  let halfW = p.w / 2;
+  if (p.rot) {
+    const c = Math.abs(Math.cos(p.rot)), s2 = Math.abs(Math.sin(p.rot));
+    halfW = (p.w * c + p.h * s2) / 2;
   }
-  if (span < 2) { const i = slideIndexOf(p); return [i, i]; }
-  const start = Math.round((p.cx - span * W / 2) / W);
-  return [start, start + span - 1];
+  const a = Math.max(0, Math.floor((p.cx - halfW + 4) / W));
+  const b = Math.min(slides.length - 1, Math.floor((p.cx + halfW - 4) / W));
+  return [a, Math.max(a, b)];
 }
 
 // Beim Verschieben soll das Foto durchgehend sichtbar bleiben, damit man sieht,
@@ -7539,9 +7564,9 @@ function addTextPair(kind) {
   } else if (kind === 'arthouse') {
     // Arthouse-Duo: Signal-Rot, Poster-Claim + Mono-Nummer.
     sub  = makeTextItem('001 — AW 26/27', 'Space Mono', { weight: 400, size: 24 });
-    sub.tracking = 2; sub.color = '#A82820';
+    sub.tracking = 2; sub.color = '#D10101';
     head = makeTextItem('THIS IS IT', 'Archivo', { weight: 900, size: 118 });
-    head.color = '#A82820';
+    head.color = '#D10101';
   } else { // editorial — Ogg-Look: kursive Subline über Versal-Headline
     sub  = makeTextItem('Le',   'Cormorant Garamond', { italic: true, weight: 500, size: 78 });
     head = makeTextItem('PORT', 'Playfair Display',    { weight: 700, size: 150 });
@@ -8209,7 +8234,7 @@ const PALETTES = {
   },
   arthouse: {
     _order: ['rot', 'kohle', 'senf', 'azur'], _default: 'rot',
-    rot:   { paper: '#EFEBE4', ink: '#171512', accent: '#A82820', grey: '#8C877D', paper2: '#E8E6E1' },
+    rot:   { paper: '#EFEBE4', ink: '#171512', accent: '#D10101', grey: '#8C877D', paper2: '#E8E6E1' },
     kohle: { paper: '#F0EEE9', ink: '#171512', accent: '#171512', grey: '#8C877D', paper2: '#E8E6E1' },
     senf:  { paper: '#EFEBE4', ink: '#171512', accent: '#D9A82C', grey: '#8C877D', paper2: '#E8E6E1' },
     azur:  { paper: '#EDEFF2', ink: '#12202C', accent: '#1F51D8', grey: '#7E8A94', paper2: '#E4E8EC' }
@@ -9172,7 +9197,7 @@ function addCategoryIssue(fam, name) {
 // Signal-Rot aus der „Waiting for a sign"-Vorlage + S/W-Fotos als Standard
 // (p.mono, Umschalter in der Paletten-Zeile). Papier, Anton/Archivo Black,
 // Space-Mono-Marginalien, Fraunces-Zitate.
-const AH_PAPER = '#EFEBE4', AH_INK = '#171512', AH_RED = '#A82820', AH_GREY = '#8C877D', AH_PAPER2 = '#E8E6E1';
+const AH_PAPER = '#EFEBE4', AH_INK = '#171512', AH_RED = '#D10101', AH_GREY = '#8C877D', AH_PAPER2 = '#E8E6E1';
 
 function addArthousePage(kind, forceAppend) {
   try { Promise.all([document.fonts.load('900 200px "Archivo"'), document.fonts.load('400 200px "Anton"')]).then(() => redraw()); } catch (e) {}
@@ -10009,6 +10034,11 @@ document.addEventListener('click', (e) => {
 // ═══════════════════════════════════════
 
 function updateDeleteBtn() {
+  // Auswahl aktiv → Canvas übernimmt die Gesten selbst (Pinch-Zoom aufs Foto,
+  // präzises Ziehen). Ohne Auswahl bleibt das native Slide-Wischen (pan-x) —
+  // iOS schluckte den Pinch sonst, sobald der erste Finger eine Wischgeste
+  // begonnen hatte.
+  try { canvas.style.touchAction = (sel >= 0 && sel < photos.length) ? 'none' : ''; } catch (e) {}
   const hasSel = sel >= 0 && sel < photos.length;
   const isText = hasSel && photos[sel].kind === 'text';
   const isImage = hasSel && photos[sel].kind === 'image'; // Frame/Crop nur für echte Fotos
@@ -10027,7 +10057,10 @@ function updateDeleteBtn() {
   // die aktive Slide Journal-Kopf-/Fußzeilen trägt.
   // Seiten-Sektion (Header/Footer-Toggles): immer verfügbar, sobald etwas
   // ausgewählt ist — beim Einschalten werden fehlende Zeilen überall ergänzt.
-  setSectionAvail('secJournal', hasSel);
+  // Palette nur zeigen, wenn die Slide eine Farbwelt kennt (Template-Slides) —
+  // bei reinen Foto-Slides gibt es dort nichts zu wählen.
+  const _slPal = slides[activeSlide];
+  setSectionAvail('secJournal', hasSel && !!(_slPal && typeof PALETTES !== 'undefined' && PALETTES[_slPal.palFam]));
   setSectionAvail('secChrome', hasSel);
   setSectionAvail('secResize', hasSel);
   if (typeof syncJournalUI === 'function') syncJournalUI();
@@ -10250,11 +10283,17 @@ function syncLayerList() {
     const p = photos[i];
     const row = document.createElement('div');
     row.className = 'ly-row' + (i === sel ? ' on' : '') + (p.locked ? ' locked' : '');
+    const grip = document.createElement('span');
+    grip.className = 'ly-grip';
+    grip.textContent = '≡';
+    grip.title = 'Drag to reorder';
+    grip.style.cssText = 'cursor:grab; touch-action:none; user-select:none; -webkit-user-select:none; padding:0 8px 0 2px; color:var(--muted); font-size:14px; flex:0 0 auto;';
+    grip.addEventListener('pointerdown', (ev) => { ev.preventDefault(); ev.stopPropagation(); startLayerDrag(ev, i, row); });
     const name = document.createElement('span'); name.className = 'ly-name'; name.textContent = layerName(p);
     const lk = document.createElement('button'); lk.className = 'ly-lock'; lk.title = p.locked ? 'Unlock' : 'Lock';
     lk.innerHTML = p.locked ? LOCK_SVG : UNLOCK_SVG;
     lk.addEventListener('click', (ev) => { ev.stopPropagation(); beginAction(); p.locked = !p.locked; updateDeleteBtn(); redraw(); scheduleSave(); });
-    row.appendChild(name); row.appendChild(lk);
+    row.appendChild(grip); row.appendChild(name); row.appendChild(lk);
     row.addEventListener('click', () => { sel = i; updateDeleteBtn(); redraw(); });   // auch verdeckte/gesperrte wählbar
     el.appendChild(row);
   });
@@ -10573,43 +10612,90 @@ function closePanel() { sel = -1; updateDeleteBtn(); redraw(); }
 })();
 
 // ── Layer ordering (jetzt als Sektion #secLayer) ──────
-document.getElementById('layerUp').addEventListener('click', () => {
-  if (sel < 0 || sel >= photos.length - 1) return;
+// Slide-bewusst (14.07.26): Die alten Handler tauschten im GLOBALEN Array —
+// oft mit einem Element einer ANDEREN Slide → sichtbar passierte nichts.
+// Jetzt wird immer mit dem Nachbarn AUF DERSELBEN SLIDE getauscht und die
+// Liste sofort aktualisiert.
+function slideLayerIds() {
+  const i = activeSlide, ids = [];
+  photos.forEach((q, k) => { if (Math.floor(q.cx / W) === i) ids.push(k); });
+  return ids;   // aufsteigend = Zeichenreihenfolge (hinten → vorn)
+}
+function moveLayerStep(dir) {
+  if (sel < 0) return;
+  const ids = slideLayerIds();
+  const pos = ids.indexOf(sel);
+  if (pos < 0) return;
+  const npos = pos + dir;
+  if (npos < 0 || npos >= ids.length) return;
   beginAction();
-  [photos[sel], photos[sel+1]] = [photos[sel+1], photos[sel]];
-  sel++;
-  redraw();
-  scheduleSave();
-});
+  const j = ids[npos];
+  [photos[sel], photos[j]] = [photos[j], photos[sel]];
+  sel = j;
+  syncLayerList(); updateDeleteBtn(); redraw(); scheduleSave();
+}
+function moveLayerEnd(front) {
+  if (sel < 0) return;
+  const ids = slideLayerIds();
+  const pos = ids.indexOf(sel);
+  if (pos < 0) return;
+  beginAction();
+  const slideItems = ids.map(k => photos[k]);
+  const item = slideItems.splice(pos, 1)[0];
+  front ? slideItems.push(item) : slideItems.unshift(item);
+  ids.forEach((k, n) => { photos[k] = slideItems[n]; });
+  sel = ids[front ? ids.length - 1 : 0];
+  syncLayerList(); updateDeleteBtn(); redraw(); scheduleSave();
+}
+document.getElementById('layerUp').addEventListener('click', () => moveLayerStep(1));
+document.getElementById('layerDown').addEventListener('click', () => moveLayerStep(-1));
+document.getElementById('layerFront').addEventListener('click', () => moveLayerEnd(true));
+document.getElementById('layerBack').addEventListener('click', () => moveLayerEnd(false));
 
-document.getElementById('layerDown').addEventListener('click', () => {
-  if (sel <= 0) return;
-  beginAction();
-  [photos[sel], photos[sel-1]] = [photos[sel-1], photos[sel]];
-  sel--;
-  redraw();
-  scheduleSave();
-});
-
-document.getElementById('layerFront').addEventListener('click', () => {
-  if (sel < 0 || sel >= photos.length - 1) return;
-  beginAction();
-  const [p] = photos.splice(sel, 1);
-  photos.push(p);
-  sel = photos.length - 1;
-  redraw();
-  scheduleSave();
-});
-
-document.getElementById('layerBack').addEventListener('click', () => {
-  if (sel <= 0) return;
-  beginAction();
-  const [p] = photos.splice(sel, 1);
-  photos.unshift(p);
-  sel = 0;
-  redraw();
-  scheduleSave();
-});
+// ── Layer per Griff (≡) hoch/runter ziehen ──
+function startLayerDrag(ev, photoIdx, row) {
+  const startY = ev.clientY;
+  const h = Math.max(24, row.offsetHeight || 30);
+  let engaged = false, steps = 0;
+  const move = e2 => {
+    const dy = e2.clientY - startY;
+    if (!engaged && Math.abs(dy) < 6) return;
+    if (!engaged) { engaged = true; row.style.opacity = '0.55'; row.style.position = 'relative'; row.style.zIndex = '5'; }
+    if (e2.cancelable) e2.preventDefault();
+    steps = Math.round(dy / h);
+    row.style.transform = 'translateY(' + dy + 'px)';
+  };
+  const up = () => {
+    window.removeEventListener('pointermove', move);
+    window.removeEventListener('pointerup', up);
+    window.removeEventListener('pointercancel', up);
+    row.style.transform = ''; row.style.opacity = ''; row.style.zIndex = '';
+    sel = photoIdx;
+    if (engaged && steps) {
+      beginAction();
+      const ids = slideLayerIds();
+      const pos = ids.indexOf(photoIdx);
+      if (pos >= 0) {
+        // Liste zeigt die OBERSTE Ebene zuerst → steps nach unten = nach hinten.
+        const disp = ids.length - 1 - pos;
+        const nd = Math.max(0, Math.min(ids.length - 1, disp + steps));
+        if (nd !== disp) {
+          const A = ids.length - 1 - nd;
+          const slideItems = ids.map(k => photos[k]);
+          const item = slideItems.splice(pos, 1)[0];
+          slideItems.splice(A, 0, item);
+          ids.forEach((k, n) => { photos[k] = slideItems[n]; });
+          sel = ids[A];
+          scheduleSave();
+        }
+      }
+    }
+    syncLayerList(); updateDeleteBtn(); redraw();
+  };
+  window.addEventListener('pointermove', move, { passive: false });
+  window.addEventListener('pointerup', up);
+  window.addEventListener('pointercancel', up);
+}
 
 // ═══════════════════════════════════════
 // FRAME (mat border) + FIT
@@ -11572,6 +11658,27 @@ document.getElementById('rotStepR').addEventListener('click', () => jumpRot(1));
     }
     bar.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.t === pfSimTier));
   }
+  // ── Admin-Zugang: 5 schnelle Tipps aufs Splash-Logo schalten die Free/Pro-
+  //    Simulation an/aus — wichtig für iPhone/iPad, wo es keine ?tier=-URL
+  //    gibt. Danach wechselt der Balken unten links jederzeit zwischen
+  //    Free, Pro und Aus (auch mitten im Editor). Bewusst versteckt, damit
+  //    normale Nutzer im Store-Build nie einen Schalter sehen.
+  (function () {
+    const mark = document.querySelector('.splash-mark');
+    if (!mark) return;
+    let taps = 0, timer = null;
+    mark.addEventListener('click', () => {
+      taps++;
+      clearTimeout(timer);
+      timer = setTimeout(() => { taps = 0; }, 1500);
+      if (taps < 5) return;
+      taps = 0;
+      if (pfSimTier) { pfSimTier = null; try { localStorage.removeItem('pfSimTier'); } catch (err) {} }
+      else { pfSimTier = 'free'; try { localStorage.setItem('pfSimTier', 'free'); } catch (err) {} }
+      applyProBadges(); syncSimBar();
+      if (typeof showToast === 'function') showToast(pfSimTier ? 'Simulation ON — switch Free/Pro bottom left' : 'Simulation off');
+    });
+  })();
   applyProBadges(); syncSimBar();
 })();
 // Tippen auf die „0" in der Mitte → exakt 0°
@@ -11932,8 +12039,10 @@ cropCanvas.addEventListener('mousedown', e => cropDragStart(e.clientX, e.clientY
 window.addEventListener('mousemove', e => { if (cropOpen) cropDragMove(e.clientX, e.clientY); });
 window.addEventListener('mouseup',   () => { if (cropOpen) cropDragEnd(); });
 
-// Pinch im Crop-Fenster: zwei Finger zoomen den Ausschnitt (auseinander =
-// reinzoomen, also kleinerer Crop-Rahmen). Verhältnis-Lock bleibt erhalten.
+// Pinch im Crop-Fenster: Richtung auf Silvans Wunsch umgedreht (15.07.26) —
+// Finger AUSEINANDER = Rahmen wird GRÖSSER, Finger zusammen = kleiner.
+// Fühlt sich an, als würde man den Auswahlrahmen direkt aufziehen.
+// Verhältnis-Lock bleibt erhalten.
 let cropPinch = null;
 cropCanvas.addEventListener('touchstart', e => {
   e.preventDefault();
@@ -11952,7 +12061,7 @@ cropCanvas.addEventListener('touchmove', e => {
     e.preventDefault();
     const a = e.touches[0], b = e.touches[1];
     const dist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
-    const scale = cropPinch.dist / Math.max(1, dist);   // Finger auf = Rahmen kleiner
+    const scale = dist / Math.max(1, cropPinch.dist);   // Finger auseinander = Rahmen größer
     const s0 = cropPinch.rect;
     const cx = s0.x + s0.w / 2, cy = s0.y + s0.h / 2;
     let w = clampNum(s0.w * scale, CROP_MIN, cropImgW);
@@ -12253,6 +12362,22 @@ function showProExportSheet(proSlides) {
   ov.querySelector('.buy').addEventListener('click', () => { ov.remove(); if (window.showProStub) window.showProStub(); });
   ov.querySelector('.strip').addEventListener('click', () => { ov.remove(); removeProSlidesAndExport(proSlides); });
 }
+// ── Export-Dateinamen: „postfolio" als Absender + optionaler Projekt-Slug +
+//    zweistellige Slide-Nummer (postfolio-alpbach-01.png). Klare Sortierung im
+//    Ordner/Kamera-Roll, Branding bei jedem Teilen — und falls die Bilder auf
+//    eigenen Websites landen, ein beschreibender, suchmaschinenlesbarer Name.
+function exportBaseName() {
+  const slug = String(typeof currentProjectName !== 'undefined' && currentProjectName || '')
+    .toLowerCase()
+    .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 40);
+  return 'postfolio' + (slug ? '-' + slug : '');
+}
+function exportName(idx) {
+  return exportBaseName() + '-' + String(idx + 1).padStart(2, '0') + '.png';
+}
 function removeProSlidesAndExport(proSlides) {
   const n = proSlides.length;
   if (!confirm('Remove ' + n + (n === 1 ? ' slide' : ' slides') + ' with Pro layouts from this carousel?')) return;
@@ -12320,7 +12445,7 @@ async function runExport(slideIndices) {
       btn.textContent = '↓ Download';
       btn.addEventListener('click', () => {
         const a = document.createElement('a');
-        a.href = url; a.download = `carousel_${idx + 1}.png`; a.click();
+        a.href = url; a.download = exportName(idx); a.click();
       });
       item.appendChild(btn);
     }
@@ -12361,12 +12486,12 @@ document.getElementById('downloadAllBtn').addEventListener('click', async () => 
   try {
     const zip = new JSZip();
     for (const { blob, idx } of lastExportUrls) {
-      zip.file(`carousel_${idx + 1}.png`, blob); // Blob liegt schon vor (kein fetch nötig)
+      zip.file(exportName(idx), blob); // Blob liegt schon vor (kein fetch nötig)
     }
     const zipBlob = await zip.generateAsync({ type: 'blob' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(zipBlob);
-    a.download = 'carousel_slides.zip';
+    a.download = exportBaseName() + '-slides.zip';
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 4000);
   } catch (err) {
@@ -12389,7 +12514,7 @@ document.getElementById('shareAllBtn').addEventListener('click', async () => {
 
   try {
     const files = lastExportUrls.map(({ blob, idx }) =>
-      new File([blob], `carousel_${idx + 1}.png`, { type: 'image/png' }));
+      new File([blob], exportName(idx), { type: 'image/png' }));
     if (navigator.canShare && navigator.canShare({ files })) {
       await navigator.share({ files });
     } else {
