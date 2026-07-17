@@ -831,10 +831,10 @@ details.hlp-sec[open] .hlp-chev { transform: rotate(180deg); }
 .tm-arr { margin-left: auto; color: var(--muted); font-size: 18px; line-height: 1; }
 .tm-back {
   display: block; width: 100%; text-align: left; height: auto;
-  background: transparent; border: none; color: var(--muted);
-  font-size: 12px; padding: 6px 10px 8px; cursor: pointer;
+  background: transparent; border: none; color: var(--accent);
+  font-size: 14px; font-weight: 600; padding: 8px 10px 9px; cursor: pointer;
 }
-.tm-back:hover { color: var(--text); }
+.tm-back:hover { color: var(--dark); }
 
 /* Save/New liegen jetzt im „•••"-Overflow (siehe .ov-item). Nur die
    Speicher-Bestätigung blitzt kurz in der Markenfarbe auf. */
@@ -2812,6 +2812,10 @@ html.native-ios .hlp-browser-only { display: none; }
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="12" r="6"/><circle cx="15" cy="12" r="6"/></svg>
       <span>Blend</span>
     </button>
+    <button class="acc-chip tool-btn" data-sec="secTexts" data-ctx="both" title="All text on this slide — select & edit">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h9"/><path d="M8.5 5v14"/><path d="M16 8h5"/><path d="M16 12h5"/><path d="M16 16h5"/></svg>
+      <span>Texts</span>
+    </button>
     <button class="acc-chip tool-btn" data-sec="secFont" data-ctx="txt" title="Font">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 20 12 4l7 16"/><path d="M8 14h8"/></svg>
       <span>Font</span>
@@ -2977,6 +2981,13 @@ html.native-ios .hlp-browser-only { display: none; }
         <span class="jr-tgl-dot" aria-hidden="true"></span>
       </button>
     </div>
+  </div>
+
+  <!-- ▼ Texts-Sektion: alle Texte der aktiven Slide — antippen wählt aus,
+       zweiter Tipp öffnet die Bearbeitung. Rettet Texte, die unter dem
+       ✓-Button oder anderen UI-Elementen liegen. -->
+  <div class="acc-sec" id="secTexts" style="display:none">
+    <div id="textItemList"></div>
   </div>
 
   <!-- ▼ Resize-Sektion: skaliert das gewählte Element um seine Mitte —
@@ -10067,6 +10078,8 @@ function updateDeleteBtn() {
   setSectionAvail('secJournal', hasSel && !!(_slPal && typeof PALETTES !== 'undefined' && PALETTES[_slPal.palFam]));
   setSectionAvail('secChrome', hasSel);
   setSectionAvail('secResize', hasSel);
+  setSectionAvail('secTexts', hasSel && photos.some(q => q.kind === 'text' && !q.hidden && Math.floor(q.cx / W) === activeSlide));
+  if (typeof syncTextItemList === 'function') syncTextItemList();
   if (typeof syncJournalUI === 'function') syncJournalUI();
   // Akkordeon: welche Sektionen sind für diese Auswahl überhaupt verfügbar?
   // Border: bei normalen Fotos, Template-Zellen und den INNEREN Frame-Fotos (Inset) —
@@ -10114,7 +10127,7 @@ function updateDeleteBtn() {
   // außer es ist bereits eine andere Text-/Rotate-Sektion offen.
   // secLayer bleibt offen: Wer im Layer-Panel eine Ebene wählt, will sie
   // verschieben — nicht ins Font-Tool springen.
-  if (isText && !['secFont','secStyle','secSpacing','secOutline','secRotate','secTPos','secLayer'].includes(openSec)) openSec = 'secFont';
+  if (isText && !['secFont','secStyle','secSpacing','secOutline','secRotate','secTPos','secLayer','secTexts'].includes(openSec)) openSec = 'secFont';
   syncFrameButtons();
   syncMarginButtons();
   syncSlotUI();
@@ -10275,6 +10288,32 @@ function layerName(p) {
   if (p.kind === 'placeholder') return 'Empty frame';
   if (p.role === 'bg') return 'Background photo';
   return 'Photo';
+}
+// Text-Liste der aktiven Slide: 1. Tipp wählt aus, 2. Tipp öffnet den Editor.
+function syncTextItemList() {
+  const el = document.getElementById('textItemList');
+  if (!el) return;
+  el.innerHTML = '';
+  photos.forEach((q, k) => {
+    if (q.kind !== 'text' || q.hidden || Math.floor(q.cx / W) !== activeSlide) return;
+    const row = document.createElement('div');
+    row.className = 'ly-row' + (k === sel ? ' on' : '');
+    const name = document.createElement('span');
+    name.className = 'ly-name';
+    name.textContent = '“' + String(q.text || 'Text').replace(/\n/g, ' · ').trim().slice(0, 30) + '”';
+    row.appendChild(name);
+    row.addEventListener('click', () => {
+      if (sel === k) { openTextEdit(); return; }
+      sel = k;
+      panelHidden = false;
+      updateDeleteBtn();
+      redraw();
+    });
+    el.appendChild(row);
+  });
+  if (!el.children.length) {
+    el.innerHTML = '<div style="font-size:12px; color:var(--muted); padding:6px 2px;">No text on this slide</div>';
+  }
 }
 function syncLayerList() {
   const el = document.getElementById('layerList');
@@ -10719,12 +10758,14 @@ const FRAME_COLOR   = '#ffffff';
 // platzierte Fotos behalten ihre Außenkontur (Foto + Rahmen), die Bildgröße
 // wächst/schrumpft um die Randdifferenz — Position/Drehung bleiben.
 function applyFrameToPhoto(p, newFw, color) {
-  if (!p || p.kind !== 'image') return;
+  // Auch LEERE Platzhalter (z. B. frische Journal-/Kategorie-Seiten) dürfen
+  // eine Border bekommen — beim Befüllen übernimmt das Foto sie einfach.
+  if (!p || (p.kind !== 'image' && p.kind !== 'placeholder')) return;
   p.frame = newFw > 0 ? { width: newFw, color: color || (p.frame && p.frame.color) || FRAME_COLOR } : null;
   // Jede Änderung der Rahmendicke passt das Foto IMMER automatisch neu in seine
   // Zelle ein (Auto-Fit) — so sitzt der Rahmen rundum sauber, ohne dass man
-  // „Fit" drücken muss. (Früher blieb die Foto-Box unangetastet.)
-  fitPhoto(p);
+  // „Fit" drücken muss. (Platzhalter ohne home haben keine Bildmaße → kein Fit.)
+  if (p.kind === 'image' || p.home) fitPhoto(p);
 }
 
 const FRAME_LEVEL = { none: 0, s1: 1, s2: 2, s3: 3, s4: 4, s5: 5 };
@@ -10792,13 +10833,23 @@ function applyFrameWidthUI(fw) {
   const gcells = p.frameGroup ? photos.filter(x => x.frameGroup === p.frameGroup) : [];
   const isTpl = p.tmplN || gcells.some(c => c.tmplN || c.tmplBorder != null);
   if (isTpl) {
-    // Templates: Rand/Abstand STUFENLOS in px — der Slider steuert direkt B.
-    gcells.forEach(c => { if (!c.tmplN) c.tmplN = gcells.length; });
+    // Templates (16.07.26): „Border" legt jetzt ECHTE Foto-Rahmen um alle
+    // Zellen der Vorlage — jede Zelle schrumpft um die Rahmenbreite, sodass
+    // Zelle + Rahmen die ursprüngliche Fläche behalten (kein Überlappen).
+    // Der Vorlagen-ABSTAND selbst bleibt über „Fit" rücksetzbar; Grids haben
+    // Außenrand + Lückenfarbe weiter in der Grid-Sektion.
     const cells = gcells.length ? gcells : [p];
-    const oc = cells.find(c => c.tmplOrient);
-    layoutTemplate(cells, oc ? oc.tmplOrient : 'portrait', Math.max(0, Math.round(fw)));
+    cells.forEach(c => {
+      const f0 = (c.frame && c.frame.width) || 0;
+      const ow = c.w + 2 * f0, oh = c.h + 2 * f0;
+      c.frame = fw > 0 ? { width: fw, color: (c.frame && c.frame.color) || color } : null;
+      c.w = Math.max(20, ow - 2 * fw);
+      c.h = Math.max(20, oh - 2 * fw);
+      if (c.kind === 'image' && c.img) c.crop = adjustCropToAspect(c, c.w / c.h);
+    });
     syncFrameButtons();
     redraw();
+    scheduleSave();
     return;
   }
   const color = (p.frame && p.frame.color) || FRAME_COLOR;
@@ -11403,9 +11454,15 @@ function fitPhoto(p) {
   // Vorlagen-Foto mit fester Design-Position: zurück zur entworfenen Zelle —
   // Border/Fit verändern NUR Foto + Rahmen, der Rest des Templates bleibt fix.
   if (p.home) {
+    // Rahmen einrechnen: Foto so verkleinern, dass Foto + Border zusammen die
+    // Design-Zelle füllen — sonst läge die Border bei Vollbild-Seiten (Journal,
+    // Arthouse …) außerhalb der Slide und wäre unsichtbar.
     const si = slideIndexOf(p);
-    if (p.img) p.crop = adjustCropToAspect(p, p.home.w / p.home.h);
-    p.w = p.home.w; p.h = p.home.h;
+    const ins = frameInsets(p);
+    const w = Math.max(20, p.home.w - ins.left - ins.right);
+    const h = Math.max(20, p.home.h - ins.top - ins.bottom);
+    if (p.img) p.crop = adjustCropToAspect(p, w / h);
+    p.w = w; p.h = h;
     p.cx = si * W + p.home.dx; p.cy = p.home.cy;
     return;
   }
