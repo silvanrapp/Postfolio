@@ -5398,14 +5398,25 @@ function drawRectItem(c, p, scale) {
   else if (p.radius > 0) pathRoundRect(c, -w / 2, -h / 2, w, h, p.radius * scale);
   else c.rect(-w / 2, -h / 2, w, h);
   if (p.grad && p.grad.stops) {
-    // Linearer Verlauf über die Box (dir 'x': links→rechts, 'y': oben→unten).
-    // Gemalte Schatten sind auf jedem Gerät identisch — kein Verlass auf
-    // ctx.shadow* nötig (Magazine-Stapel).
-    const g = p.grad.dir === 'y'
-      ? c.createLinearGradient(0, -h / 2, 0, h / 2)
-      : c.createLinearGradient(-w / 2, 0, w / 2, 0);
-    p.grad.stops.forEach(st => g.addColorStop(st[0], st[1]));
-    c.fillStyle = g; c.fill();
+    // Verlaufs-Füllung (gemalte Schatten — auf jedem Gerät identisch, kein
+    // ctx.shadow*-Banding): dir 'x'/'y' = linear über die Box, dir 'r' =
+    // radiale ELLIPSE über die Box (weicher Schlagschatten, Falloff über die
+    // Stops steuerbar).
+    if (p.grad.dir === 'r') {
+      c.save();
+      c.scale(1, h / w);
+      const g = c.createRadialGradient(0, 0, 0, 0, 0, w / 2);
+      p.grad.stops.forEach(st => g.addColorStop(st[0], st[1]));
+      c.fillStyle = g;
+      c.beginPath(); c.arc(0, 0, w / 2, 0, Math.PI * 2); c.fill();
+      c.restore();
+    } else {
+      const g = p.grad.dir === 'y'
+        ? c.createLinearGradient(0, -h / 2, 0, h / 2)
+        : c.createLinearGradient(-w / 2, 0, w / 2, 0);
+      p.grad.stops.forEach(st => g.addColorStop(st[0], st[1]));
+      c.fillStyle = g; c.fill();
+    }
   }
   if (p.fillColor) {
     // Optionaler weicher Schatten (Magazine-Mockups): nur auf dem Füll-Pfad,
@@ -5734,21 +5745,22 @@ function applyGutterWarp(c, cv, i, oxDev, oyDev, scale) {
   c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'high';
   c.fillStyle = sl.bg || '#ffffff';
   c.fillRect(x, y, w, h);
-  const midX = w / 2, FALL = 0.13;
+  const midX = w / 2, FALL = 0.16;
   const sag = wp.sag * scale, comp = wp.comp * scale;
   // Streifen werden GESCHERT gezeichnet (Parallelogramm zwischen den exakten
-  // Kurvenwerten an beiden Streifenkanten) — die Kanten laufen dadurch
-  // durchgehend ohne Treppenstufen, unabhängig von Glättung/DPR. Breitere
-  // Streifen sind damit sogar glatter UND schneller.
+  // Kurvenwerten an beiden Streifenkanten) — Kanten laufen durchgehend ohne
+  // Stufen. Die UNTERKANTE bleibt fix (Zielhöhe = h − dip): Der Buchblock
+  // unten bleibt gerade, nur die Oberkante senkt sich in den Falz.
   const fAt = px => Math.exp(-(Math.abs(px - midX) / midX) / FALL);
-  const stw = Math.max(3, Math.round(3 * scale));
+  const stw = Math.max(2, Math.round(1.5 * scale));
   for (let px = 0; px < w; px += stw) {
     const x1 = Math.min(w, px + stw), sw2 = x1 - px;
     if (sw2 <= 0) break;
     const d0 = sag * fAt(px), d1 = sag * fAt(x1);
     const fm = fAt(px + sw2 / 2);
     const sx = Math.min(w - sw2, Math.max(0, px + comp * fm * (px >= midX ? 1 : -1)));
-    const vs = (h - ((d0 + d1) / 2) * 0.55) / h;   // Unterkante hebt sich leicht
+    const dm = (d0 + d1) / 2;
+    const vs = (h - dm) / h;                       // Unterkante bleibt auf y + h
     c.setTransform(1, (d1 - d0) / sw2, 0, vs, x + px, y + d0);
     c.drawImage(_warpCv, sx, 0, sw2, h, 0, 0, sw2, h);
   }
@@ -9749,7 +9761,8 @@ function addMagazinePage(kind, forceAppend) {
     // 3/10-Referenz: links Headline (3 Zeilen) oben, zentrierter Intro-Block,
     // Words/Photography-Spalte, zwei Textspalten unten — rechts randloses Foto.
     slides[idx].bg = MG_BG;
-    items.push(jrRect(mid, 640, 920, 600, { fill: MG_PAGE, radius: 3, shadow: { blur: 70, dx: -12, dy: 36, color: 'rgba(30,28,25,0.4)' } }));
+    items.push(mgF(jrRect(mid - 14, 678, 1056, 792, { grad: { dir: 'r', stops: [[0, 'rgba(30,28,25,0.30)'], [0.42, 'rgba(30,28,25,0.23)'], [0.62, 'rgba(30,28,25,0.14)'], [0.79, 'rgba(30,28,25,0.065)'], [0.91, 'rgba(30,28,25,0.02)'], [1, 'rgba(30,28,25,0)']] } })));
+    items.push(jrRect(mid, 640, 920, 600, { fill: MG_PAGE, radius: 3 }));
     items.push(jrRect(mid - 6, 640, 12, 600, { fill: '#EEECE6' }));
     items.push(jrRect(mid, 640, 2, 600, { fill: MG_SPINE }));
     items.push(mgL('The Ridge House\nby Atelier Ost\nand Werkraum Alpin', 'Archivo', { size: 21, weight: 500, color: MG_INK, cy: 420 }, cx0 + 120));
@@ -9773,7 +9786,8 @@ function addMagazinePage(kind, forceAppend) {
     // Foto OBEN RECHTS, darunter Subhead + zwei Spalten, unten Mini-Credits.
     slides[idx].palFam = 'magazine'; slides[idx].palId = 'salbei';
     slides[idx].bg = MG_BG;
-    items.push(jrRect(mid, 640, 920, 600, { fill: MG_PAGE, radius: 3, shadow: { blur: 70, dx: -12, dy: 36, color: 'rgba(30,28,25,0.4)' } }));
+    items.push(mgF(jrRect(mid - 14, 678, 1056, 792, { grad: { dir: 'r', stops: [[0, 'rgba(30,28,25,0.30)'], [0.42, 'rgba(30,28,25,0.23)'], [0.62, 'rgba(30,28,25,0.14)'], [0.79, 'rgba(30,28,25,0.065)'], [0.91, 'rgba(30,28,25,0.02)'], [1, 'rgba(30,28,25,0)']] } })));
+    items.push(jrRect(mid, 640, 920, 600, { fill: MG_PAGE, radius: 3 }));
     items.push(jrRect(mid - 6, 640, 12, 600, { fill: '#EEECE6' }));
     items.push(jrRect(mid, 640, 2, 600, { fill: MG_SPINE }));
     items.push(jrPh(cx0 + 206, 496, 179, 263));
@@ -9811,7 +9825,7 @@ function addMagazinePage(kind, forceAppend) {
   // Falz-Wölbung nur für die offenen Doppelseiten; andere Kinds löschen die
   // Zuordnung (falls das Template eine Doppelseite ersetzt hat).
   if (kind === 'spread' || kind === 'grid') {
-    slides[idx].mgWarp = { x: 80, y: 340 + (realH() - 1350) / 2, w: 920, h: 612, sag: 7.5, comp: 2.6 };
+    slides[idx].mgWarp = { x: 80, y: 340 + (realH() - 1350) / 2, w: 920, h: 601, sag: 7, comp: 2.4 };
   } else {
     delete slides[idx].mgWarp;
   }
