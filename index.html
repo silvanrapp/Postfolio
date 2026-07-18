@@ -3397,6 +3397,10 @@ html.native-ios .hlp-browser-only { display: none; }
 <!-- Mirror-Umschalter (schwebt unten links) — nur bei Frames-Insets sichtbar.
      An (.sel) = die beiden inneren Fotos bewegen sich symmetrisch gespiegelt;
      Aus = jedes Inset einzeln (Snap-Linien bleiben). -->
+<div id="slideRefWrap" style="display:none; position:fixed; z-index:66; left:14px; bottom:66px; align-items:center; gap:8px; background:rgba(255,255,255,0.9); border:1px solid rgba(0,0,0,0.08); border-radius:999px; padding:8px 14px; box-shadow:0 3px 12px rgba(42,40,38,0.14); font-size:13px; font-weight:600; -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px);">
+  <span>Show page</span>
+  <select id="slideRefPick" style="font:inherit; border:none; background:transparent; color:var(--accent);"></select>
+</div>
 <button id="mirrorBtn" title="Mirror the two inner photos — off = move each one freely">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 6H8"/><path d="M11 3 8 6l3 3"/><line x1="3.5" y1="12" x2="20.5" y2="12" stroke-dasharray="2.5 2.5"/><path d="M8 18h8"/><path d="M13 15l3 3-3 3"/></svg>
   <span>Mirror</span>
@@ -3437,6 +3441,7 @@ html.native-ios .hlp-browser-only { display: none; }
       <div class="pi-actions">
         <button id="promoAddLight">+ Outro · light</button>
         <button id="promoAddDark">+ Outro · dark</button>
+        <button id="promoAddMini" title="'Slides made with Postfolio' + a mini preview of one of your pages (pick via dropdown) — support your indie app ♥">+ Outro · preview</button>
       </div>
     </div>
   </div>
@@ -4107,6 +4112,7 @@ function focusSelSlide() {
   if (typeof centerActiveSlide === 'function') centerActiveSlide(false);
 }
 function beginAction(tag) {
+  _srSeq++;   // Slide-Minis (slideref) neu rendern
   try {
     if (tag !== 'wheel' && !dragMode && !pinchData && !_photoDragActive) focusSelSlide();
   } catch (e) {}
@@ -4250,7 +4256,7 @@ async function restoreState(st) {
   })));
   bumpFrameGroupSeq();
   photos = st.photos
-    .filter(p => p.kind === 'text' || p.kind === 'logo' || p.kind === 'placeholder' || p.kind === 'rect' || p.img)
+    .filter(p => p.kind === 'text' || p.kind === 'logo' || p.kind === 'placeholder' || p.kind === 'rect' || p.kind === 'slideref' || p.img)
     .map(p => { const o = { ...p }; delete o.src; return o; });
   sel = -1;
   return true;
@@ -5690,6 +5696,7 @@ function drawItem(p) {
   if (p.kind === 'text') { drawTextContent(ctx, p, S); ctx.restore(); return; }
   if (p.kind === 'logo') { drawLogoItem(ctx, p, S); ctx.restore(); return; }
   if (p.kind === 'rect') { drawRectItem(ctx, p, S); ctx.restore(); return; }
+  if (p.kind === 'slideref') { drawSlideRef(ctx, p, S); ctx.restore(); return; }
   if (p.kind === 'placeholder') { ctx.restore(); return; }   // → scharfes UI-Overlay
   if (p.frame && p.frame.width > 0) {
     const ins = frameInsets(p);
@@ -5729,6 +5736,42 @@ function drawGridBackdrops(c, slideIdx, scale, offX) {
 //    staucht sich in die Bindung (inverses Sampling, keine Lücken). Läuft als
 //    Post-Pass NACH den Items — identisch auf Canvas, Preview und Export.
 //    sl.mgWarp = { x, y, w, h, sag, comp } in Slide-Koordinaten.
+let _srCache = { key: '', cv: null };
+let _srSeq = 0;   // beginAction/Undo erhöhen → Minis rendern sich neu
+function drawSlideRef(c, p, scale) {
+  const w = p.w * scale, h = p.h * scale;
+  if (window._inSlideRef) {   // Mini im Mini: nur als stille Fläche andeuten
+    c.fillStyle = '#EDECE8';
+    c.fillRect(-w / 2, -h / 2, w, h);
+    return;
+  }
+  // Freies Fenster: solange keine Seite gewählt ist (ref < 0), bleibt hier
+  // eine leere weiße Fläche mit dezentem Hinweis — die Seitenwahl geschieht
+  // über die 'Show page'-Pill (erscheint beim Antippen des Fensters).
+  const hasRef = typeof p.ref === 'number' && p.ref >= 0 && p.ref < slides.length;
+  if (!hasRef) {
+    c.fillStyle = '#FFFFFF';
+    c.fillRect(-w / 2, -h / 2, w, h);
+    c.strokeStyle = 'rgba(42,40,38,0.16)';
+    c.lineWidth = Math.max(1, 1.5 * scale);
+    c.strokeRect(-w / 2, -h / 2, w, h);
+    c.fillStyle = '#8F8B84';
+    c.font = '500 ' + Math.max(9, Math.round(30 * scale)) + 'px Archivo, sans-serif';
+    c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText('Tap to choose a page', 0, 0);
+    return;
+  }
+  const ref = Math.max(0, Math.min(slides.length - 1, p.ref || 0));
+  const key = ref + '@' + _srSeq + '@' + slides.length + '@' + W + 'x' + H;
+  if (_srCache.key !== key || !_srCache.cv) {
+    window._inSlideRef = true;
+    try { _srCache = { key, cv: renderPreviewCanvas(ref, 0.8) }; }
+    finally { window._inSlideRef = false; }
+  }
+  c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'high';
+  c.drawImage(_srCache.cv, -w / 2, -h / 2, w, h);
+}
+
 let _warpCv = null;
 function applyGutterWarp(c, cv, i, oxDev, oyDev, scale) {
   const sl = slides[i], wp = sl && sl.mgWarp;
@@ -7770,6 +7813,7 @@ async function addOutroSlide(dark) {
     await document.fonts.load('italic 500 38px "Cormorant Garamond"');
     await document.fonts.load('500 20px "Cormorant Garamond"');
     await document.fonts.load('600 118px "Playfair Display"');
+    await document.fonts.load('italic 500 46px "Playfair Display"');
   } catch (e) {}
   beginAction();
   slides.push({ bg: dark ? '#2A2826' : '#F4F1EB' });
@@ -7792,6 +7836,8 @@ async function addOutroSlide(dark) {
   // Herz wie eine Hochzahl (x²): klein, hochgestellt, in Textfarbe.
   const heart   = makeTextItem('♥', 'Cormorant Garamond', { weight: 500, size: 20, color: col });
   const maker   = makeTextItem('SILVAN RAPP', 'Archivo', { weight: 500, size: 26, color: col });
+  // Highlight „it's free!" — direkt unter der Wortmarke, ohne Bubble.
+  const free    = makeTextItem("it's free!", 'Playfair Display', { weight: 500, italic: true, size: 46, color: '#D10101' });
 
   const _mc = document.createElement('canvas').getContext('2d');
   eyebrow.cx = cx; eyebrow.cy = logo.cy - logo.h * 0.5 - eyebrow.h * 0.8;
@@ -7803,7 +7849,8 @@ async function addOutroSlide(dark) {
   wmDot.w = Math.max(24, Math.round(_dotW + 6));
   wm.cx    = cx - _dotW / 2; wm.cy    = center;
   wmDot.cx = cx + _wmW / 2;  wmDot.cy = center;
-  tag.cx = cx;     tag.cy = center + wm.h * 0.5 + tag.h * 0.9;
+  free.cx = cx;    free.cy = Math.round(center + wm.h * 0.5 + free.h * 0.55);
+  tag.cx = cx;     tag.cy = free.cy + free.h * 0.5 + tag.h * 0.8;
   trigger.cx = cx; trigger.cy = tag.cy + tag.h * 0.5 + trigger.h * 0.9;
   // Credit-Block ans Seitenende, mittig; Herz direkt nach „lovers",
   // hochgestellt wie eine Quadrat-Hochzahl (m²), in Textfarbe.
@@ -7822,8 +7869,64 @@ async function addOutroSlide(dark) {
   heart.cy = credit.cy - credit.h * 0.28;  // hochgestellt wie ²
   maker.cx = cx;   maker.cy = credit.cy + credit.h * 0.5 + maker.h * 1.2;
 
-  photos.push(eyebrow, logo, wm, wmDot, tag, trigger, credit, heart, maker);
+  photos.push(eyebrow, logo, wm, wmDot, free, tag, trigger, credit, heart, maker);
   activeSlide = idx; sel = -1;
+  resizeCanvas(); syncBgButtons(); updateDots(); updateDeleteBtn();
+  redraw(); scheduleSave();
+  jumpToSlide(idx);
+}
+
+// Outro-Variante „preview": ‚SLIDES MADE WITH Postfolio' + Mini-Vorschau einer
+// EIGENEN Carousel-Seite (kind 'slideref'; Seitenzahl per Dropdown — die Pill
+// #slideRefWrap erscheint, sobald das Mini angetippt wird) + „it's free!"-Bubble.
+async function addOutroSlideMini() {
+  try {
+    await document.fonts.load('600 100px "Playfair Display"');
+    await document.fonts.load('italic 500 46px "Playfair Display"');
+  } catch (e) {}
+  beginAction();
+  slides.push({ bg: '#F4F1EB' });
+  const idx = slides.length - 1;
+  const cx = idx * W + W / 2;
+  const col = '#2A2826';
+
+  const eyebrow = makeTextItem('SLIDES MADE WITH', 'Archivo', { weight: 500, size: 26, color: col });
+  eyebrow.tracking = 6;
+  // Korrektes Postfolio-Logo: Badge + Wortmarke ohne i-Punkt + roter Satzpunkt
+  // (CI wie Start-/Outro-Screen, Punkt-Regel).
+  const logo    = { kind: 'logo', cx, cy: 0, w: 150, h: 150, rot: 0, logoDark: false };
+  const wm      = makeTextItem('Postfolıo', 'Playfair Display', { weight: 600, size: 100, color: col });
+  const wmDot   = makeTextItem('.', 'Playfair Display', { weight: 600, size: 100, color: '#D10101' });
+  const free    = makeTextItem("it's free!", 'Playfair Display', { weight: 500, italic: true, size: 46, color: '#D10101' });
+  const trigger = makeTextItem('GET YOURS AT POSTFOLIO.STUDIO', 'Archivo', { weight: 500, size: 26, color: '#D10101' });
+
+  const _mc = document.createElement('canvas').getContext('2d');
+  _mc.font = '600 100px "Playfair Display", Georgia, serif';
+  const _wmW  = _mc.measureText(wm.text).width;
+  const _dotW = _mc.measureText('.').width;
+  wm.w    = Math.round(_wmW + 16);
+  wmDot.w = Math.max(24, Math.round(_dotW + 6));
+  logo.cy    = Math.round(H * 0.135);
+  eyebrow.cx = cx; eyebrow.cy = logo.cy - logo.h * 0.5 - eyebrow.h * 0.8;
+  const wmCy = Math.round(logo.cy + logo.h * 0.5 + wm.h * 0.62);
+  wm.cx    = cx - _dotW / 2; wm.cy    = wmCy;
+  wmDot.cx = cx + _wmW / 2;  wmDot.cy = wmCy;
+  // Highlight „it's free!" direkt UNTER der Wortmarke (ohne Bubble).
+  free.cx = cx; free.cy = Math.round(wmCy + wm.h * 0.5 + free.h * 0.55);
+  trigger.cx = cx; trigger.cy = Math.round(H * 0.93);
+
+  // Freies Fenster für eine EIGENE Carousel-Seite (beliebige Seite aus dem
+  // Filmstreifen, Auswahl per 'Show page'-Dropdown) über gemaltem
+  // Radial-Schatten. Startet LEER (ref −1) mit Hinweis im Fenster.
+  const mw = 480, mh = Math.round(mw * H / W), mcy = Math.round(H * 0.635);
+  const shRect = jrRect(cx - 10, mcy + 26, mw + 150, mh + 160, { mgFix: true,
+    grad: { dir: 'r', stops: [[0, 'rgba(30,28,25,0.28)'], [0.5, 'rgba(30,28,25,0.18)'], [0.72, 'rgba(30,28,25,0.09)'], [0.88, 'rgba(30,28,25,0.03)'], [1, 'rgba(30,28,25,0)']] } });
+  const mini = { kind: 'slideref', ref: -1, cx, cy: mcy, w: mw, h: mh, rot: 0 };
+
+  photos.push(eyebrow, logo, wm, wmDot, free, shRect, mini, trigger);
+  activeSlide = idx;
+  // Fenster direkt auswählen → die 'Show page'-Pill ist sofort sichtbar.
+  sel = photos.indexOf(mini);
   resizeCanvas(); syncBgButtons(); updateDots(); updateDeleteBtn();
   redraw(); scheduleSave();
   jumpToSlide(idx);
@@ -10308,12 +10411,14 @@ function renderPreviewCanvas(i, mult) {
   drawGridBackdrops(c, i, mult, 0);
   photos.forEach(p => {
     if (!itemDrawsOnSlide(p, i)) return;   // nur eigene Slide(s) — siehe slideSpan()
+    if (p.hidden) return;                  // Toggle-Zustand gilt ÜBERALL gleich
     c.save();
     c.translate((p.cx - i * W) * mult, p.cy * mult);
     c.rotate(p.rot || 0);
     if (p.kind === 'text')        { drawTextContent(c, p, mult); c.restore(); return; }
     if (p.kind === 'logo')        { drawLogoItem(c, p, mult);    c.restore(); return; }
     if (p.kind === 'rect')        { drawRectItem(c, p, mult);   c.restore(); return; }
+    if (p.kind === 'slideref')    { drawSlideRef(c, p, mult);   c.restore(); return; }
     if (p.kind === 'placeholder') { c.restore(); return; }
     if (p.frame && p.frame.width > 0) {
       const ins = frameInsets(p);
@@ -10362,10 +10467,88 @@ async function openPreview() {
 }
 function closePreview() {
   document.getElementById('preview').classList.remove('show');
+  if (typeof window._pvZoomReset === 'function') window._pvZoomReset();
   document.getElementById('preview-track').innerHTML = '';
   previewUrls.forEach(u => { try { URL.revokeObjectURL(u); } catch (e) {} });
   previewUrls = [];
 }
+// ── Pinch-Zoom in der Vollbild-Vorschau (18.07.26): Zwei Finger zoomen die
+//    aktuelle Seite (1–4×), EIN Finger verschiebt im gezoomten Zustand,
+//    Doppeltipp setzt zurück. Solange gezoomt ist, pausiert das Seiten-
+//    Wischen (overflow/touch-action), danach schnappt alles zurück.
+(function () {
+  const track = document.getElementById('preview-track');
+  if (!track) return;
+  let img = null, scale = 1, tx = 0, ty = 0;
+  let startDist = 0, startScale = 1, startTx = 0, startTy = 0, startMid = null;
+  let panStart = null, lastTap = 0;
+  const currentImg = () => {
+    const idx = Math.round(track.scrollLeft / Math.max(1, track.clientWidth));
+    const panel = track.children[Math.max(0, Math.min(track.children.length - 1, idx))];
+    return panel ? panel.querySelector('img') : null;
+  };
+  const apply = () => { if (img) img.style.transform = scale > 1.001 ? 'translate(' + tx + 'px,' + ty + 'px) scale(' + scale + ')' : ''; };
+  const setZoomMode = on => { track.style.overflowX = on ? 'hidden' : 'auto'; track.style.touchAction = on ? 'none' : 'pan-x'; };
+  const clampPan = () => {
+    if (!img) return;
+    const mx = (scale - 1) * img.clientWidth / 2 + 40;
+    const my = (scale - 1) * img.clientHeight / 2 + 40;
+    tx = Math.max(-mx, Math.min(mx, tx));
+    ty = Math.max(-my, Math.min(my, ty));
+  };
+  const reset = () => { scale = 1; tx = 0; ty = 0; apply(); setZoomMode(false); img = null; };
+  window._pvZoomReset = reset;
+  track.addEventListener('touchstart', e => {
+    if (!document.getElementById('preview').classList.contains('show')) return;
+    if (e.touches.length === 2) {
+      e.preventDefault();
+      if (!img) img = currentImg();
+      if (!img) return;
+      const a = e.touches[0], b = e.touches[1];
+      startDist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+      startScale = scale; startTx = tx; startTy = ty;
+      startMid = { x: (a.clientX + b.clientX) / 2, y: (a.clientY + b.clientY) / 2 };
+      setZoomMode(true);
+    } else if (e.touches.length === 1) {
+      const now = Date.now();
+      if (now - lastTap < 300 && scale > 1.001) { e.preventDefault(); reset(); lastTap = 0; return; }
+      lastTap = now;
+      if (scale > 1.001) panStart = { x: e.touches[0].clientX - tx, y: e.touches[0].clientY - ty };
+    }
+  }, { passive: false });
+  track.addEventListener('touchmove', e => {
+    if (e.touches.length === 2 && img && startDist > 0) {
+      e.preventDefault();
+      const a = e.touches[0], b = e.touches[1];
+      const d = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+      scale = Math.max(1, Math.min(4, startScale * d / startDist));
+      const mid = { x: (a.clientX + b.clientX) / 2, y: (a.clientY + b.clientY) / 2 };
+      tx = startTx + (mid.x - startMid.x);
+      ty = startTy + (mid.y - startMid.y);
+      clampPan(); apply();
+    } else if (e.touches.length === 1 && panStart && scale > 1.001) {
+      e.preventDefault();
+      tx = e.touches[0].clientX - panStart.x;
+      ty = e.touches[0].clientY - panStart.y;
+      clampPan(); apply();
+    }
+  }, { passive: false });
+  track.addEventListener('touchend', e => {
+    panStart = null;
+    if (e.touches.length === 0) {
+      startDist = 0;
+      if (scale < 1.12) reset();
+    }
+  });
+})();
+document.getElementById('slideRefPick').addEventListener('change', function () {
+  if (sel < 0 || !photos[sel] || photos[sel].kind !== 'slideref') return;
+  const v = parseInt(this.value, 10);
+  if (isNaN(v) || v < 0) return;   // 'Choose…'-Platzhalter gewählt
+  beginAction();
+  photos[sel].ref = v;
+  redraw(); scheduleSave();
+});
 document.getElementById('previewBtn').addEventListener('click', openPreview);
 document.getElementById('preview-close').addEventListener('click', closePreview);
 
@@ -10504,6 +10687,20 @@ function updateDeleteBtn() {
   const isTplCell = isTpl && (isImage || photos[sel].kind === 'placeholder');
   const delBtn = document.getElementById('deleteBtn');
   delBtn.classList.toggle('show', hasSel);
+  // Outro-Mini ausgewählt → Seitenwahl-Dropdown einblenden (ohne die eigene Seite)
+  const srw = document.getElementById('slideRefWrap');
+  if (srw) {
+    const srOn = hasSel && photos[sel].kind === 'slideref';
+    srw.style.display = srOn ? 'inline-flex' : 'none';
+    if (srOn) {
+      const pk = document.getElementById('slideRefPick');
+      const own = slideIndexOf(photos[sel]);
+      const cur = (typeof photos[sel].ref === 'number' && photos[sel].ref >= 0) ? photos[sel].ref : -1;
+      pk.innerHTML = (cur < 0 ? '<option value="-1" selected disabled>Choose…</option>' : '') +
+        slides.map((_, k) => k === own ? '' :
+        '<option value="' + k + '"' + (cur === k ? ' selected' : '') + '>Page ' + (k + 1) + '</option>').join('');
+    }
+  }
   delBtn.title = isText ? 'Delete text' : 'Delete photo';
   document.getElementById('cropBtn').classList.toggle('show', isImage);
   document.getElementById('replaceBtn').classList.toggle('show', isImage);
@@ -10731,6 +10928,7 @@ function layerName(p) {
   if (p.kind === 'rect') return p.shape === 'ellipse' ? 'Circle' : 'Color block';
   if (p.kind === 'text') return '“' + ((p.text || 'Text').trim().slice(0, 18) || 'Text') + '”';
   if (p.kind === 'placeholder') return 'Empty frame';
+  if (p.kind === 'slideref') return 'Slide preview';
   if (p.role === 'bg') return 'Background photo';
   return 'Photo';
 }
@@ -12806,13 +13004,15 @@ document.getElementById('exportOneBtn').addEventListener('click', () => {
 });
 
 // ── Outro-Einladung: optionale Marken-Slide anhängen und Export neu erzeugen ──
-async function addOutroAndReexport(dark) {
-  await addOutroSlide(dark);
+async function addOutroAndReexport(variant) {
+  if (variant === 'mini') await addOutroSlideMini();
+  else await addOutroSlide(variant);
   document.getElementById('promoInvite').classList.add('hidden'); // nicht doppelt anbieten
   runExport(slides.map((_, i) => i));
 }
 document.getElementById('promoAddLight').addEventListener('click', () => addOutroAndReexport(false));
 document.getElementById('promoAddDark').addEventListener('click', () => addOutroAndReexport(true));
+document.getElementById('promoAddMini').addEventListener('click', () => addOutroAndReexport('mini'));
 
 // ═══════════════════════════════════════
 // TRY-BEFORE-BUY: „Bauen frei, Export ist die Münze"
@@ -13059,6 +13259,7 @@ function exportSlideCanvas(i) {
   // Photos + text items (offset so slide i starts at x=0)
   photos.forEach(p => {
     if (!itemDrawsOnSlide(p, i)) return;   // nur eigene Slide(s) — siehe slideSpan()
+    if (p.hidden) return;                  // Toggle-Zustand gilt ÜBERALL gleich
     ectx.save();
     ectx.translate((p.cx - i * W) * EX, p.cy * EX);
     ectx.rotate(p.rot);
@@ -13069,6 +13270,7 @@ function exportSlideCanvas(i) {
     }
     if (p.kind === 'logo') { drawLogoItem(ectx, p, EX); ectx.restore(); return; }
     if (p.kind === 'rect') { drawRectItem(ectx, p, EX); ectx.restore(); return; }
+    if (p.kind === 'slideref') { drawSlideRef(ectx, p, EX); ectx.restore(); return; }
     if (p.kind === 'placeholder') { ectx.restore(); return; } // leere Platzhalter nicht exportieren
     if (p.frame && p.frame.width > 0) {
       const ins = frameInsets(p);
