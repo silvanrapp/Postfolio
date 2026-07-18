@@ -5799,9 +5799,14 @@ function applyGutterWarp(c, cv, i, oxDev, oyDev, scale) {
   // Kurvenwerten an beiden Streifenkanten) — Kanten laufen durchgehend ohne
   // Stufen. Die UNTERKANTE bleibt fix (Zielhöhe = h − dip): Der Buchblock
   // unten bleibt gerade, nur die Oberkante senkt sich in den Falz.
+  // Nahe am Bund ist die Kurve STEIL — dort 1-px-Streifen, außen breitere:
+  // sonst zeigen sich beim Zoomen Ecken an den Segment-Übergängen (und ein
+  // Mini-Sägezahn an der Unterkante, weil vs nur den Strip-Mittelwert nimmt).
   const fAt = px => Math.exp(-(Math.abs(px - midX) / midX) / FALL);
-  const stw = Math.max(2, Math.round(1.5 * scale));
-  for (let px = 0; px < w; px += stw) {
+  const fineZone = midX * FALL * 3;               // f > e⁻³ ≈ 0.05 ⇒ fein
+  const coarse = Math.max(2, Math.round(1.5 * scale));
+  for (let px = 0; px < w; ) {
+    const stw = Math.abs(px + 0.5 - midX) < fineZone ? 1 : coarse;
     const x1 = Math.min(w, px + stw), sw2 = x1 - px;
     if (sw2 <= 0) break;
     const d0 = sag * fAt(px), d1 = sag * fAt(x1);
@@ -5811,8 +5816,27 @@ function applyGutterWarp(c, cv, i, oxDev, oyDev, scale) {
     const vs = (h - dm) / h;                       // Unterkante bleibt auf y + h
     c.setTransform(1, (d1 - d0) / sw2, 0, vs, x + px, y + d0);
     c.drawImage(_warpCv, sx, 0, sw2, h, 0, 0, sw2, h);
+    px = x1;
   }
   c.setTransform(1, 0, 0, 1, 0, 0);
+  // GLATTE Oberkante + Schatten-Anschluss: Die Bund-Senke gibt oben ein Band
+  // frei, das der flache bg-Flood füllte — das schnitt den GEMALTEN Grund-
+  // schatten an der Regionsoberkante hart ab (sichtbare waagerechte Kante),
+  // und die Streifen-Ränder wirkten beim Zoomen stufig. Deshalb: die Bild-
+  // zeile DIREKT ÜBER der Region — geclippt auf die exakte Senkenkurve —
+  // über das Band strecken. Der Schatten läuft nahtlos weiter, und die
+  // Seiten-Oberkante ist eine glatte Pfad-Kurve statt Treppen.
+  if (y > 3 && sag > 0.5) {
+    c.beginPath();
+    c.moveTo(x, y - 1);
+    for (let px = 0; px <= w; px += 2) c.lineTo(x + px, y + sag * fAt(px) - 0.4);
+    c.lineTo(x + w, y - 1);
+    c.closePath();
+    c.save();
+    c.clip();
+    c.drawImage(cv, x, y - 3, w, 1, x, y - 1, w, Math.ceil(sag) + 2);
+    c.restore();
+  }
   c.restore();
 }
 
