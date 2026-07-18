@@ -5736,14 +5736,23 @@ function applyGutterWarp(c, cv, i, oxDev, oyDev, scale) {
   c.fillRect(x, y, w, h);
   const midX = w / 2, FALL = 0.13;
   const sag = wp.sag * scale, comp = wp.comp * scale;
-  const stw = Math.max(2, Math.round(scale));
+  // Streifen werden GESCHERT gezeichnet (Parallelogramm zwischen den exakten
+  // Kurvenwerten an beiden Streifenkanten) — die Kanten laufen dadurch
+  // durchgehend ohne Treppenstufen, unabhängig von Glättung/DPR. Breitere
+  // Streifen sind damit sogar glatter UND schneller.
+  const fAt = px => Math.exp(-(Math.abs(px - midX) / midX) / FALL);
+  const stw = Math.max(3, Math.round(3 * scale));
   for (let px = 0; px < w; px += stw) {
-    const t = Math.abs(px + stw / 2 - midX) / midX;
-    const f = Math.exp(-t / FALL);
-    const dip = sag * f;
-    const sx = Math.min(w - stw, Math.max(0, px + comp * f * (px >= midX ? 1 : -1)));
-    c.drawImage(_warpCv, sx, 0, stw, h, x + px, y + dip, stw, h - dip * 0.55);
+    const x1 = Math.min(w, px + stw), sw2 = x1 - px;
+    if (sw2 <= 0) break;
+    const d0 = sag * fAt(px), d1 = sag * fAt(x1);
+    const fm = fAt(px + sw2 / 2);
+    const sx = Math.min(w - sw2, Math.max(0, px + comp * fm * (px >= midX ? 1 : -1)));
+    const vs = (h - ((d0 + d1) / 2) * 0.55) / h;   // Unterkante hebt sich leicht
+    c.setTransform(1, (d1 - d0) / sw2, 0, vs, x + px, y + d0);
+    c.drawImage(_warpCv, sx, 0, sw2, h, 0, 0, sw2, h);
   }
+  c.setTransform(1, 0, 0, 1, 0, 0);
   c.restore();
 }
 
@@ -7431,6 +7440,7 @@ idbGetK('mediaIndex').then(ix => { _libHasItems = !!(ix && ix.length); }).catch(
 // wählt frei zwischen Photo, Library, Text, Frames, Templates.
 let _addPopupAt = 0;
 function openAddFlow() {
+  sel = -1; if (typeof updateDeleteBtn === 'function') updateDeleteBtn();
   _addPopupAt = Date.now();          // Schonfrist: der öffnende Klick bubbelt noch
   _textMenu.classList.add('tm-center');
   showTextLevel('root');
@@ -7919,10 +7929,20 @@ function jumpToSlide(idx) {
 function layoutTargetSlide() {
   let idx = activeSlide;
   if (!framesSlideOccupied(idx)) return { idx, imgs: [] };
-  // BASIC (18.07.26): Ein neues Template auf einer belegten Slide ERSETZT das
-  // alte immer — kein Dialog mehr (der alte confirm ließ zudem rects/Fließtext
-  // stehen → Templates überlagerten sich). Vorhandene Fotos wandern in die
-  // neuen Platzhalter; NUTZER-Texte und Seiten-Chrome (jr) bleiben erhalten.
+  // BASIC v3 (18.07.26, Silvan): NIEMALS still überschreiben — und im Zweifel
+  // immer auf eine NEUE Seite. Belegte aktive Seite → Abfrage: OK ersetzt das
+  // Layout dieser Seite (Fotos wandern mit), Abbrechen legt das Template auf
+  // einer neuen Seite DIREKT DAHINTER an (Muster wie duplicateSlideAction).
+  if (!confirm('This page already has a layout.\n\nOK — replace it (your photos move into the new layout)\nCancel — keep this page and add the template on a new page')) {
+    if (slides.length >= 20) { showToast('Maximum of 20 slides'); return null; }
+    const at = idx + 1;
+    slides.splice(at, 0, { bg: slides[idx].bg });
+    photos.forEach(p => { if (Math.floor(p.cx / W) >= at) p.cx += W; });
+    activeSlide = at;
+    resizeCanvas();
+    if (typeof syncSnapPoints === 'function') try { syncSnapPoints(); } catch (e) {}
+    return { idx: at, imgs: [] };
+  }
   const imgs = [];
   photos.forEach(p => { if (slideIndexOf(p) === idx && p.kind === 'image' && p.img) imgs.push(p.img); });
   photos = photos.filter(p => !(slideIndexOf(p) === idx &&
@@ -7946,8 +7966,10 @@ function refillSlidePlaceholders(slideIdx, imgs) {
 }
 function addFramesLayout(n, axis) {
   axis = (axis === 'col') ? 'col' : 'row';
+  sel = -1;
   beginAction();
-  const _t = layoutTargetSlide();   // belegt? → ersetzen oder neue Slide (fragt nach)
+  const _t = layoutTargetSlide();
+  if (!_t) return false;   // belegt? → ersetzen oder neue Slide (fragt nach)
   let idx = _t.idx;
   const cxBase = idx * W;
   const gid = ++frameGroupSeq;           // verbindet die Insets dieser Gruppe (gleiche Größe)
@@ -7996,8 +8018,10 @@ document.getElementById('framesCols2Btn').addEventListener('click', () => addFra
 // Bänder übereinander, Insets Querformat 5:4 an der horizontalen Naht.
 function addFramesFacingLayout(axis) {
   axis = (axis === 'row') ? 'row' : 'col';
+  sel = -1;
   beginAction();
-  const _t = layoutTargetSlide();   // belegt? → ersetzen oder neue Slide (fragt nach)
+  const _t = layoutTargetSlide();
+  if (!_t) return false;   // belegt? → ersetzen oder neue Slide (fragt nach)
   let idx = _t.idx;
   const cxBase = idx * W;
   const gid = ++frameGroupSeq;
@@ -8132,8 +8156,10 @@ function layoutTemplate(cells, orient, B) {
 function addTemplate(n, orient, cols) {
   cols = cols || 1;
   orient = orient || (n === 1 ? 'portrait' : 'landscape');
+  sel = -1;
   beginAction();
-  const _t = layoutTargetSlide();   // belegt? → ersetzen oder neue Slide (fragt nach)
+  const _t = layoutTargetSlide();
+  if (!_t) return false;   // belegt? → ersetzen oder neue Slide (fragt nach)
   let idx = _t.idx;
   slides[idx].bg = '#ffffff';                     // klassischer weißer Hintergrund
   const cxBase = idx * W;
@@ -8173,8 +8199,10 @@ document.getElementById('tplGrid9Btn').addEventListener('click', () => addTempla
 // normal editier-/verschiebbar.
 function addGridTitleTemplate(cols) {
   cols = cols === 1 ? 1 : 2;
+  sel = -1;
   beginAction();
-  const _t = layoutTargetSlide();   // belegt? → ersetzen oder neue Slide (fragt nach)
+  const _t = layoutTargetSlide();
+  if (!_t) return false;   // belegt? → ersetzen oder neue Slide (fragt nach)
   let idx = _t.idx;
   slides[idx].bg = '#ffffff';                 // das Band IST der Slide-Hintergrund
   const cxBase = idx * W;
@@ -8216,8 +8244,10 @@ document.getElementById('tplRowsTitleBtn').addEventListener('click', () => addGr
 // Schlichte Basis-Templates (FREI, kein proFeat): Vollseite bzw. zwei
 // Querformate übereinander — 5 pt Standard-Border ringsum und an der Naht.
 function addSimpleTemplate(n) {
+  sel = -1;
   beginAction();
   const _t = layoutTargetSlide();
+  if (!_t) return false;
   const idx = _t.idx;
   slides[idx].bg = '#ffffff';
   const cx0 = idx * W, mid = cx0 + W / 2;
@@ -8594,6 +8624,7 @@ syncJournalUI();
 // ans Ende anhängen; sonst greift der normale Ersetzen/Neue-Slide-Dialog.
 function addJournalPage(kind, forceAppend) {
   try { Promise.all([document.fonts.load('400 120px "Young Serif"'), document.fonts.load('italic 400 52px "Fraunces"')]).then(() => redraw()); } catch (e) {}
+  sel = -1;   // Add zielt auf die ANGEZEIGTE Seite, nicht auf die Auswahl
   beginAction();
   let t;
   if (forceAppend) {
@@ -8605,6 +8636,7 @@ function addJournalPage(kind, forceAppend) {
     t = { idx: idx2, imgs: [] };
   } else {
     t = layoutTargetSlide();
+    if (!t) return false;
   }
   const idx = t.idx;
   slides[idx].bg = JR_PAPER;
@@ -8736,6 +8768,7 @@ const AR_PAPER = '#F2EDE2', AR_INK = '#221E19', AR_BRICK = '#C1441E', AR_MUTED =
 
 function addArchivePage(kind, forceAppend) {
   try { Promise.all([document.fonts.load('400 200px "Anton"'), document.fonts.load('400 24px "Space Mono"')]).then(() => redraw()); } catch (e) {}
+  sel = -1;   // Add zielt auf die ANGEZEIGTE Seite, nicht auf die Auswahl
   beginAction();
   let t;
   if (forceAppend) {
@@ -8747,6 +8780,7 @@ function addArchivePage(kind, forceAppend) {
     t = { idx: idx2, imgs: [] };
   } else {
     t = layoutTargetSlide();
+    if (!t) return false;
   }
   const idx = t.idx;
   slides[idx].palFam = 'archive'; slides[idx].palId = 'druck';
@@ -8879,6 +8913,7 @@ const ST_RED = '#D63A1F', ST_BLUE = '#2438C4', ST_ORANGE = '#E8650D', ST_CREAM =
 
 function addStatementPage(kind, forceAppend) {
   try { Promise.all([document.fonts.load('900 200px "Archivo"'), document.fonts.load('italic 600 72px "Fraunces"'), document.fonts.load('400 170px "Anton"')]).then(() => redraw()); } catch (e) {}
+  sel = -1;   // Add zielt auf die ANGEZEIGTE Seite, nicht auf die Auswahl
   beginAction();
   let t;
   if (forceAppend) {
@@ -8890,6 +8925,7 @@ function addStatementPage(kind, forceAppend) {
     t = { idx: idx2, imgs: [] };
   } else {
     t = layoutTargetSlide();
+    if (!t) return false;
   }
   const idx = t.idx;
   slides[idx].palFam = 'statement'; slides[idx].palId = 'signal';
@@ -9020,8 +9056,10 @@ const HZ_BG = '#A4400F', HZ_DEEP = '#5E1D05', HZ_ROSE = '#C9968F', HZ_IVORY = '#
 
 function addHazePage(kind) {
   try { Promise.all([document.fonts.load('italic 600 92px "Fraunces"'), document.fonts.load('400 78px "Young Serif"')]).then(() => redraw()); } catch (e) {}
+  sel = -1;
   beginAction();
   const t = layoutTargetSlide();
+  if (!t) return false;
   const idx = t.idx;
   const cx0 = idx * W, mid = cx0 + W / 2;
   const firstIdx = photos.length;
@@ -9092,6 +9130,7 @@ const FR_NEON = '#C6F53C', FR_BLUE = '#2438C4', FR_INK = '#171512', FR_CREAM = '
 
 function addFramePage(kind, forceAppend) {
   try { document.fonts.load('400 26px "Space Mono"').then(() => redraw()); } catch (e) {}
+  sel = -1;   // Add zielt auf die ANGEZEIGTE Seite, nicht auf die Auswahl
   beginAction();
   let t;
   if (forceAppend) {
@@ -9103,6 +9142,7 @@ function addFramePage(kind, forceAppend) {
     t = { idx: idx2, imgs: [] };
   } else {
     t = layoutTargetSlide();
+    if (!t) return false;
   }
   const idx = t.idx;
   slides[idx].palFam = 'frame'; slides[idx].palId = 'neon';
@@ -9359,6 +9399,7 @@ const AH_PAPER = '#EFEBE4', AH_INK = '#171512', AH_RED = '#D10101', AH_GREY = '#
 
 function addArthousePage(kind, forceAppend) {
   try { Promise.all([document.fonts.load('900 200px "Archivo"'), document.fonts.load('400 200px "Anton"')]).then(() => redraw()); } catch (e) {}
+  sel = -1;   // Add zielt auf die ANGEZEIGTE Seite, nicht auf die Auswahl
   beginAction();
   let t;
   if (forceAppend) {
@@ -9370,6 +9411,7 @@ function addArthousePage(kind, forceAppend) {
     t = { idx: idx2, imgs: [] };
   } else {
     t = layoutTargetSlide();
+    if (!t) return false;
   }
   const idx = t.idx;
   slides[idx].palFam = 'arthouse'; slides[idx].palId = 'rot';
@@ -9617,6 +9659,7 @@ function mgC(txt, font, o, cx) {
 
 function addMagazinePage(kind, forceAppend) {
   try { Promise.all([document.fonts.load('500 54px "Cormorant Garamond"'), document.fonts.load('600 28px "Archivo"')]).then(() => redraw()); } catch (e) {}
+  sel = -1;   // Add zielt auf die ANGEZEIGTE Seite, nicht auf die Auswahl
   beginAction();
   let t;
   if (forceAppend) {
@@ -9628,6 +9671,7 @@ function addMagazinePage(kind, forceAppend) {
     t = { idx: idx2, imgs: [] };
   } else {
     t = layoutTargetSlide();
+    if (!t) return false;
   }
   const idx = t.idx;
   const cx0 = idx * W, mid = cx0 + W / 2;
