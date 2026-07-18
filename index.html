@@ -4859,6 +4859,7 @@ function hitPhoto(lx, ly) {
   for (let i = photos.length - 1; i >= 0; i--) {
     const p = photos[i];
     if (p.hidden) continue;   // ausgeblendete Elemente sind nicht antippbar
+    if (p.mgFix) continue;    // fixierter Magazin-Fließtext: nie auswähl-/editierbar
     // Gesperrte Ebenen sind AUSWÄHLBAR (Toolbar, Schloss, Crop) — nur das
     // Verschieben/Skalieren wird in den Gesten-Handlern blockiert.
     if (photosLocked && p.kind !== 'text') continue; // Text-Modus: nur Text bewegbar
@@ -5135,7 +5136,7 @@ function drawTextContent(c, p, scale) {
     if (words.length < 2) { drawLine(line, ax, oy, false); return; }
     const wordsW = words.reduce((a, w2) => a + c.measureText(w2).width, 0);
     const gap = (target - indW - wordsW) / (words.length - 1);
-    if (gap < -1.5 || gap > fontSize * scale * 1.8) { drawLine(line, ax, oy, false); return; }
+    if (gap < -1.5 || gap > fontSize * scale * 3) { drawLine(line, ax, oy, false); return; }
     const prev = c.textAlign; c.textAlign = 'left';
     let x = ax + indW;
     words.forEach(w2 => { c.fillText(w2, x, oy); x += c.measureText(w2).width + gap; });
@@ -5396,6 +5397,16 @@ function drawRectItem(c, p, scale) {
   if (p.shape === 'ellipse') c.ellipse(0, 0, w / 2, h / 2, 0, 0, Math.PI * 2);
   else if (p.radius > 0) pathRoundRect(c, -w / 2, -h / 2, w, h, p.radius * scale);
   else c.rect(-w / 2, -h / 2, w, h);
+  if (p.grad && p.grad.stops) {
+    // Linearer Verlauf über die Box (dir 'x': links→rechts, 'y': oben→unten).
+    // Gemalte Schatten sind auf jedem Gerät identisch — kein Verlass auf
+    // ctx.shadow* nötig (Magazine-Stapel).
+    const g = p.grad.dir === 'y'
+      ? c.createLinearGradient(0, -h / 2, 0, h / 2)
+      : c.createLinearGradient(-w / 2, 0, w / 2, 0);
+    p.grad.stops.forEach(st => g.addColorStop(st[0], st[1]));
+    c.fillStyle = g; c.fill();
+  }
   if (p.fillColor) {
     // Optionaler weicher Schatten (Magazine-Mockups): nur auf dem Füll-Pfad,
     // damit Strokes scharf bleiben. Skaliert mit — gilt für Canvas, Preview
@@ -7871,21 +7882,20 @@ function jumpToSlide(idx) {
 function layoutTargetSlide() {
   let idx = activeSlide;
   if (!framesSlideOccupied(idx)) return { idx, imgs: [] };
-  if (confirm('Replace the layout on this slide?\nYour photos will move into the new layout.\n(Cancel = add it on a new slide instead)')) {
-    const imgs = [];
-    photos.forEach(p => { if (slideIndexOf(p) === idx && p.kind === 'image' && p.img) imgs.push(p.img); });
-    // Bilder, Platzhalter UND Template-Deko-Texte (tplTxt) der Slide entfernen —
-    // vom NUTZER hinzugefügte freie Texte und die Seiten-Chrome (jr) bleiben.
-    // Ohne das überlagerten sich beim Layout-Wechsel die Texte beider Templates.
-    photos = photos.filter(p => !(slideIndexOf(p) === idx && (p.kind === 'image' || p.kind === 'placeholder' || (p.tplTxt && !p.jr))));
-    sel = -1;
-    return { idx, imgs };
-  }
-  if (slides.length < 20) {
-    slides.push({ bg: slides[slides.length - 1].bg });
-    idx = slides.length - 1;
-  }
-  return { idx, imgs: [] };
+  // BASIC (18.07.26): Ein neues Template auf einer belegten Slide ERSETZT das
+  // alte immer — kein Dialog mehr (der alte confirm ließ zudem rects/Fließtext
+  // stehen → Templates überlagerten sich). Vorhandene Fotos wandern in die
+  // neuen Platzhalter; NUTZER-Texte und Seiten-Chrome (jr) bleiben erhalten.
+  const imgs = [];
+  photos.forEach(p => { if (slideIndexOf(p) === idx && p.kind === 'image' && p.img) imgs.push(p.img); });
+  photos = photos.filter(p => !(slideIndexOf(p) === idx &&
+    (p.kind === 'image' || p.kind === 'placeholder' || p.kind === 'rect' || p.mgFix || (p.tplTxt && !p.jr))));
+  // Template-Zuordnungen der Slide zurücksetzen — das neue Template setzt
+  // seine eigenen (sonst bliebe z. B. der Magazine-Palette-Chip aktiv).
+  const sl = slides[idx];
+  if (sl) { delete sl.palFam; delete sl.palId; sl.tint = null; }
+  sel = -1;
+  return { idx, imgs };
 }
 // Nach einem Layout-Wechsel: die eingesammelten Fotos der Reihe nach in die
 // neuen Platzhalter einsetzen (ohne Auto-Inset-Magie, ohne Toast).
@@ -8253,7 +8263,8 @@ function fitItemsToHeight(items, Hreal) {
 function jrRect(cx, cy, w, h, o) {
   o = o || {};
   return { kind: 'rect', cx, cy, w, h, rot: o.rot || 0, shape: o.shape || 'rect',
-           fillColor: o.fill || null, stroke: o.stroke || null, radius: o.radius || 0 };
+           fillColor: o.fill || null, stroke: o.stroke || null, radius: o.radius || 0,
+           grad: o.grad || null, shadow: o.shadow || null, mgFix: o.mgFix || false };
 }
 
 // Kopf- und Fußzeile einer Journal-Innenseite (Slide idx).
@@ -9531,7 +9542,7 @@ const MG_BG = '#C9CCC4', MG_PAGE = '#FBFBF9', MG_PAGE2 = '#F3F3EF', MG_PAGE3 = '
       MG_SHADOW = { blur: 46, dx: -18, dy: 26, color: 'rgba(30,28,25,0.35)' };
 // Fester Fließtext (Spalten sind auf ~20 Zeichen umbrochen — die Box-Breite
 // wird über align:'left' aus der längsten Zeile geeicht).
-const MG_COL_A = 'Set on a quiet hillside above the\nvalley, the house is shaped by\nits terrain before anything else.\n   Granite boulders, tall spruce\ntrees and the prevailing winds\ndefine the experience of the\nsite, while the elevated position\noffers a changed perspective of\nthe landscape below. You leave\nthe road and, within a few quiet\nsteps, find yourself beneath the\ncanopy. The light changes. The\nair changes. The house becomes\nless of an object and more of a\nliving framework for the forest.\n   The architecture follows this\nshift. Rather than imposing\nitself on the hillside, the\nbuilding sits within it, letting\ntrees puncture elevated decks\nand native planting continue\nbeneath the timber structure.';
+const MG_COL_A = 'Set on a quiet hillside above the\nvalley, the house is shaped by\nits terrain before anything else.\n   Granite boulders, tall spruce\ntrees and the prevailing winds\ndefine the experience of the\nsite, while the elevated position\noffers a changed perspective of\nthe landscape below. You leave\nthe road and, within a few quiet\nsteps, find yourself beneath the\ncanopy. The light changes. The\nair changes. The house becomes\nless of an object and more of a\nliving framework for the forest.\n   The architecture follows this\nshift and, rather than imposing\nitself on the hillside, the house\nsits within it, letting the trees\npuncture the elevated decks and\nnative planting continue beneath\nthe raised timber structure.';
 const MG_COL_B = 'Generous east and west facing\nglazing captures the movement of\nthe sun throughout the day, while\nopen air corridors and operable\ndoors encourage a very direct\nrelationship with the mountain\nclimate. The buildings track the\npassage of light and time; you\nfind the scent of pine carried\nin on the air and the slower\nrhythms of the place settling\ninto attunement — to the season,\nthe site and the hours of light.\n   Materiality is central to this\nambition. Cross-laminated timber\ncarries structure and expression\nin equal measure; placer stone,\nglass and untreated wood are\nchosen for their weight, their\ntexture and their capacity to\nage gracefully in the mountain\nlight, season after season.';
 const MG_COL_C = 'Deep in a quiet pine forest, the\nhouse rests on a gentle slope in\nthe shade of old spruce trees, its\ndark timber facade almost fading\ninto the shadow of the woodland.\n   From the first sketch the idea\nwas simple: the building should\nbelong to the forest, and not the\nforest to the building. Every room\nis arranged around a tall existing\ntree or around a framed view into\nthe clearing, so that the light,\nthe weather and the season become\npart of daily life in the house.\n   The materials repeat what the\nforest already knows: local wood,\nlime plaster and pale grey stone\nfrom a quarry nearby. The windows\nare set deep into the walls, and\nso every opening frames the trees\nlike a quiet painting that keeps\nchanging with the hours. In winter\nthe rooms turn warm and golden; in\nsummer the canopy keeps them cool\nand green. Nothing here is loud;\nthe beauty of the house lies in\nproportion, in calm and in the\npatience of honest craftsmanship\ncarried through every detail.';
 const MG_COL_D = 'In the early mornings, fog drifts\nbetween the trunks and the house\nseems to float above the forest\nfloor. A covered wooden walkway\nleads from the entrance to a small\nsauna hidden further up the slope.\n   Inside, the plan stays simple:\none open living space around the\nstone fireplace, three quiet rooms\nfacing the trees, and a reading\ncorner beneath the highest point\nof the roof. Every detail, from\nthe door handles to the built-in\nwindow seats, was drawn by hand\nand built by carpenters from the\nvalley below.\n   A house like this is not built\nto impress at first sight. It is\nbuilt to age slowly, to gather its\nown light and stories, and to grow\nmore beautiful with every year.';
@@ -9552,8 +9563,11 @@ function mgJ(txt, font, o, leftX, colW) {
   t.align = 'justify';
   t.w = colW;
   t.cx = leftX + colW / 2;
+  t.mgFix = true;   // Fließtext ist auf Mockup-Größe eh unlesbar → fest
   return t;
 }
+// Element als fixen Magazin-Bestandteil markieren (nicht antipp-/editierbar).
+function mgF(t) { t.mgFix = true; return t; }
 function mgC(txt, font, o, cx) {
   const t = jrText(txt, font, o);
   t.cx = cx;
@@ -9626,14 +9640,17 @@ function addMagazinePage(kind, forceAppend) {
       'Malbon Melrose Place Studio North\nYlaga Nordic Furniture & Objects\nGolden Square Werkraum Alpin',
       'Quiet House Atelier Ost · Moke Cabin Fearon & Co\nSurrey 112 Studio North · Brick Veil House Matyas\nBreeze House Daniel Boddam · Playhouse C. Williamson'
     ];
-    [[340, '#EFEAE0', MG_SHADOW, 'Winter Light', 'DM Serif Display', 38, 400, 1, 7.5, 952, -95],
-     [472, '#F3F1EC', fan, 'The Still North', 'Archivo', 34, 200, 3, 6.5, 940, -120],
-     [595, '#F8F7F3', fan, 'QUIET PLACES', 'Cormorant Garamond', 43, 500, 5, 7, 947, -110]].forEach(([bx, tone, sh, ttl, fnt, fs, fw, tr, cs, cyC, cxOff], bi) => {
+    const GRAD_SH = { dir: 'x', stops: [[0, 'rgba(30,28,25,0)'], [1, 'rgba(30,28,25,0.34)']] };
+    [[340, '#EFEAE0', MG_SHADOW, 'WINTER LIGHT', 'Cormorant Garamond', 43, 500, 5, 7.5, 952, -95],
+     [472, '#F3F1EC', fan, 'The Still North', 'Playfair Display', 36, 400, 1, 6.5, 940, -120],
+     [595, '#F8F7F3', fan, 'Quiet Places', 'Archivo', 28, 200, 3, 7, 947, -110]].forEach(([bx, tone, sh, ttl, fnt, fs, fw, tr, cs, cyC, cxOff], bi) => {
+      if (bi > 0) items.push(mgF(jrRect(cx0 + bx - 278, 675, 36, 672, { grad: GRAD_SH })));
       items.push(jrRect(cx0 + bx, 675, 520, 672, { fill: tone, radius: 4, shadow: sh }));
       items.push(jrText(ttl, fnt, { size: fs, weight: fw, color: MG_INK, tracking: tr, cx: cx0 + bx - 53, cy: 443 }));
       items.push(jrPh(cx0 + bx - 35, 659, 284, 348));
-      items.push(mgC(MG_CREDS[bi], 'Archivo', { size: cs, weight: 400, color: MG_MUTED, cy: cyC }, cx0 + bx + cxOff));
+      items.push(mgF(mgC(MG_CREDS[bi], 'Archivo', { size: cs, weight: 400, color: MG_MUTED, cy: cyC }, cx0 + bx + cxOff)));
     });
+    items.push(mgF(jrRect(cx0 + 447, 675, 36, 672, { grad: GRAD_SH })));
     items.push(jrRect(cx0 + 725, 675, 520, 672, { fill: MG_PAGE, radius: 4, shadow: fan }));
     items.push(jrText('THE', 'Cormorant Garamond', { size: 28, weight: 500, color: MG_INK, tracking: 5, cx: cx0 + 725, cy: 399 }));
     items.push(jrText('ALPINE ISSUE', 'Cormorant Garamond', { size: 43, weight: 500, color: MG_INK, tracking: 5, cx: cx0 + 725, cy: 443 }));
@@ -9649,14 +9666,14 @@ function addMagazinePage(kind, forceAppend) {
     items.push(jrRect(mid - 6, 640, 12, 600, { fill: '#EEECE6' }));
     items.push(jrRect(mid, 640, 2, 600, { fill: MG_SPINE }));
     items.push(mgL('The Ridge House\nby Atelier Ost\nand Werkraum Alpin', 'Archivo', { size: 21, weight: 500, color: MG_INK, cy: 420 }, cx0 + 120));
-    items.push(mgL(MG_INTRO, 'Archivo', { size: 12, weight: 400, color: '#3E3B38', cy: 587 }, cx0 + 242));
+    items.push(mgF(mgL(MG_INTRO, 'Archivo', { size: 12, weight: 400, color: '#3E3B38', cy: 587 }, cx0 + 242)));
     [['Words', 'Stella Pearson', 710], ['Photography', 'Silvan Rapp', 752]].forEach(([lb, val, y]) => {
       items.push(mgL(lb, 'Archivo', { size: 8, weight: 600, color: '#3A3835', cy: y }, cx0 + 120));
       items.push(mgL(val, 'Archivo', { size: 8, weight: 400, color: MG_MUTED, cy: y + 14 }, cx0 + 120));
     });
     items.push(mgJ(MG_COL_A, 'Archivo', { size: 7.5, weight: 400, color: '#55524E', cy: 811 }, cx0 + 242, 133));
     items.push(mgJ(MG_COL_B, 'Archivo', { size: 7.5, weight: 400, color: '#55524E', cy: 811 }, cx0 + 387, 133));
-    items.push(jrText('128', 'Archivo', { size: 9, weight: 400, color: MG_MUTED, cx: cx0 + 104, cy: 930 }));
+    items.push(mgF(jrText('128', 'Archivo', { size: 9, weight: 400, color: MG_MUTED, cx: cx0 + 104, cy: 930 })));
     items.push(jrPh(mid + 230, 640, 460, 600));
   } else if (kind === 'grid') {
     // 5/10-Referenz: links 2×2-Grid fast seitenfüllend (kleine Stege), rechts
@@ -9686,7 +9703,7 @@ function addMagazinePage(kind, forceAppend) {
       items.push(li);
       items.push(mgL(val, 'Archivo', { size: 6.5, weight: 400, color: MG_MUTED, cy: y }, cx0 + 835 + Math.round(lb.length * 6.5 * 0.54) + 7));
     });
-    items.push(jrText('081', 'Archivo', { size: 9, weight: 400, color: MG_MUTED, cx: cx0 + 950, cy: 918 }));
+    items.push(mgF(jrText('081', 'Archivo', { size: 9, weight: 400, color: MG_MUTED, cx: cx0 + 950, cy: 918 })));
   }
 
   // Try-before-buy wie überall: Pro-Seiten taggen, Sperre sitzt am Export.
@@ -10593,7 +10610,7 @@ function syncTextItemList() {
   if (!el) return;
   el.innerHTML = '';
   photos.forEach((q, k) => {
-    if (q.kind !== 'text' || q.hidden || Math.floor(q.cx / W) !== activeSlide) return;
+    if (q.kind !== 'text' || q.hidden || q.mgFix || Math.floor(q.cx / W) !== activeSlide) return;
     const row = document.createElement('div');
     row.className = 'ly-row' + (k === sel ? ' on' : '');
     const name = document.createElement('span');
