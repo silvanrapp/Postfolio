@@ -10451,7 +10451,8 @@ async function openPreview() {
   for (let i = 0; i < slides.length; i++) {
     const panel = document.createElement('div'); panel.className = 'pv-panel';
     const img = document.createElement('img');
-    const blob = await canvasToBlob(renderPreviewCanvas(i, mult));
+    // Vorschau nutzt dieselbe Hybrid-Logik — spart spürbar RAM auf Mobilgeräten.
+    const blob = await canvasToBlob(renderPreviewCanvas(i, mult), slideWantsJpeg(i));
     const url = URL.createObjectURL(blob); previewUrls.push(url);
     img.src = url; panel.appendChild(img); track.appendChild(panel);
     const d = document.createElement('div'); d.className = 'pvd' + (i === activeSlide ? ' on' : '');
@@ -13081,8 +13082,11 @@ function exportBaseName() {
     .slice(0, 40);
   return 'postfolio' + (slug ? '-' + slug : '');
 }
-function exportName(idx) {
-  return exportBaseName() + '-' + String(idx + 1).padStart(2, '0') + '.png';
+// Dateiendung folgt dem tatsächlichen Blob-Format (Hybrid: .jpg für Foto-
+// Slides, .png für reine Text-/Grafik-Slides).
+function exportName(idx, blob) {
+  const ext = (blob && blob.type === 'image/jpeg') ? '.jpg' : '.png';
+  return exportBaseName() + '-' + String(idx + 1).padStart(2, '0') + ext;
 }
 function removeProSlidesAndExport(proSlides) {
   const n = proSlides.length;
@@ -13124,7 +13128,7 @@ async function runExport(slideIndices) {
 
   const urls = [];
   for (const i of slideIndices) {
-    const blob = await canvasToBlob(exportSlideCanvas(i));
+    const blob = await canvasToBlob(exportSlideCanvas(i), slideWantsJpeg(i));
     urls.push({ url: URL.createObjectURL(blob), blob, idx: i });
   }
   lastExportUrls = urls;
@@ -13132,7 +13136,7 @@ async function runExport(slideIndices) {
 
   const list = document.getElementById('exp-list');
   list.innerHTML = '';
-  urls.forEach(({ url, idx }) => {
+  urls.forEach(({ url, blob, idx }) => {
     const item = document.createElement('div');
     item.className = 'exp-item';
 
@@ -13151,7 +13155,7 @@ async function runExport(slideIndices) {
       btn.textContent = '↓ Download';
       btn.addEventListener('click', () => {
         const a = document.createElement('a');
-        a.href = url; a.download = exportName(idx); a.click();
+        a.href = url; a.download = exportName(idx, blob); a.click();
       });
       item.appendChild(btn);
     }
@@ -13192,7 +13196,7 @@ document.getElementById('downloadAllBtn').addEventListener('click', async () => 
   try {
     const zip = new JSZip();
     for (const { blob, idx } of lastExportUrls) {
-      zip.file(exportName(idx), blob); // Blob liegt schon vor (kein fetch nötig)
+      zip.file(exportName(idx, blob), blob); // Blob liegt schon vor (kein fetch nötig)
     }
     const zipBlob = await zip.generateAsync({ type: 'blob' });
     const a = document.createElement('a');
@@ -13220,7 +13224,7 @@ document.getElementById('shareAllBtn').addEventListener('click', async () => {
 
   try {
     const files = lastExportUrls.map(({ blob, idx }) =>
-      new File([blob], exportName(idx), { type: 'image/png' }));
+      new File([blob], exportName(idx, blob), { type: blob.type || 'image/png' }));
     if (navigator.canShare && navigator.canShare({ files })) {
       await navigator.share({ files });
     } else {
@@ -13292,8 +13296,19 @@ function exportSlideCanvas(i) {
 
 // canvas.toBlob ist asynchron und speicherschonender als toDataURL
 // (kein riesiger Base64-String) — wichtig auf Mobilgeräten bei 3×-PNGs.
-function canvasToBlob(c) {
-  return new Promise(resolve => c.toBlob(resolve, 'image/png'));
+// Hybrid-Export: jpeg=true → JPEG 90 % (Foto-Slides: ~1/10 der PNG-Größe,
+// visuell identisch — Instagram rekomprimiert ohnehin zu JPEG/1080 px).
+// Reine Text-/Grafik-Slides bleiben PNG: klein UND pixelperfekte Kanten.
+function canvasToBlob(c, jpeg) {
+  return new Promise(resolve => jpeg
+    ? c.toBlob(resolve, 'image/jpeg', 0.9)
+    : c.toBlob(resolve, 'image/png'));
+}
+// Enthält die Slide sichtbare Fotos (oder ein Seiten-Mini, das Fotos rendert)?
+// → dann lohnt JPEG; sonst bleibt das verlustfreie PNG.
+function slideWantsJpeg(i) {
+  return photos.some(p => itemDrawsOnSlide(p, i) && !p.hidden &&
+    (p.kind === 'image' || p.kind === 'slideref'));
 }
 
 document.getElementById('closeExp').addEventListener('click', () => {
