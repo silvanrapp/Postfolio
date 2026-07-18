@@ -3219,7 +3219,7 @@ html.native-ios .hlp-browser-only { display: none; }
 
   <div id="textCtrl" style="display:none">
     <div class="acc-sec" id="secFont" style="display:none">
-    <input type="text" id="textContentInput" placeholder="Your text" maxlength="120">
+    <input type="text" id="textContentInput" placeholder="Your text" maxlength="400">
     <div class="tc-row">
       <select id="fontSelect" title="Font">
         <optgroup label="Headline · bold / caps">
@@ -9621,7 +9621,7 @@ function addMagazinePage(kind, forceAppend) {
     items.push(jrPh(mid, 620, 350, 440));
     items.push(jrText('N°07', 'Archivo', { size: 15, weight: 500, color: MG_INK, tracking: 2, cx: mid, cy: 890 }));
     items.push(jrText('Architecture and design of the Alps, Tyrol and beyond', 'Archivo', { size: 13, weight: 400, color: MG_MUTED, tracking: 1, cx: mid, cy: 916 }));
-    items.push(mgC('Quiet House Atelier Ost & Marlowe Volkering · Moke Valley Cabin Fearon & Co\nSurrey 112 Studio North · Brick Veil House Matyas Architects & Interiors\nBreeze House Daniel Boddam · Yoseki HGA Studio · Playhouse C. Williamson', 'Archivo', { size: 10, weight: 400, color: MG_MUTED, cy: 985 }, mid));
+    items.push(mgF(mgC('Quiet House Atelier Ost & Marlowe Volkering · Moke Valley Cabin Fearon & Co\nSurrey 112 Studio North · Brick Veil House Matyas Architects & Interiors\nBreeze House Daniel Boddam · Yoseki HGA Studio · Playhouse C. Williamson', 'Archivo', { size: 10, weight: 400, color: MG_MUTED, cy: 985 }, mid)));
   } else if (kind === 'stapel') {
     // 2/10-Original (IMG_1131): VIER gleichformatige Ausgaben (je 520×672)
     // übereinander, Versatz 123 — drei nur im linken Anschnitt, Titel-Heft
@@ -9657,7 +9657,7 @@ function addMagazinePage(kind, forceAppend) {
     items.push(jrPh(cx0 + 725, 659, 284, 348));
     items.push(jrText('N°07', 'Archivo', { size: 12, weight: 500, color: MG_INK, tracking: 2, cx: cx0 + 725, cy: 872 }));
     items.push(jrText('Architecture and design of the Alps, Tyrol and beyond', 'Archivo', { size: 10, weight: 400, color: MG_MUTED, tracking: 1, cx: cx0 + 725, cy: 893 }));
-    items.push(mgC('Quiet House Atelier Ost & Marlowe Volkering · Moke Cabin Fearon & Co\nSurrey 112 Studio North · Brick Veil House Matyas & Interiors\nBreeze House Daniel Boddam · Playhouse C. Williamson', 'Archivo', { size: 8, weight: 400, color: MG_MUTED, cy: 947 }, cx0 + 725));
+    items.push(mgF(mgC('Quiet House Atelier Ost & Marlowe Volkering · Moke Cabin Fearon & Co\nSurrey 112 Studio North · Brick Veil House Matyas & Interiors\nBreeze House Daniel Boddam · Playhouse C. Williamson', 'Archivo', { size: 8, weight: 400, color: MG_MUTED, cy: 947 }, cx0 + 725)));
   } else if (kind === 'spread') {
     // 3/10-Referenz: links Headline (3 Zeilen) oben, zentrierter Intro-Block,
     // Words/Photography-Spalte, zwei Textspalten unten — rechts randloses Foto.
@@ -9666,14 +9666,14 @@ function addMagazinePage(kind, forceAppend) {
     items.push(jrRect(mid - 6, 640, 12, 600, { fill: '#EEECE6' }));
     items.push(jrRect(mid, 640, 2, 600, { fill: MG_SPINE }));
     items.push(mgL('The Ridge House\nby Atelier Ost\nand Werkraum Alpin', 'Archivo', { size: 21, weight: 500, color: MG_INK, cy: 420 }, cx0 + 120));
-    items.push(mgF(mgL(MG_INTRO, 'Archivo', { size: 12, weight: 400, color: '#3E3B38', cy: 587 }, cx0 + 242)));
+    items.push(mgL(MG_INTRO, 'Archivo', { size: 12, weight: 400, color: '#3E3B38', cy: 587 }, cx0 + 242));
     [['Words', 'Stella Pearson', 710], ['Photography', 'Silvan Rapp', 752]].forEach(([lb, val, y]) => {
       items.push(mgL(lb, 'Archivo', { size: 8, weight: 600, color: '#3A3835', cy: y }, cx0 + 120));
       items.push(mgL(val, 'Archivo', { size: 8, weight: 400, color: MG_MUTED, cy: y + 14 }, cx0 + 120));
     });
     items.push(mgJ(MG_COL_A, 'Archivo', { size: 7.5, weight: 400, color: '#55524E', cy: 811 }, cx0 + 242, 133));
     items.push(mgJ(MG_COL_B, 'Archivo', { size: 7.5, weight: 400, color: '#55524E', cy: 811 }, cx0 + 387, 133));
-    items.push(mgF(jrText('128', 'Archivo', { size: 9, weight: 400, color: MG_MUTED, cx: cx0 + 104, cy: 930 })));
+    items.push(jrText('128', 'Archivo', { size: 9, weight: 400, color: MG_MUTED, cx: cx0 + 104, cy: 930 }));
     items.push(jrPh(mid + 230, 640, 460, 600));
   } else if (kind === 'grid') {
     // 5/10-Referenz: links 2×2-Grid fast seitenfüllend (kleine Stege), rechts
@@ -9703,7 +9703,7 @@ function addMagazinePage(kind, forceAppend) {
       items.push(li);
       items.push(mgL(val, 'Archivo', { size: 6.5, weight: 400, color: MG_MUTED, cy: y }, cx0 + 835 + Math.round(lb.length * 6.5 * 0.54) + 7));
     });
-    items.push(mgF(jrText('081', 'Archivo', { size: 9, weight: 400, color: MG_MUTED, cx: cx0 + 950, cy: 918 })));
+    items.push(jrText('081', 'Archivo', { size: 9, weight: 400, color: MG_MUTED, cx: cx0 + 950, cy: 918 }));
   }
 
   // Try-before-buy wie überall: Pro-Seiten taggen, Sperre sitzt am Export.
@@ -9906,9 +9906,19 @@ document.addEventListener('click', (e) => {
 document.getElementById('textContentInput').addEventListener('input', function() {
   if (sel < 0 || sel >= photos.length || photos[sel].kind !== 'text') return;
   beginAction('text');
-  photos[sel].text = this.value;
+  const p = photos[sel];
+  // Formatierung bleibt beim Inhalt-Ändern IMMER gleich (18.07.26): Die
+  // Schriftgröße hängt an p.h / Zeilenzahl — ändert sich die Zeilenzahl,
+  // wird p.h so nachgeführt, dass die Basis-Zeilenhöhe (= optische Größe)
+  // exakt konstant bleibt. Breite/Anker/Ausrichtung bleiben unangetastet.
+  const lead = p.leading || 1;
+  const n0 = Math.max(1, String(p.text || '').split('\n').length);
+  const base = p.h / (1 + (n0 - 1) * lead);
+  p.text = this.value;
+  const n1 = Math.max(1, String(this.value).split('\n').length);
+  p.h = base * (1 + (n1 - 1) * lead);
   // Journal: Kopf-/Fußzeilen-Texte über alle Journal-Slides synchron halten.
-  if (typeof syncJournalText === 'function') syncJournalText(photos[sel]);
+  if (typeof syncJournalText === 'function') syncJournalText(p);
   redraw();
 });
 
