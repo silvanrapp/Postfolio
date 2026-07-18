@@ -3441,7 +3441,12 @@ html.native-ios .hlp-browser-only { display: none; }
       <div class="pi-actions">
         <button id="promoAddLight">+ Outro · light</button>
         <button id="promoAddDark">+ Outro · dark</button>
-        <button id="promoAddMini" title="'Slides made with Postfolio' + a mini preview of one of your pages (pick via dropdown) — support your indie app ♥">+ Outro · preview</button>
+        <button id="promoAddMini" title="'Slides made with Postfolio' + a mini preview of one of your pages — support your indie app ♥">+ Outro · preview</button>
+      </div>
+      <!-- Seitenwahl fürs Preview-Outro: klappt beim Klick auf, die Wahl
+           erstellt das Outro fertig befüllt und scrollt die Liste ans Ende. -->
+      <div id="promoMiniPick" class="pi-actions" style="display:none;">
+        <select id="promoMiniPage" style="font-size:10px; padding:5px 10px; background:transparent; color:rgba(255,255,255,0.8); border:1px solid rgba(255,255,255,0.28); border-radius:7px;"></select>
       </div>
     </div>
   </div>
@@ -7879,7 +7884,7 @@ async function addOutroSlide(dark) {
 // Outro-Variante „preview": ‚SLIDES MADE WITH Postfolio' + Mini-Vorschau einer
 // EIGENEN Carousel-Seite (kind 'slideref'; Seitenzahl per Dropdown — die Pill
 // #slideRefWrap erscheint, sobald das Mini angetippt wird) + „it's free!"-Bubble.
-async function addOutroSlideMini() {
+async function addOutroSlideMini(refIdx) {
   try {
     await document.fonts.load('600 100px "Playfair Display"');
     await document.fonts.load('italic 500 46px "Playfair Display"');
@@ -7921,7 +7926,7 @@ async function addOutroSlideMini() {
   const mw = 480, mh = Math.round(mw * H / W), mcy = Math.round(H * 0.635);
   const shRect = jrRect(cx - 10, mcy + 26, mw + 150, mh + 160, { mgFix: true,
     grad: { dir: 'r', stops: [[0, 'rgba(30,28,25,0.28)'], [0.5, 'rgba(30,28,25,0.18)'], [0.72, 'rgba(30,28,25,0.09)'], [0.88, 'rgba(30,28,25,0.03)'], [1, 'rgba(30,28,25,0)']] } });
-  const mini = { kind: 'slideref', ref: -1, cx, cy: mcy, w: mw, h: mh, rot: 0 };
+  const mini = { kind: 'slideref', ref: (typeof refIdx === 'number' && refIdx >= 0) ? refIdx : -1, cx, cy: mcy, w: mw, h: mh, rot: 0 };
 
   photos.push(eyebrow, logo, wm, wmDot, free, shRect, mini, trigger);
   activeSlide = idx;
@@ -13005,15 +13010,45 @@ document.getElementById('exportOneBtn').addEventListener('click', () => {
 });
 
 // ── Outro-Einladung: optionale Marken-Slide anhängen und Export neu erzeugen ──
-async function addOutroAndReexport(variant) {
-  if (variant === 'mini') await addOutroSlideMini();
-  else await addOutroSlide(variant);
+async function addOutroAndReexport(dark) {
+  await addOutroSlide(dark);
   document.getElementById('promoInvite').classList.add('hidden'); // nicht doppelt anbieten
   runExport(slides.map((_, i) => i));
 }
 document.getElementById('promoAddLight').addEventListener('click', () => addOutroAndReexport(false));
 document.getElementById('promoAddDark').addEventListener('click', () => addOutroAndReexport(true));
-document.getElementById('promoAddMini').addEventListener('click', () => addOutroAndReexport('mini'));
+// Preview-Outro braucht — anders als light/dark — eine Entscheidung (welche
+// Seite ins Fenster?). Die fällt DIREKT im Export-Overlay: Klick klappt die
+// Seitenwahl auf, die Wahl erstellt das Outro fertig befüllt, exportiert neu
+// und scrollt die Liste ans Ende zum frischen Outro.
+document.getElementById('promoAddMini').addEventListener('click', () => {
+  const row = document.getElementById('promoMiniPick');
+  if (row.style.display !== 'none') { row.style.display = 'none'; return; }
+  const pk = document.getElementById('promoMiniPage');
+  pk.innerHTML = '<option value="-1" selected disabled>Which page?</option>' +
+    slides.map((_, k) => '<option value="' + k + '">Page ' + (k + 1) + '</option>').join('');
+  row.style.display = 'flex';
+});
+document.getElementById('promoMiniPage').addEventListener('change', async function () {
+  const v = parseInt(this.value, 10);
+  if (isNaN(v) || v < 0) return;
+  document.getElementById('promoMiniPick').style.display = 'none';
+  await addOutroSlideMini(v);
+  document.getElementById('promoInvite').classList.add('hidden'); // nicht doppelt anbieten
+  await runExport(slides.map((_, i) => i));
+  // Direkt beim neuen Outro landen (statt von Hand runterscrollen zu müssen).
+  // Die Blob-Bilder laden asynchron nach und schieben das Layout — deshalb
+  // erst scrollen, wenn das LETZTE Bild steht, plus Sofort-Scroll als Start.
+  const ov = document.getElementById('exp-overlay');
+  const last = document.getElementById('exp-list').lastElementChild;
+  const go = () => { try { ov.scrollTo({ top: ov.scrollHeight, behavior: 'smooth' }); } catch (e) { ov.scrollTop = ov.scrollHeight; } };
+  go();
+  if (last) {
+    const img = last.querySelector('img');
+    if (img && !img.complete) img.addEventListener('load', () => requestAnimationFrame(go), { once: true });
+    else setTimeout(go, 400);
+  }
+});
 
 // ═══════════════════════════════════════
 // TRY-BEFORE-BUY: „Bauen frei, Export ist die Münze"
@@ -13116,6 +13151,9 @@ async function runExport(slideIndices) {
   if (proSlides.length) { showProExportSheet(proSlides); return; }
   const prevSel = sel;
   sel = -1;
+  // Offene Outro-Seitenwahl einklappen (falls der Export neu startet).
+  const _pm = document.getElementById('promoMiniPick');
+  if (_pm) _pm.style.display = 'none';
   document.getElementById('loading').classList.add('show');
 
   // Alte Object-URLs des letzten Exports freigeben (Speicher), bevor neue
