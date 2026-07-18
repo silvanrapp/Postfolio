@@ -5712,6 +5712,41 @@ function drawGridBackdrops(c, slideIdx, scale, offX) {
   });
 }
 
+// ── Falz-Wölbung (Magazine, 18.07.26): Die fertige Doppelseiten-Region wird
+//    spaltenweise mit exponentialem Falz-Profil neu gezeichnet — Seiten bleiben
+//    plan, nur die Zone am Bund (FALL ≈ 13 % der halben Breite) sackt ab und
+//    staucht sich in die Bindung (inverses Sampling, keine Lücken). Läuft als
+//    Post-Pass NACH den Items — identisch auf Canvas, Preview und Export.
+//    sl.mgWarp = { x, y, w, h, sag, comp } in Slide-Koordinaten.
+let _warpCv = null;
+function applyGutterWarp(c, cv, i, oxDev, oyDev, scale) {
+  const sl = slides[i], wp = sl && sl.mgWarp;
+  if (!wp) return;
+  const x = Math.round(oxDev + wp.x * scale), y = Math.round(oyDev + wp.y * scale);
+  const w = Math.max(4, Math.round(wp.w * scale)), h = Math.max(4, Math.round(wp.h * scale));
+  if (!_warpCv) _warpCv = document.createElement('canvas');
+  if (_warpCv.width !== w)  _warpCv.width  = w;
+  if (_warpCv.height !== h) _warpCv.height = h;
+  const oc = _warpCv.getContext('2d');
+  oc.clearRect(0, 0, w, h);
+  oc.drawImage(cv, x, y, w, h, 0, 0, w, h);
+  c.save();
+  c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'high';
+  c.fillStyle = sl.bg || '#ffffff';
+  c.fillRect(x, y, w, h);
+  const midX = w / 2, FALL = 0.13;
+  const sag = wp.sag * scale, comp = wp.comp * scale;
+  const stw = Math.max(2, Math.round(scale));
+  for (let px = 0; px < w; px += stw) {
+    const t = Math.abs(px + stw / 2 - midX) / midX;
+    const f = Math.exp(-t / FALL);
+    const dip = sag * f;
+    const sx = Math.min(w - stw, Math.max(0, px + comp * f * (px >= midX ? 1 : -1)));
+    c.drawImage(_warpCv, sx, 0, stw, h, x + px, y + dip, stw, h - dip * 0.55);
+  }
+  c.restore();
+}
+
 function renderNow() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -5737,6 +5772,8 @@ function renderNow() {
       if (!itemDrawsOnSlide(p, i, true)) return;
       drawItem(p);
     });
+
+    if (slide.mgWarp) applyGutterWarp(ctx, canvas, i, i * W * S, 0, S);
 
     ctx.restore();
   });
@@ -7893,7 +7930,7 @@ function layoutTargetSlide() {
   // Template-Zuordnungen der Slide zurücksetzen — das neue Template setzt
   // seine eigenen (sonst bliebe z. B. der Magazine-Palette-Chip aktiv).
   const sl = slides[idx];
-  if (sl) { delete sl.palFam; delete sl.palId; sl.tint = null; }
+  if (sl) { delete sl.palFam; delete sl.palId; delete sl.mgWarp; sl.tint = null; }
   sel = -1;
   return { idx, imgs };
 }
@@ -9539,7 +9576,9 @@ CAT_FNS.arthouse = addArthousePage;
 // Satzspiegel-Textur, wirkt wie ein echtes Magazin (bewusst kein Lorem Ipsum).
 const MG_BG = '#C9CCC4', MG_PAGE = '#FBFBF9', MG_PAGE2 = '#F3F3EF', MG_PAGE3 = '#EDEDE8',
       MG_INK = '#1F1D1A', MG_MUTED = '#8F8B84', MG_SPINE = '#E0DED8',
-      MG_SHADOW = { blur: 46, dx: -18, dy: 26, color: 'rgba(30,28,25,0.35)' };
+      MG_SHADOW = { blur: 46, dx: -18, dy: 26, color: 'rgba(30,28,25,0.35)' },
+      MG_GUT_L = { dir: 'x', stops: [[0, 'rgba(30,28,25,0)'], [0.78, 'rgba(30,28,25,0.07)'], [1, 'rgba(30,28,25,0.2)']] },
+      MG_GUT_R = { dir: 'x', stops: [[0, 'rgba(30,28,25,0.2)'], [0.22, 'rgba(30,28,25,0.07)'], [1, 'rgba(30,28,25,0)']] };
 // Fester Fließtext (Spalten sind auf ~20 Zeichen umbrochen — die Box-Breite
 // wird über align:'left' aus der längsten Zeile geeicht).
 const MG_COL_A = 'Set on a quiet hillside above the\nvalley, the house is shaped by\nits terrain before anything else.\n   Granite boulders, tall spruce\ntrees and the prevailing winds\ndefine the experience of the\nsite, while the elevated position\noffers a changed perspective of\nthe landscape below. You leave\nthe road and, within a few quiet\nsteps, find yourself beneath the\ncanopy. The light changes. The\nair changes. The house becomes\nless of an object and more of a\nliving framework for the forest.\n   The architecture follows this\nshift and, rather than imposing\nitself on the hillside, the house\nsits within it, letting the trees\npuncture the elevated decks and\nnative planting continue beneath\nthe raised timber structure.';
@@ -9616,6 +9655,10 @@ function addMagazinePage(kind, forceAppend) {
     slides[idx].bg = MG_BG;
     items.push(jrRect(mid, 640, 640, 850, { fill: MG_PAGE, radius: 4, shadow: MG_SHADOW }));
     items.push(jrRect(mid - 316, 640, 8, 850, { fill: MG_SPINE, radius: 2 }));
+    items.push(mgF(jrRect(mid - 294, 640, 40, 850, { grad: MG_GUT_R })));
+    items.push(mgF(jrRect(mid, 1067, 632, 3, { fill: '#E7E5DF' })));
+    items.push(mgF(jrRect(mid, 1070, 622, 3, { fill: '#DBD9D2' })));
+    items.push(mgF(jrRect(mid + 2, 1072.5, 608, 2.5, { fill: '#CFCDC6' })));
     items.push(jrText('THE', 'Cormorant Garamond', { size: 36, weight: 500, color: MG_INK, tracking: 6, cx: mid, cy: 291 }));
     items.push(jrText('ALPINE ISSUE', 'Cormorant Garamond', { size: 54, weight: 500, color: MG_INK, tracking: 6, cx: mid, cy: 347 }));
     items.push(jrPh(mid, 620, 350, 440));
@@ -9662,7 +9705,7 @@ function addMagazinePage(kind, forceAppend) {
     // 3/10-Referenz: links Headline (3 Zeilen) oben, zentrierter Intro-Block,
     // Words/Photography-Spalte, zwei Textspalten unten — rechts randloses Foto.
     slides[idx].bg = MG_BG;
-    items.push(jrRect(mid, 640, 920, 600, { fill: MG_PAGE, radius: 3, shadow: { blur: 55, dy: 30, color: 'rgba(30,28,25,0.38)' } }));
+    items.push(jrRect(mid, 640, 920, 600, { fill: MG_PAGE, radius: 3, shadow: { blur: 70, dx: -12, dy: 36, color: 'rgba(30,28,25,0.4)' } }));
     items.push(jrRect(mid - 6, 640, 12, 600, { fill: '#EEECE6' }));
     items.push(jrRect(mid, 640, 2, 600, { fill: MG_SPINE }));
     items.push(mgL('The Ridge House\nby Atelier Ost\nand Werkraum Alpin', 'Archivo', { size: 21, weight: 500, color: MG_INK, cy: 420 }, cx0 + 120));
@@ -9675,12 +9718,18 @@ function addMagazinePage(kind, forceAppend) {
     items.push(mgJ(MG_COL_B, 'Archivo', { size: 7.5, weight: 400, color: '#55524E', cy: 811 }, cx0 + 387, 133));
     items.push(jrText('128', 'Archivo', { size: 9, weight: 400, color: MG_MUTED, cx: cx0 + 104, cy: 930 }));
     items.push(jrPh(mid + 230, 640, 460, 600));
+    // Mockup-Plastizität: Seiten wölben sich in den Bund, Papierdicke unten.
+    items.push(mgF(jrRect(mid - 33, 640, 66, 600, { grad: MG_GUT_L })));
+    items.push(mgF(jrRect(mid + 33, 640, 66, 600, { grad: MG_GUT_R })));
+    items.push(mgF(jrRect(mid, 943, 912, 3.5, { fill: '#E7E5DF' })));
+    items.push(mgF(jrRect(mid - 2, 946.5, 902, 3, { fill: '#DBD9D2' })));
+    items.push(mgF(jrRect(mid + 2, 949.5, 890, 2.5, { fill: '#CFCDC6' })));
   } else if (kind === 'grid') {
     // 5/10-Referenz: links 2×2-Grid fast seitenfüllend (kleine Stege), rechts
     // Foto OBEN RECHTS, darunter Subhead + zwei Spalten, unten Mini-Credits.
     slides[idx].palFam = 'magazine'; slides[idx].palId = 'salbei';
     slides[idx].bg = MG_BG;
-    items.push(jrRect(mid, 640, 920, 600, { fill: MG_PAGE, radius: 3, shadow: { blur: 55, dy: 30, color: 'rgba(30,28,25,0.38)' } }));
+    items.push(jrRect(mid, 640, 920, 600, { fill: MG_PAGE, radius: 3, shadow: { blur: 70, dx: -12, dy: 36, color: 'rgba(30,28,25,0.4)' } }));
     items.push(jrRect(mid - 6, 640, 12, 600, { fill: '#EEECE6' }));
     items.push(jrRect(mid, 640, 2, 600, { fill: MG_SPINE }));
     items.push(jrPh(cx0 + 206, 496, 179, 263));
@@ -9704,12 +9753,24 @@ function addMagazinePage(kind, forceAppend) {
       items.push(mgL(val, 'Archivo', { size: 6.5, weight: 400, color: MG_MUTED, cy: y }, cx0 + 835 + Math.round(lb.length * 6.5 * 0.54) + 7));
     });
     items.push(jrText('081', 'Archivo', { size: 9, weight: 400, color: MG_MUTED, cx: cx0 + 950, cy: 918 }));
+    items.push(mgF(jrRect(mid - 33, 640, 66, 600, { grad: MG_GUT_L })));
+    items.push(mgF(jrRect(mid + 33, 640, 66, 600, { grad: MG_GUT_R })));
+    items.push(mgF(jrRect(mid, 943, 912, 3.5, { fill: '#E7E5DF' })));
+    items.push(mgF(jrRect(mid - 2, 946.5, 902, 3, { fill: '#DBD9D2' })));
+    items.push(mgF(jrRect(mid + 2, 949.5, 890, 2.5, { fill: '#CFCDC6' })));
   }
 
   // Try-before-buy wie überall: Pro-Seiten taggen, Sperre sitzt am Export.
   // Cover + Spread bleiben frei.
   if (kind !== 'cover' && kind !== 'spread') items.forEach(it => { it.proFeat = 'magazine'; });
   if (kind !== 'voll') fitItemsToHeight(items, realH());
+  // Falz-Wölbung nur für die offenen Doppelseiten; andere Kinds löschen die
+  // Zuordnung (falls das Template eine Doppelseite ersetzt hat).
+  if (kind === 'spread' || kind === 'grid') {
+    slides[idx].mgWarp = { x: 80, y: 340 + (realH() - 1350) / 2, w: 920, h: 612, sag: 7.5, comp: 2.6 };
+  } else {
+    delete slides[idx].mgWarp;
+  }
   photos.push(...items);
   refillSlidePlaceholders(idx, t.imgs);
   activeSlide = idx; sel = firstIdx; panelHidden = false;
@@ -10207,6 +10268,7 @@ function renderPreviewCanvas(i, mult) {
     drawPhotoLayer(c, p, p.img, sx, sy, sw, sh, p.w * mult, p.h * mult);
     c.restore();
   });
+  if (slides[i].mgWarp) applyGutterWarp(c, ec, i, 0, 0, mult);
   c.restore();
   return ec;
 }
@@ -12961,6 +13023,8 @@ function exportSlideCanvas(i) {
     drawPhotoLayer(ectx, p, p.img, sx, sy, sw, sh, p.w * EX, p.h * EX);
     ectx.restore();
   });
+
+  if (slides[i].mgWarp) applyGutterWarp(ectx, ec, i, 0, 0, EX);
 
   ectx.restore();
   return ec;
