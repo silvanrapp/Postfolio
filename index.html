@@ -8291,6 +8291,14 @@ function syncJournalUI() {
 // (Slide-BG, Rects, Strokes, Frames, Texte). Nutzerfremde Farben bleiben.
 // ═══════════════════════════════════════
 const PALETTES = {
+  magazine: {
+    _order: ['salbei', 'creme', 'sand', 'rose', 'nebel'], _default: 'salbei',
+    salbei: { bg: '#C9CCC4', accent: '#FBFBF9' },
+    creme:  { bg: '#EAE4D8', accent: '#FBFBF9' },
+    sand:   { bg: '#DFD3BF', accent: '#FBFBF9' },
+    rose:   { bg: '#E6D7D1', accent: '#FBFBF9' },
+    nebel:  { bg: '#D4D9DE', accent: '#FBFBF9' }
+  },
   frame: {
     _order: ['neon', 'flamme', 'flieder', 'asphalt'], _default: 'neon',
     neon:    { bg: '#2438C4', bgSoft: '#4A5BE0', accent: '#C6F53C', ink: '#171512', paper: '#F4F1EB', muted: '#AAB4F0', dark: '#23282D', dark2: '#2E3A42', dark3: '#3A3F45', card1: '#EFE9DC', card2: '#F7F2E7', grey: '#8B949C' },
@@ -9543,6 +9551,9 @@ function addMagazinePage(kind, forceAppend) {
   } else if (kind === 'cover') {
     // 10/10-Referenz: „THE" klein über großem Serifen-Titel, fast quadratisches
     // Foto in der oberen Heftmitte, unten N° + Untertitel + drei Credit-Zeilen.
+    slides[idx].palFam = 'magazine'; slides[idx].palId = 'salbei';
+    slides[idx].palFam = 'magazine'; slides[idx].palId = 'salbei';
+    slides[idx].palFam = 'magazine'; slides[idx].palId = 'salbei';
     slides[idx].bg = MG_BG;
     items.push(jrRect(mid, 640, 640, 850, { fill: MG_PAGE, radius: 4, shadow: MG_SHADOW }));
     items.push(jrRect(mid - 316, 640, 8, 850, { fill: MG_SPINE, radius: 2 }));
@@ -9591,6 +9602,7 @@ function addMagazinePage(kind, forceAppend) {
   } else if (kind === 'grid') {
     // 5/10-Referenz: links 2×2-Grid fast seitenfüllend (kleine Stege), rechts
     // Foto OBEN RECHTS, darunter Subhead + zwei Spalten, unten Mini-Credits.
+    slides[idx].palFam = 'magazine'; slides[idx].palId = 'salbei';
     slides[idx].bg = MG_BG;
     items.push(jrRect(mid, 640, 920, 600, { fill: MG_PAGE, radius: 3, shadow: { blur: 55, dy: 30, color: 'rgba(30,28,25,0.38)' } }));
     items.push(jrRect(mid - 6, 640, 12, 600, { fill: '#EEECE6' }));
