@@ -10556,8 +10556,12 @@ async function openPreview() {
   for (let i = 0; i < slides.length; i++) {
     const panel = document.createElement('div'); panel.className = 'pv-panel';
     const img = document.createElement('img');
-    // Vorschau nutzt dieselbe Hybrid-Logik — spart spürbar RAM auf Mobilgeräten.
-    const blob = await canvasToBlob(renderPreviewCanvas(i, mult), slideWantsJpeg(i));
+    // Vorschau IMMER verlustfrei (PNG): In der Vorschau wird per Pinch-Zoom
+    // pixelgenau geprüft — JPEG erzeugt auf hellen Papier-Verläufen sichtbare
+    // 8×8-Blockkacheln und Geisterkanten an Text (sah aus wie „stufige
+    // Wölbung", war aber der Encoder). Die Hybrid-Ersparnis gilt nur für den
+    // eigentlichen Export.
+    const blob = await canvasToBlob(renderPreviewCanvas(i, mult));
     const url = URL.createObjectURL(blob); previewUrls.push(url);
     img.src = url; panel.appendChild(img); track.appendChild(panel);
     const d = document.createElement('div'); d.className = 'pvd' + (i === activeSlide ? ' on' : '');
@@ -13438,8 +13442,11 @@ function exportSlideCanvas(i) {
 // visuell identisch — Instagram rekomprimiert ohnehin zu JPEG/1080 px).
 // Reine Text-/Grafik-Slides bleiben PNG: klein UND pixelperfekte Kanten.
 function canvasToBlob(c, jpeg) {
+  // 0.92: bei 0.9 wurden auf hellen Papier-Verläufen (Magazine-Mockups) beim
+  // Reinzoomen JPEG-Blockkacheln sichtbar; 0.92 ist visuell sauber und bleibt
+  // ~85 % kleiner als PNG.
   return new Promise(resolve => jpeg
-    ? c.toBlob(resolve, 'image/jpeg', 0.9)
+    ? c.toBlob(resolve, 'image/jpeg', 0.92)
     : c.toBlob(resolve, 'image/png'));
 }
 // Enthält die Slide sichtbare Fotos (oder ein Seiten-Mini, das Fotos rendert)?
