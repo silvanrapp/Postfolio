@@ -3024,6 +3024,27 @@ html.native-ios .hlp-browser-only { display: none; }
         <span class="jr-tgl-dot" aria-hidden="true"></span>
       </button>
     </div>
+    <!-- Globaler Rahmen für ALLE Slides gleichmäßig (Breite + Farbe + Linie).
+         Wirkt live auf jede Seite; PRO-Feature (auf Web für alle frei). -->
+    <div class="row" style="margin-top:8px">
+      <span class="label" id="frameAllLabel">Frame</span>
+      <div class="size-chips" id="frameAllChips">
+        <button class="size-chip sel" data-v="0" title="No frame">0</button>
+        <button class="size-chip" data-v="12" title="12 pt">12</button>
+        <button class="size-chip" data-v="24" title="24 pt">24</button>
+        <button class="size-chip" data-v="40" title="40 pt">40</button>
+        <button class="size-chip" data-v="60" title="60 pt">60</button>
+      </div>
+    </div>
+    <div class="row" id="frameAllColorRow">
+      <span class="label">Color</span>
+      <button class="clr-btn white sel" data-fclr="#ffffff" title="White"></button>
+      <button class="clr-btn black"     data-fclr="#111111" title="Black"></button>
+      <button class="clr-btn beige"     data-fclr="#F4F1EB" title="Beige"></button>
+      <button class="clr-btn grey"      data-fclr="#888888" title="Grey"></button>
+      <input type="color" id="frameAllColorPick" class="color-pick" value="#ffffff" title="Pick any frame color">
+      <button id="frameAllLine" class="jr-tgl" title="Thin inner line inside the frame"><span class="jr-tgl-txt">Line</span><span class="jr-tgl-dot" aria-hidden="true"></span></button>
+    </div>
   </div>
 
   <!-- ▼ Texts-Sektion: alle Texte der aktiven Slide — antippen wählt aus,
@@ -3714,7 +3735,7 @@ html.native-ios .hlp-browser-only { display: none; }
 // Die Wahl bleibt in localStorage, der schwebende Umschalter unten links wechselt live.
 const PRO_FEATURES = ['tplStack','tplGrid','tplRecap','framesExtra','textPresets',
                       'batchExport','hiRes','gradientMask','brandKit','journal',
-                      'archive','statement','framestyle','arthouse','magazine'];
+                      'archive','statement','framestyle','arthouse','magazine','frameAll'];
 const PF_PLATFORM = window.Capacitor ? 'ios' : 'web';
 let pfIsPro = false;      // iOS: später aus StoreKit-Kauf gelesen
 let pfSimTier = null;     // 'free' | 'pro' | null (nur intern)
@@ -3761,7 +3782,8 @@ const PRO_UI = [
   ['magazine',  ['mgSet5Btn','mgSet7Btn','mgSet9Btn','mgStapelBtn','mgGridBtn','mgVollBtn']],
   ['textPresets', ['presetEditorialBtn','presetMagazinBtn','presetJournalBtn','presetPosterBtn','presetSpecBtn','presetArthouseBtn']],
   ['batchExport', ['exportAllBtn']],
-  ['gradientMask',['maskLabelBtn','maskToggle']]
+  ['gradientMask',['maskLabelBtn','maskToggle']],
+  ['frameAll',    ['frameAllLabel']]
 ];
 
 // ═══════════════════════════════════════
@@ -3838,6 +3860,11 @@ let activeSlide = 0;
 // den Slide-Hintergrund oder eine Kachel im Filmstreifen. Zeigt die Slide-
 // Werkzeuge (Texts / Page / Palette). Wird beim Wählen eines Elements gelöscht.
 let slideFocus  = false;
+// Globaler Rahmen um ALLE Slides gleichmäßig (Silvan 19.07., Tester-Wunsch):
+// ein einheitlicher Rand in Wunschfarbe, auf jede Slide gleich angewendet —
+// unabhängig davon, ob Einzelfoto, Grid oder Frames. w=0 → aus. PRO-Feature
+// ('frameAll'); auf Web ist hasFeature immer true → dort für alle frei.
+let slideFrame = { w: 0, color: '#FFFFFF', line: false };
 let guides      = []; // active smart guides { type:'v'|'h', pos:number }
 
 // Interaction state
@@ -4225,6 +4252,7 @@ function serializeState() {
     mode, activeSlide,
     journal: (typeof journalMeta !== 'undefined') ? { ...journalMeta } : undefined,
     corners: { round: CORNERS.round, r: CORNERS.r },
+    slideFrame: { ...slideFrame },
     slides: slides.map(s => ({ ...s })),
     photos: photos.map(p => {
       const o = { ...p };
@@ -4256,6 +4284,8 @@ async function restoreState(st) {
   slides = (st.slides && st.slides.length ? st.slides : [{ bg: '#F4F1EB' }]).map(s => ({ ...s }));
   activeSlide = Math.min(st.activeSlide || 0, slides.length - 1);
   if (st.corners) { CORNERS.round = !!st.corners.round; if (st.corners.r) CORNERS.r = st.corners.r; }
+  slideFrame = st.slideFrame ? { w: +st.slideFrame.w || 0, color: st.slideFrame.color || '#FFFFFF', line: !!st.slideFrame.line } : { w: 0, color: '#FFFFFF', line: false };
+  if (typeof syncFrameAllUI === 'function') syncFrameAllUI();
   if (st.journal && typeof journalMeta !== 'undefined') {
     Object.assign(journalMeta, st.journal);
     // Migration: früher gab es nur EIN gemeinsames show-Flag.
@@ -6054,6 +6084,50 @@ function warpRegion(c, cv, sl, wp, oxDev, oyDev, scale) {
   c.restore();
 }
 
+// Globaler Slide-Rahmen: gleichmäßige Bänder in slideFrame.color über die
+// Außenkanten JEDER Slide — NACH allem anderen gezeichnet (deckt die äußersten
+// Pixel ab, „Instagram-Rahmen"-Look). Slide beginnt bei ox, Maßstab scale.
+// In allen drei Render-Pfaden aufgerufen (Editor, Vorschau, Export) → identisch.
+function drawSlideFrame(c, ox, scale) {
+  if (!slideFrame || !(slideFrame.w > 0)) return;
+  const bw = Math.round(slideFrame.w * scale);
+  const Wd = Math.round(W * scale), Hd = Math.round(H * scale);
+  if (bw <= 0) return;
+  c.save();
+  c.fillStyle = slideFrame.color || '#FFFFFF';
+  c.fillRect(ox, 0, Wd, bw);                 // oben
+  c.fillRect(ox, Hd - bw, Wd, bw);           // unten
+  c.fillRect(ox, 0, bw, Hd);                 // links
+  c.fillRect(ox + Wd - bw, 0, bw, Hd);       // rechts
+  if (slideFrame.line) {                      // optionale feine Innenlinie
+    const lw = Math.max(1, scale * 0.8);
+    c.strokeStyle = 'rgba(30,28,25,0.18)';
+    c.lineWidth = lw;
+    c.strokeRect(ox + bw + lw / 2, bw + lw / 2, Wd - 2 * bw - lw, Hd - 2 * bw - lw);
+  }
+  c.restore();
+}
+// UI-Sync + Verdrahtung des globalen Rahmen-Reglers (in der „Page"-Sektion).
+function syncFrameAllUI() {
+  const chips = document.getElementById('frameAllChips');
+  if (chips) chips.querySelectorAll('.size-chip').forEach(b => b.classList.toggle('sel', (+b.dataset.v) === (slideFrame.w | 0)));
+  const cr = document.getElementById('frameAllColorRow');
+  if (cr) cr.querySelectorAll('.clr-btn').forEach(b => b.classList.toggle('sel', (b.dataset.fclr || '').toLowerCase() === (slideFrame.color || '').toLowerCase()));
+  const cp = document.getElementById('frameAllColorPick'); if (cp && /^#([0-9a-fA-F]{6})$/.test(slideFrame.color || '')) cp.value = slideFrame.color;
+  const lb = document.getElementById('frameAllLine'); if (lb) lb.classList.toggle('sel', !!slideFrame.line);
+}
+(function initFrameAllUI() {
+  const chips = document.getElementById('frameAllChips'); if (!chips) return;
+  const setW = v => { if (typeof beginAction === 'function') beginAction(); slideFrame.w = Math.max(0, v | 0); syncFrameAllUI(); redraw(); scheduleSave(); if (typeof updateProDot === 'function') updateProDot(); };
+  chips.querySelectorAll('.size-chip').forEach(b => b.addEventListener('click', () => setW(+b.dataset.v)));
+  const cr = document.getElementById('frameAllColorRow');
+  if (cr) cr.querySelectorAll('.clr-btn').forEach(b => b.addEventListener('click', () => { if (typeof beginAction === 'function') beginAction(); slideFrame.color = b.dataset.fclr; syncFrameAllUI(); redraw(); scheduleSave(); }));
+  const cp = document.getElementById('frameAllColorPick');
+  if (cp) cp.addEventListener('input', () => { slideFrame.color = cp.value; syncFrameAllUI(); redraw(); scheduleSave(); });
+  const lb = document.getElementById('frameAllLine');
+  if (lb) lb.addEventListener('click', () => { if (typeof beginAction === 'function') beginAction(); slideFrame.line = !slideFrame.line; syncFrameAllUI(); redraw(); scheduleSave(); });
+  syncFrameAllUI();
+})();
 function renderNow() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -6081,6 +6155,7 @@ function renderNow() {
     });
 
     if (slide.mgWarp) applyGutterWarp(ctx, canvas, i, i * W * S, 0, S);
+    drawSlideFrame(ctx, i * W * S, S);
 
     ctx.restore();
   });
@@ -10930,6 +11005,7 @@ function renderPreviewCanvas(i, mult) {
     c.restore();
   });
   if (slides[i].mgWarp) applyGutterWarp(c, ec, i, 0, 0, mult);
+  drawSlideFrame(c, 0, mult);
   c.restore();
   return ec;
 }
@@ -13658,7 +13734,7 @@ function updateProDot() {
   // als Kauf-Erinnerung, bei Pro als bleibendes „hab ich mir gegönnt"-Abzeichen
   // (Silvan 19.07.). Anders als die Template-Badges (applyProBadges) verschwindet
   // er also NACH dem Kauf NICHT. Web hat kein Pro-Konzept → nur mit Simulation.
-  const show = (PF_PLATFORM !== 'web' || pfSimTier) && photos.some(p => p.proFeat);
+  const show = (PF_PLATFORM !== 'web' || pfSimTier) && (photos.some(p => p.proFeat) || (slideFrame && slideFrame.w > 0));
   b.classList.toggle('has-pro', show);
 }
 // Einmalige Vorwarnung beim ersten Einsatz eines Pro-Features (Sheet mit
@@ -13752,6 +13828,12 @@ function removeProSlidesAndExport(proSlides) {
 let lastExportUrls = []; // [{ url, idx }] from the most recent export, used by "Download All"
 
 async function runExport(slideIndices) {
+  // Globaler Rahmen ist ein PRO-Feature: liegt einer an und ist PRO nicht frei-
+  // geschaltet (iOS-Free), Paywall statt Export. Auf Web ist hasFeature immer
+  // true → dort für alle frei.
+  if (slideFrame && slideFrame.w > 0 && typeof hasFeature === 'function' && !hasFeature('frameAll')) {
+    if (window.showProStub) { window.showProStub(); return; }
+  }
   // Try-before-buy-Sperre: Enthalten die zu exportierenden Slides Pro-Inhalte
   // ohne freigeschaltetes Feature → Pro-Screen statt Export.
   const proSlides = draftProSlides().filter(i => slideIndices.indexOf(i) >= 0);
@@ -13934,6 +14016,7 @@ function exportSlideCanvas(i) {
   });
 
   if (slides[i].mgWarp) applyGutterWarp(ectx, ec, i, 0, 0, EX);
+  drawSlideFrame(ectx, 0, EX);
 
   ectx.restore();
   return ec;
