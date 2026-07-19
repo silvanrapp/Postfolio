@@ -5882,6 +5882,27 @@ function applyGutterWarp(c, cv, i, oxDev, oyDev, scale) {
   // folge (hintere Ausgaben zuerst).
   const regions = Array.isArray(sl.mgWarp) ? sl.mgWarp : [sl.mgWarp];
   for (const wp of regions) if (wp) warpRegion(c, cv, sl, wp, oxDev, oyDev, scale);
+  // Bodenschatten NACH dem Wölben zeichnen (Silvan 19.07.: „die gerade Kante
+  // muss weg" — als Template-Item lag er in der Warp-Region und wurde vom
+  // bg-Flood an der Regionskante GERADE abgeschnitten). Jetzt liegt er darüber,
+  // direkt unter der gewölbten Unterkante → weicher, runder Schatten, keine
+  // Kante. Koordinaten slide-lokal wie wp.x. { cx, cy, w, h, stops }.
+  if (sl.mgFloorShadow) {
+    c.save();
+    sl.mgFloorShadow.forEach(s => {
+      const scx = oxDev + s.cx * scale, scy = oyDev + s.cy * scale;
+      const sw = s.w * scale, sh = s.h * scale;
+      c.save();
+      c.translate(scx, scy);
+      c.scale(1, sh / sw);
+      const g = c.createRadialGradient(0, 0, 0, 0, 0, sw / 2);
+      s.stops.forEach(st => g.addColorStop(st[0], st[1]));
+      c.fillStyle = g;
+      c.beginPath(); c.arc(0, 0, sw / 2, 0, Math.PI * 2); c.fill();
+      c.restore();
+    });
+    c.restore();
+  }
 }
 function warpRegion(c, cv, sl, wp, oxDev, oyDev, scale) {
   const mode = wp.mode || 0;               // 0 = Bund mittig, 1 = Falz links
@@ -10030,6 +10051,30 @@ function rewrapJustify(txt, fontFamily, size, weight, colW) {
   });
   return out.join('\n');
 }
+// Weicher Umbruch auf eine feste Box-Breite, der HARTE Zeilenumbrüche (\n)
+// respektiert und nur zu lange Zeilen zusätzlich umbricht. Für die Bearbeitung
+// von Headline/Subline/Intro: neuer Text behält die Template-Breite und läuft
+// nie über die Seite hinaus (Silvan 19.07.).
+function wrapToWidth(txt, fontFamily, size, weight, wrapW) {
+  if (!wrapW || wrapW < 20) return String(txt);
+  if (!_measCtx) _measCtx = document.createElement('canvas').getContext('2d');
+  const c = _measCtx;
+  c.font = `normal ${weight || 400} ${Math.round(size)}px "${fontFamily}", sans-serif`;
+  const out = [];
+  String(txt).split('\n').forEach(hard => {
+    const ind = (hard.match(/^ +/) || [''])[0];
+    const words = hard.trim().split(/ +/).filter(Boolean);
+    if (!words.length) { out.push(ind); return; }
+    let line = ind, has = false;
+    words.forEach(w => {
+      const test = has ? line + ' ' + w : line + w;
+      if (has && c.measureText(test).width > wrapW) { out.push(line); line = w; has = true; }
+      else { line = test; has = true; }
+    });
+    out.push(line);
+  });
+  return out.join('\n');
+}
 function mgJ(txt, font, o, leftX, colW) {
   o.cx = 0; o.align = 'left';
   const size = o.size || 7.5;
@@ -10185,8 +10230,9 @@ function addMagazinePage(kind, forceAppend) {
     // breiter Schatten-Pool, der nach unten ausläuft — dunkelster Kontakt direkt
     // an der Unterkante, dann diffuser Abfall. Zwei Lagen: schmaler Kontakt +
     // breiter, sehr weicher Halo darunter.
-    items.push(mgF(jrRect(mid, 1010, 1010, 172, { grad: { dir: 'r', stops: [[0, 'rgba(30,28,25,0.16)'], [0.4, 'rgba(30,28,25,0.085)'], [0.72, 'rgba(30,28,25,0.025)'], [1, 'rgba(30,28,25,0)']] } })));
-    items.push(mgF(jrRect(mid, 966, 900, 60, { grad: { dir: 'r', stops: [[0, 'rgba(30,28,25,0.24)'], [0.5, 'rgba(30,28,25,0.12)'], [0.82, 'rgba(30,28,25,0.03)'], [1, 'rgba(30,28,25,0)']] } })));
+    // Bodenschatten liegt NICHT mehr als Item hier (würde an der Warp-Region
+    // gerade abgeschnitten) — er wird über slides[idx].mgFloorShadow NACH dem
+    // Wölben gezeichnet (siehe applyGutterWarp).
     items.push(mgF(jrRect(cx0 + 70, 642, 20, 620, { grad: { dir: 'r', stops: [[0, 'rgba(30,28,25,0.11)'], [0.7, 'rgba(30,28,25,0.05)'], [1, 'rgba(30,28,25,0)']] } })));
     items.push(mgF(jrRect(cx0 + 1010, 642, 20, 620, { grad: { dir: 'r', stops: [[0, 'rgba(30,28,25,0.11)'], [0.7, 'rgba(30,28,25,0.05)'], [1, 'rgba(30,28,25,0)']] } })));
     items.push(jrRect(mid, 640, 920, 600, { fill: MG_PAGE, radius: 3 }));
@@ -10207,8 +10253,8 @@ function addMagazinePage(kind, forceAppend) {
     // Dünnerer, eleganterer Buchblock (Silvan 19.07.: „unten wirkt es zu dick"):
     // statt drei kräftiger Kanten nur eine feine Blockkante + ein hauchzarter
     // Schattenstrich darunter → das Heft wirkt schlank.
-    items.push(mgF(jrRect(mid, 943, 906, 1.8, { fill: '#E4E2DC', radius: 0.9 })));
-    items.push(mgF(jrRect(mid, 945, 892, 1.3, { fill: '#D4D2CB', radius: 0.65 })));
+    // Buchblock nur noch als HAUCH einer Kante (Silvan: „man sieht die Seiten kaum").
+    items.push(mgF(jrRect(mid, 936, 900, 1.2, { fill: '#EBE9E3', radius: 0.6 })));
   } else if (kind === 'grid') {
     // 5/10-Referenz: links 2×2-Grid fast seitenfüllend (kleine Stege), rechts
     // Foto OBEN RECHTS, darunter Subhead + zwei Spalten, unten Mini-Credits.
@@ -10223,8 +10269,9 @@ function addMagazinePage(kind, forceAppend) {
     // breiter Schatten-Pool, der nach unten ausläuft — dunkelster Kontakt direkt
     // an der Unterkante, dann diffuser Abfall. Zwei Lagen: schmaler Kontakt +
     // breiter, sehr weicher Halo darunter.
-    items.push(mgF(jrRect(mid, 1010, 1010, 172, { grad: { dir: 'r', stops: [[0, 'rgba(30,28,25,0.16)'], [0.4, 'rgba(30,28,25,0.085)'], [0.72, 'rgba(30,28,25,0.025)'], [1, 'rgba(30,28,25,0)']] } })));
-    items.push(mgF(jrRect(mid, 966, 900, 60, { grad: { dir: 'r', stops: [[0, 'rgba(30,28,25,0.24)'], [0.5, 'rgba(30,28,25,0.12)'], [0.82, 'rgba(30,28,25,0.03)'], [1, 'rgba(30,28,25,0)']] } })));
+    // Bodenschatten liegt NICHT mehr als Item hier (würde an der Warp-Region
+    // gerade abgeschnitten) — er wird über slides[idx].mgFloorShadow NACH dem
+    // Wölben gezeichnet (siehe applyGutterWarp).
     items.push(mgF(jrRect(cx0 + 70, 642, 20, 620, { grad: { dir: 'r', stops: [[0, 'rgba(30,28,25,0.11)'], [0.7, 'rgba(30,28,25,0.05)'], [1, 'rgba(30,28,25,0)']] } })));
     items.push(mgF(jrRect(cx0 + 1010, 642, 20, 620, { grad: { dir: 'r', stops: [[0, 'rgba(30,28,25,0.11)'], [0.7, 'rgba(30,28,25,0.05)'], [1, 'rgba(30,28,25,0)']] } })));
     items.push(jrRect(mid, 640, 920, 600, { fill: MG_PAGE, radius: 3 }));
@@ -10254,8 +10301,8 @@ function addMagazinePage(kind, forceAppend) {
     // Dünnerer, eleganterer Buchblock (Silvan 19.07.: „unten wirkt es zu dick"):
     // statt drei kräftiger Kanten nur eine feine Blockkante + ein hauchzarter
     // Schattenstrich darunter → das Heft wirkt schlank.
-    items.push(mgF(jrRect(mid, 943, 906, 1.8, { fill: '#E4E2DC', radius: 0.9 })));
-    items.push(mgF(jrRect(mid, 945, 892, 1.3, { fill: '#D4D2CB', radius: 0.65 })));
+    // Buchblock nur noch als HAUCH einer Kante (Silvan: „man sieht die Seiten kaum").
+    items.push(mgF(jrRect(mid, 936, 900, 1.2, { fill: '#EBE9E3', radius: 0.6 })));
   }
 
   // Try-before-buy wie überall: Pro-Seiten taggen, Sperre sitzt am Export.
@@ -10265,11 +10312,24 @@ function addMagazinePage(kind, forceAppend) {
   // Falz-Wölbung nur für die offenen Doppelseiten; andere Kinds löschen die
   // Zuordnung (falls das Template eine Doppelseite ersetzt hat).
   const voff = (realH() - 1350) / 2;
+  delete slides[idx].mgFloorShadow;
   if (kind === 'spread' || kind === 'grid') {
     // h 613: schließt die Papierstapel-Kanten unten MIT ein — sie wölben sich
     // sanft mit (bowB), wie beim echten Buchblock. Die feinen 1-px-Streifen
     // am Bund verhindern die früheren „Zähne".
-    slides[idx].mgWarp = { x: 80, y: 340 + voff, w: 920, h: 613, sag: 10.5, comp: 3.2, bowT: 6.4, bowB: 3.6, lightAlpha: 0.82, gutter: 0.34 };
+    // h 600 = EXAKT die Seitenhöhe (cy640·h600 → 340..940). Kein bg-Streifen
+    // mehr unter der Seite (der war unter dunklen Fotos als helle GERADE Kante
+    // sichtbar — Silvan 19.07.). bowB-Überhang deckt die gewölbte Unterkante ab.
+    slides[idx].mgWarp = { x: 80, y: 340 + voff, w: 920, h: 600, sag: 10.5, comp: 3.2, bowT: 6.4, bowB: 1.8, lightAlpha: 0.82, gutter: 0.34 };
+    // Runder, zweiteiliger Bodenschatten — NACH dem Wölben gezeichnet (siehe
+    // applyGutterWarp), sitzt direkt unter der gewölbten Unterkante, keine
+    // gerade Abschnittkante. Je eine Linse unter linker/rechter Seite (Mitte
+    // heller) + ein hauchzarter breiter Grundschatten.
+    slides[idx].mgFloorShadow = [
+      { cx: 540, cy: 986 + voff, w: 1010, h: 84, stops: [[0, 'rgba(30,28,25,0.06)'], [0.6, 'rgba(30,28,25,0.02)'], [1, 'rgba(30,28,25,0)']] },
+      { cx: 306, cy: 972 + voff, w: 476, h: 66, stops: [[0, 'rgba(30,28,25,0.22)'], [0.55, 'rgba(30,28,25,0.09)'], [0.82, 'rgba(30,28,25,0.02)'], [1, 'rgba(30,28,25,0)']] },
+      { cx: 774, cy: 972 + voff, w: 476, h: 66, stops: [[0, 'rgba(30,28,25,0.22)'], [0.55, 'rgba(30,28,25,0.09)'], [0.82, 'rgba(30,28,25,0.02)'], [1, 'rgba(30,28,25,0)']] }
+    ];
   } else if (kind === 'cover') {
     // Einzelseite, links gebunden: sehr subtile Falz (mode 1) — die ganze
     // Seite bekommt eine leichte Plastizität, der Titel biegt sich minimal in
@@ -10283,6 +10343,23 @@ function addMagazinePage(kind, forceAppend) {
   } else {
     delete slides[idx].mgWarp;
   }
+  // Umbruch-Breite jedes editierbaren Text-Bausteins merken (wrapW): beim Ändern
+  // des Inhalts bricht der Text auf EXAKT diese Breite um → gleiche Abmessung
+  // & Formatierung wie im Template (Silvan 19.07.). WICHTIG: die GEMESSENE
+  // Breite der längsten Original-Zeile nehmen (nicht it.w = grobe Zeichen-
+  // schätzung ×0.62, die zu breit ausfällt → Text lief rechts über die Seite).
+  if (!_measCtx) _measCtx = document.createElement('canvas').getContext('2d');
+  items.forEach(it => {
+    if (it.kind !== 'text' || it.mgBody || it.wrapW != null) return;
+    const lead = it.leading || 1;
+    const n = Math.max(1, String(it.text || '').split('\n').length);
+    const fs = (it.h / (1 + (n - 1) * lead)) * 0.78;
+    const wgt = it.bold ? 700 : (it.weight || 300);
+    _measCtx.font = `normal ${wgt} ${Math.round(fs)}px "${it.fontFamily}", sans-serif`;
+    let mx = 0;
+    String(it.text || '').split('\n').forEach(l => { mx = Math.max(mx, _measCtx.measureText(l).width); });
+    it.wrapW = Math.max(40, Math.ceil(mx) + 1);
+  });
   photos.push(...items);
   refillSlidePlaceholders(idx, t.imgs);
   activeSlide = idx; sel = firstIdx; panelHidden = false;
@@ -10487,8 +10564,14 @@ document.getElementById('textContentInput').addEventListener('input', function()
   const lead = p.leading || 1;
   const n0 = Math.max(1, String(p.text || '').split('\n').length);
   const base = p.h / (1 + (n0 - 1) * lead);
-  p.text = this.value;
-  const n1 = Math.max(1, String(this.value).split('\n').length);
+  // Magazine-Bausteine (wrapW gesetzt): neuen Text auf die Template-Box-Breite
+  // umbrechen, damit er nicht über die Seite hinausläuft und dieselbe Abmessung
+  // behält. p.w (= Anker/Breite) bleibt unverändert.
+  const fontSize = base * 0.78;
+  const wgt = p.bold ? 700 : (p.weight || 300);
+  const val = p.wrapW ? wrapToWidth(this.value, p.fontFamily, fontSize, wgt, p.wrapW) : this.value;
+  p.text = val;
+  const n1 = Math.max(1, String(val).split('\n').length);
   p.h = base * (1 + (n1 - 1) * lead);
   // Journal: Kopf-/Fußzeilen-Texte über alle Journal-Slides synchron halten.
   if (typeof syncJournalText === 'function') syncJournalText(p);
