@@ -3824,6 +3824,10 @@ let slides      = [{ bg: '#F4F1EB' }];
 let photos      = []; // { img, cx, cy, w, h, rot }
 let sel         = -1; // selected photo index
 let activeSlide = 0;
+// Slide-Fokus: Toolbar auf Slide-EBENE (kein Element gewählt) — z. B. Tipp auf
+// den Slide-Hintergrund oder eine Kachel im Filmstreifen. Zeigt die Slide-
+// Werkzeuge (Texts / Page / Palette). Wird beim Wählen eines Elements gelöscht.
+let slideFocus  = false;
 let guides      = []; // active smart guides { type:'v'|'h', pos:number }
 
 // Interaction state
@@ -4565,7 +4569,11 @@ function attachTileReorder(tile, i) {
       _suppressTileClick = true; setTimeout(() => { _suppressTileClick = false; }, 350);
       reorderSlides(i, tileTargetFromX(curX));
     } else if (!scrolling) {
-      activeSlide = i; syncBgButtons(); updateDots();
+      // Kachel im Filmstreifen angetippt → diese Slide aktiv + Toolbar auf
+      // Slide-Ebene öffnen (Silvan 19.07.: „drückt man auf einen Slide im
+      // Filmstreifen, muss auch die Toolbar aufgehen").
+      activeSlide = i; sel = -1; slideFocus = true; panelHidden = false;
+      syncBgButtons(); updateDots();
       // Panorama-Slide angeklickt → rauszoomen; 1er-Slide → Zoom zurück.
       if (!autoZoomForSlide()) centerActiveSlide();
       redraw();
@@ -6525,7 +6533,7 @@ canvas.addEventListener('mousedown', e => {
   // „+"-Feld eines Platzhalters hat Vorrang — auch wenn Texte darüber liegen.
   const plusIdx = plusHitIdx(lx, ly);
   if (plusIdx >= 0) {
-    sel = plusIdx; panelHidden = false;
+    sel = plusIdx; panelHidden = false; slideFocus = false;
     activeSlide = Math.max(0, Math.min(slides.length - 1, Math.floor(photos[plusIdx].cx / W)));
     if (typeof guardSnapBriefly === 'function') guardSnapBriefly();
     dragMode = null;
@@ -6537,6 +6545,7 @@ canvas.addEventListener('mousedown', e => {
   if (hit >= 0) {
     tapAlreadySelected = (sel === hit);
     sel          = hit;
+    slideFocus   = false;   // echtes Element gewählt → Element-Toolbar
     panelHidden  = false;   // aktiver Klick aufs Foto → Toolbar aufklappen
     activeSlide  = Math.max(0, Math.min(slides.length - 1, Math.floor(photos[sel].cx / W)));
     if (photos[hit].locked) {
@@ -6569,10 +6578,12 @@ canvas.addEventListener('mousedown', e => {
     sel          = -1;
     const si     = Math.max(0, Math.min(slides.length - 1, Math.floor(lx / W)));
     activeSlide  = si;
-    // Foto-Dialog NUR beim „+" in der Mitte einer LEEREN Slide. Ein Tipp auf
-    // den Slide-Hintergrund wählt nur aus/ab — er öffnet nie das Add-Menü
-    // (Nutzer-Feedback: das Menü ging bei jedem Slide-Tipp auf, und der
-    // Schließ-Tipp daneben öffnete es sofort wieder).
+    // Tipp auf den Slide-HINTERGRUND öffnet die Toolbar auf Slide-Ebene
+    // (Silvan 19.07.: „drückt man auf den Hintergrund eines Slides, muss die
+    // Toolbar aufgehen"). Kein Element gewählt → Slide-Werkzeuge (Texts/Page/
+    // Palette). Der Add-Dialog kommt weiter NUR übers zentrale „+".
+    slideFocus   = true;
+    panelHidden  = false;
     addCandidate = emptyCenterTap(lx, ly) ? { lx, ly, slide: si, mx: e.clientX, my: e.clientY } : null;
   }
   syncBgButtons();
@@ -6854,7 +6865,7 @@ canvas.addEventListener('touchstart', e => {
     if (hit >= 0) {
       e.preventDefault();
       tapAlreadySelected = true;
-      panelHidden = false;
+      panelHidden = false; slideFocus = false;
       activeSlide = Math.max(0, Math.min(slides.length - 1, Math.floor(photos[sel].cx / W)));
       if (typeof guardSnapBriefly === 'function') guardSnapBriefly();
       if (photos[hit].locked) {
@@ -7074,7 +7085,7 @@ canvas.addEventListener('touchend', e => {
       const movedSel = ct ? Math.hypot(ct.clientX - selCandidate.mx, ct.clientY - selCandidate.my) : 999;
       const idx = selCandidate.idx; selCandidate = null;
       if (movedSel < 8 && idx >= 0 && idx < photos.length && photos[idx]) {
-        sel = idx; panelHidden = false;
+        sel = idx; panelHidden = false; slideFocus = false;
         activeSlide = Math.max(0, Math.min(slides.length - 1, Math.floor(photos[idx].cx / W)));
         if (typeof guardSnapBriefly === 'function') guardSnapBriefly();
         _dblTapT = Date.now(); _dblTapSel = sel;   // zweiter Tipp kurz danach = Crop
@@ -7088,17 +7099,24 @@ canvas.addEventListener('touchend', e => {
         return;
       }
     }
+    let openedAdd = false;
     if (addCandidate) {
       const ct = e.changedTouches[0];
       const moved = ct ? Math.hypot(ct.clientX - addCandidate.mx, ct.clientY - addCandidate.my) : 999;
       if (moved < 8) {
         pendingAddPos = { cx: addCandidate.lx, cy: addCandidate.ly };
         openAddFlow();
+        openedAdd = true;
       }
       addCandidate = null;
     }
     // Tap (kaum Bewegung) → aktive Slide zentrieren.
-    if (ct0 && Math.hypot(ct0.clientX - pressX, ct0.clientY - pressY) < 8) centerActiveSlide();
+    if (ct0 && Math.hypot(ct0.clientX - pressX, ct0.clientY - pressY) < 8) {
+      // Hintergrund-Tipp (kein Element gewählt, kein Add-Menü) → Toolbar auf
+      // Slide-Ebene öffnen (Silvan 19.07.: „Tipp auf den Slide-Hintergrund").
+      if (sel < 0 && !openedAdd) { slideFocus = true; panelHidden = false; }
+      centerActiveSlide();
+    }
     scheduleSave();
     redraw();
   }
@@ -11040,10 +11058,13 @@ function updateDeleteBtn() {
   // Palette nur zeigen, wenn die Slide eine Farbwelt kennt (Template-Slides) —
   // bei reinen Foto-Slides gibt es dort nichts zu wählen.
   const _slPal = slides[activeSlide];
-  setSectionAvail('secJournal', hasSel && !!(_slPal && typeof PALETTES !== 'undefined' && PALETTES[_slPal.palFam]));
-  setSectionAvail('secChrome', hasSel);
+  // slideCtx = Element gewählt ODER Slide-Fokus (Hintergrund/Filmstreifen-Tipp).
+  // Slide-Ebenen-Werkzeuge (Palette, Page, Texts) sind in BEIDEN Fällen da.
+  const slideCtx = hasSel || slideFocus;
+  setSectionAvail('secJournal', slideCtx && !!(_slPal && typeof PALETTES !== 'undefined' && PALETTES[_slPal.palFam]));
+  setSectionAvail('secChrome', slideCtx);
   setSectionAvail('secResize', hasSel);
-  setSectionAvail('secTexts', hasSel && photos.some(q => q.kind === 'text' && !q.hidden && Math.floor(q.cx / W) === activeSlide));
+  setSectionAvail('secTexts', slideCtx && photos.some(q => q.kind === 'text' && !q.hidden && Math.floor(q.cx / W) === activeSlide));
   if (typeof syncTextItemList === 'function') syncTextItemList();
   if (typeof syncJournalUI === 'function') syncJournalUI();
   // Akkordeon: welche Sektionen sind für diese Auswahl überhaupt verfügbar?
@@ -11077,17 +11098,17 @@ function updateDeleteBtn() {
   setSectionAvail('secOutline', isText);
   setSectionAvail('secTPos',    isText);
   const sheet = document.getElementById('contextSheet');
-  sheet.classList.toggle('show', hasSel && !panelHidden);
-  document.getElementById('panelOpenBtn').classList.toggle('on', hasSel && panelHidden);
-  // Fertig-Haken: sichtbar, solange etwas ausgewählt ist
+  sheet.classList.toggle('show', slideCtx && !panelHidden);
+  document.getElementById('panelOpenBtn').classList.toggle('on', slideCtx && panelHidden);
+  // Fertig-Haken: sichtbar, solange ein Element ODER die Slide im Fokus ist.
   const _done = document.getElementById('doneBtn');
-  if (_done) _done.classList.toggle('show', hasSel);
+  if (_done) _done.classList.toggle('show', slideCtx);
   // Bei ausgewähltem FOTO tritt die Zoom-/Fullscreen-Pille in den Hintergrund
   // (halbtransparent + nicht klickbar), damit der rote Skalier-Punkt unten
   // rechts nie dahinter verschwindet. Mit dem ✓ endet die Auswahl → wieder normal.
   const _zc = document.getElementById('zoomCtrl');
   if (_zc) _zc.classList.toggle('dimmed', hasSel && !!photos[sel] && photos[sel].kind === 'image');
-  if (!hasSel) openSec = null;
+  if (!hasSel && !slideFocus) openSec = null;
   // Text gewählt → standardmäßig die Font-Sektion zeigen (dort ist die Eingabe),
   // außer es ist bereits eine andere Text-/Rotate-Sektion offen.
   // secLayer bleibt offen: Wer im Layer-Panel eine Ebene wählt, will sie
@@ -11543,7 +11564,9 @@ function reserveForPanel() {
   const sheet = document.getElementById('contextSheet');
   const zoom  = document.getElementById('zoomCtrl');
   const strip = document.getElementById('slideStrip');
-  const hasSel = sel >= 0 && sel < photos.length;
+  // Slide-Fokus zählt wie eine Auswahl: die Toolbar ist dann sichtbar und muss
+  // beim Reservieren des Layouts mitgerechnet werden.
+  const hasSel = (sel >= 0 && sel < photos.length) || slideFocus;
   const desktop = window.innerWidth >= 820;
   requestAnimationFrame(() => {
     const stripH = strip ? strip.offsetHeight : 0;   // fixer Filmstrip unten
@@ -14030,7 +14053,7 @@ document.getElementById('undoHdrBtn').addEventListener('click', undo);
 document.getElementById('addSlideSide').addEventListener('click', addSlideAction);
 // Fertig-Haken: Bearbeitung beenden — Auswahl weg, Toolbar zu, Wischen frei.
 document.getElementById('doneBtn').addEventListener('click', () => {
-  sel = -1;
+  sel = -1; slideFocus = false;   // ✓ schließt auch den Slide-Fokus (Toolbar zu)
   syncBgButtons(); updateDots(); updateDeleteBtn(); redraw(); scheduleSave();
 });
 document.getElementById('newBtn').addEventListener('click', () => {
@@ -14038,7 +14061,7 @@ document.getElementById('newBtn').addEventListener('click', () => {
   if (hasContent() && !window.confirm('Start a new project? This clears all photos and slides.')) return;
   beginAction(); // leeren ist per Undo umkehrbar
   slides = [{ bg: '#F4F1EB' }];
-  photos = []; sel = -1; activeSlide = 0; guides = [];
+  photos = []; sel = -1; slideFocus = false; activeSlide = 0; guides = [];
   resizeCanvas(); syncBgButtons(); updateDots(); updateDeleteBtn();
   syncFrameButtons(); syncTextUI(); syncSlotUI();
   redraw(); scheduleSave();
