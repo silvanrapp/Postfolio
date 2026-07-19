@@ -238,6 +238,13 @@ button {
   box-shadow: 0 10px 28px rgba(0,0,0,0.1);
 }
 #exportMenu.show { display: block; }
+#exportMenu { min-width: 180px; }
+#exportFrameOpt { border-bottom: 1px solid var(--bg); padding: 4px 4px 8px; }
+#expFrameRow { display: flex; align-items: center; gap: 9px; padding: 10px 11px; cursor: pointer; font-size: 13px; color: var(--text); user-select: none; }
+#expFrameRow input { width: 16px; height: 16px; accent-color: var(--dark); flex: 0 0 auto; }
+#expFrameOpts { display: none; padding: 2px 11px 4px; flex-direction: column; gap: 8px; }
+#expFrameOpts.show { display: flex; }
+#expFrameClrs { display: flex; gap: 8px; align-items: center; }
 #exportMenu button {
   display: block; width: 100%; text-align: left; height: auto;
   background: var(--surface); color: var(--text); border: none;
@@ -2169,6 +2176,23 @@ html.native-ios .hlp-browser-only { display: none; }
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 8l5-5 5 5"/><path d="M5 21h14"/></svg>
     </button>
     <div id="exportMenu">
+      <div id="exportFrameOpt">
+        <label id="expFrameRow"><input type="checkbox" id="expFrameChk"><span id="expFrameLabel">Frame all slides</span></label>
+        <div id="expFrameOpts">
+          <div class="size-chips" id="expFrameChips">
+            <button class="size-chip" data-v="12" title="12 pt">12</button>
+            <button class="size-chip" data-v="24" title="24 pt">24</button>
+            <button class="size-chip" data-v="40" title="40 pt">40</button>
+            <button class="size-chip" data-v="60" title="60 pt">60</button>
+          </div>
+          <div id="expFrameClrs">
+            <button class="clr-btn white" data-fclr="#ffffff" title="White"></button>
+            <button class="clr-btn black" data-fclr="#111111" title="Black"></button>
+            <button class="clr-btn beige" data-fclr="#F4F1EB" title="Beige"></button>
+            <button class="clr-btn grey"  data-fclr="#888888" title="Grey"></button>
+          </div>
+        </div>
+      </div>
       <button id="exportAllBtn">All slides</button>
       <button id="exportOneBtn">This slide</button>
     </div>
@@ -3783,7 +3807,7 @@ const PRO_UI = [
   ['textPresets', ['presetEditorialBtn','presetMagazinBtn','presetJournalBtn','presetPosterBtn','presetSpecBtn','presetArthouseBtn']],
   ['batchExport', ['exportAllBtn']],
   ['gradientMask',['maskLabelBtn','maskToggle']],
-  ['frameAll',    ['frameAllLabel']]
+  ['frameAll',    ['frameAllLabel', 'expFrameLabel']]
 ];
 
 // ═══════════════════════════════════════
@@ -6115,6 +6139,12 @@ function syncFrameAllUI() {
   if (cr) cr.querySelectorAll('.clr-btn').forEach(b => b.classList.toggle('sel', (b.dataset.fclr || '').toLowerCase() === (slideFrame.color || '').toLowerCase()));
   const cp = document.getElementById('frameAllColorPick'); if (cp && /^#([0-9a-fA-F]{6})$/.test(slideFrame.color || '')) cp.value = slideFrame.color;
   const lb = document.getElementById('frameAllLine'); if (lb) lb.classList.toggle('sel', !!slideFrame.line);
+  // Export-Dropdown-Widgets identisch spiegeln (gleicher State slideFrame).
+  const on = slideFrame.w > 0;
+  const chk = document.getElementById('expFrameChk'); if (chk) chk.checked = on;
+  const opts = document.getElementById('expFrameOpts'); if (opts) opts.classList.toggle('show', on);
+  const ech = document.getElementById('expFrameChips'); if (ech) ech.querySelectorAll('.size-chip').forEach(b => b.classList.toggle('sel', (+b.dataset.v) === (slideFrame.w | 0)));
+  const ecl = document.getElementById('expFrameClrs'); if (ecl) ecl.querySelectorAll('.clr-btn').forEach(b => b.classList.toggle('sel', (b.dataset.fclr || '').toLowerCase() === (slideFrame.color || '').toLowerCase()));
 }
 (function initFrameAllUI() {
   const chips = document.getElementById('frameAllChips'); if (!chips) return;
@@ -6126,6 +6156,13 @@ function syncFrameAllUI() {
   if (cp) cp.addEventListener('input', () => { slideFrame.color = cp.value; syncFrameAllUI(); redraw(); scheduleSave(); });
   const lb = document.getElementById('frameAllLine');
   if (lb) lb.addEventListener('click', () => { if (typeof beginAction === 'function') beginAction(); slideFrame.line = !slideFrame.line; syncFrameAllUI(); redraw(); scheduleSave(); });
+  // Export-Dropdown: „Frame all slides"-Kästchen + Optionen (gleicher State).
+  const chk = document.getElementById('expFrameChk');
+  if (chk) chk.addEventListener('change', () => { if (typeof beginAction === 'function') beginAction(); slideFrame.w = chk.checked ? (slideFrame.w > 0 ? slideFrame.w : 24) : 0; syncFrameAllUI(); redraw(); scheduleSave(); if (typeof updateProDot === 'function') updateProDot(); });
+  const ech = document.getElementById('expFrameChips');
+  if (ech) ech.querySelectorAll('.size-chip').forEach(b => b.addEventListener('click', () => setW(+b.dataset.v)));
+  const ecl = document.getElementById('expFrameClrs');
+  if (ecl) ecl.querySelectorAll('.clr-btn').forEach(b => b.addEventListener('click', () => { if (typeof beginAction === 'function') beginAction(); slideFrame.color = b.dataset.fclr; syncFrameAllUI(); redraw(); scheduleSave(); }));
   syncFrameAllUI();
 })();
 function renderNow() {
