@@ -1012,6 +1012,13 @@ canvas.picking-color { cursor: crosshair; }
 #textCtrl .tc-row select { flex: 1 1 0; min-width: 0; }
 #textCtrl #textContentInput { width: 100%; }
 .tc-gap { flex: 1 1 auto; }
+/* Style-Zeile: umbrechen statt horizontal scrollen — so sind B/I/U + Ausrichtung
+   (Zeile 1) UND alle Farben + Pipette (Zeile 2) gleichzeitig sichtbar und
+   wählbar. Vorher schob die flexible Lücke (.tc-gap) die Farben aus dem Bild,
+   sodass man „nur durch die Farben" scrollte (Silvan 19.07.). Der Umbruch am
+   .tc-gap erzwingt sauber zwei Reihen. */
+#secStyle .tc-row { flex-wrap: wrap; row-gap: 10px; justify-content: flex-start; }
+#secStyle .tc-gap { flex: 0 0 100%; height: 0; margin: 0; }
 #tc-track-row { gap: 10px; }
 #tc-track-row input[type=range] { flex: 1 1 auto; min-width: 0; }
 .tc-track-ico { font-size: 11px; color: var(--muted); letter-spacing: 0.06em; white-space: nowrap; }
@@ -7784,6 +7791,24 @@ async function renderLibDrawer() {
 // Einsetzen: ausgewähltes leeres Feld → befüllen und das NÄCHSTE leere Feld
 // derselben Slide vorwählen (Frames/Templates in Serie füllen). Sonst: leere
 // aktive Slide → dahin; ist sie belegt, nächste leere/neue Slide (Mehrfachwahl).
+// Das zuletzt eingefügte Foto (steht am Array-Ende = oberste Ebene) hinter die
+// Text-Bausteine der Slide legen, sodass die Schrift oben drauf sichtbar bleibt.
+// Nur wenn die Slide Text trägt; Reihenfolge = z-Order (früher = weiter hinten).
+function sendNewPhotoBehindText(slideIdx) {
+  const pIdx = photos.length - 1;
+  if (pIdx < 0 || !photos[pIdx] || photos[pIdx].kind !== 'image') return;
+  const hasText = photos.some((q, i) => i !== pIdx && q.kind === 'text' && !q.jr && Math.floor(q.cx / W) === slideIdx);
+  if (!hasText) return;
+  const p = photos.splice(pIdx, 1)[0];
+  // vor das ERSTE Element dieser Slide → ganz nach hinten auf der Slide.
+  let ins = photos.findIndex(q => Math.floor(q.cx / W) === slideIdx);
+  if (ins < 0) ins = photos.length;
+  photos.splice(ins, 0, p);
+  sel = ins;
+  if (typeof updateDeleteBtn === 'function') updateDeleteBtn();
+  forceRedraw();
+  scheduleSave();
+}
 function libDrawerPick(id) {
   idbGetK('media:' + id).then(rec => {
     if (!rec || !rec.data) { showToast('Image no longer available', { err: true }); return; }
@@ -7814,7 +7839,16 @@ function libDrawerPick(id) {
         closeLibDrawer();
         return;
       }
-      const occupied = i => slideOccupied(i);   // Split-Fotos zählen auf allen Slides
+      // „Belegt" für die Foto-Platzierung heißt: die Slide trägt bereits ein
+      // FOTO/Platzhalter. Eine reine TEXT-Template-Slide gilt als frei → das
+      // Foto landet AUF dieser Slide (hinter dem Text), nicht auf einer neuen
+      // (Silvan 19.07.: „auf Text-Slide auch ein Foto einfügen können").
+      const occupied = i => photos.some(p => {
+        if (p.jr || (p.kind !== 'image' && p.kind !== 'placeholder')) return false;
+        const hw = (p.w || 0) / 2;
+        if (hw > 1) return (p.cx + hw) > i * W + 6 && (p.cx - hw) < (i + 1) * W - 6;
+        return Math.floor(p.cx / W) === i;
+      });
       let target = activeSlide;
       if (occupied(target)) {
         let found = -1;
@@ -7830,6 +7864,9 @@ function libDrawerPick(id) {
       }
       activeSlide = target;
       insertPhotoImg(img, target * W + W / 2, H / 2, false);
+      // Foto auf einer Slide mit Text → in den HINTERGRUND (hinter den Text)
+      // schieben, damit die Schrift sichtbar bleibt (Silvan 19.07.).
+      sendNewPhotoBehindText(target);
       closeLibDrawer();
     };
     img.onerror = () => showToast('Image could not be loaded', { err: true });
@@ -10250,11 +10287,11 @@ function addMagazinePage(kind, forceAppend) {
     items.push(jrPh(mid + 230, 640, 460, 600));
     // Mockup-Plastizität: breite weiche Bund-Verläufe, Blattbauch-Sheen,
     // Außenkanten-Abdunklung, Papierdicke unten.
-    // Dünnerer, eleganterer Buchblock (Silvan 19.07.: „unten wirkt es zu dick"):
-    // statt drei kräftiger Kanten nur eine feine Blockkante + ein hauchzarter
-    // Schattenstrich darunter → das Heft wirkt schlank.
-    // Buchblock nur noch als HAUCH einer Kante (Silvan: „man sieht die Seiten kaum").
-    items.push(mgF(jrRect(mid, 936, 900, 1.2, { fill: '#EBE9E3', radius: 0.6 })));
+    // KEIN gemalter Buchblock-Strich mehr (Silvan 19.07.): die helle Linie lag
+    // als Item IN der Warp-Region und wurde mitgewölbt — auf einem dunklen
+    // Vollflächen-Foto blitzte sie als greller Streifen an der Unterkante. Die
+    // „Buchdicke" macht jetzt allein der Bodenschatten (mgFloorShadow, nach dem
+    // Warp) — der liegt auf dem Hintergrund, nie auf dem Foto.
   } else if (kind === 'grid') {
     // 5/10-Referenz: links 2×2-Grid fast seitenfüllend (kleine Stege), rechts
     // Foto OBEN RECHTS, darunter Subhead + zwei Spalten, unten Mini-Credits.
@@ -10298,11 +10335,11 @@ function addMagazinePage(kind, forceAppend) {
       items.push(mgL(val, 'Archivo', { size: 6.5, weight: 400, color: MG_MUTED, cy: y }, cx0 + 835 + Math.round(lb.length * 6.5 * 0.54) + 7));
     });
     items.push(jrText('081', 'Archivo', { size: 9, weight: 400, color: MG_MUTED, cx: cx0 + 950, cy: 918 }));
-    // Dünnerer, eleganterer Buchblock (Silvan 19.07.: „unten wirkt es zu dick"):
-    // statt drei kräftiger Kanten nur eine feine Blockkante + ein hauchzarter
-    // Schattenstrich darunter → das Heft wirkt schlank.
-    // Buchblock nur noch als HAUCH einer Kante (Silvan: „man sieht die Seiten kaum").
-    items.push(mgF(jrRect(mid, 936, 900, 1.2, { fill: '#EBE9E3', radius: 0.6 })));
+    // KEIN gemalter Buchblock-Strich mehr (Silvan 19.07.): die helle Linie lag
+    // als Item IN der Warp-Region und wurde mitgewölbt — auf einem dunklen
+    // Vollflächen-Foto blitzte sie als greller Streifen an der Unterkante. Die
+    // „Buchdicke" macht jetzt allein der Bodenschatten (mgFloorShadow, nach dem
+    // Warp) — der liegt auf dem Hintergrund, nie auf dem Foto.
   }
 
   // Try-before-buy wie überall: Pro-Seiten taggen, Sperre sitzt am Export.
@@ -10326,9 +10363,15 @@ function addMagazinePage(kind, forceAppend) {
     // gerade Abschnittkante. Je eine Linse unter linker/rechter Seite (Mitte
     // heller) + ein hauchzarter breiter Grundschatten.
     slides[idx].mgFloorShadow = [
-      { cx: 540, cy: 986 + voff, w: 1010, h: 84, stops: [[0, 'rgba(30,28,25,0.06)'], [0.6, 'rgba(30,28,25,0.02)'], [1, 'rgba(30,28,25,0)']] },
-      { cx: 306, cy: 972 + voff, w: 476, h: 66, stops: [[0, 'rgba(30,28,25,0.22)'], [0.55, 'rgba(30,28,25,0.09)'], [0.82, 'rgba(30,28,25,0.02)'], [1, 'rgba(30,28,25,0)']] },
-      { cx: 774, cy: 972 + voff, w: 476, h: 66, stops: [[0, 'rgba(30,28,25,0.22)'], [0.55, 'rgba(30,28,25,0.09)'], [0.82, 'rgba(30,28,25,0.02)'], [1, 'rgba(30,28,25,0)']] }
+      // Tiefer, breiter Boden-Halo (Ambient), läuft weich nach unten aus — füllt
+      // die Zone, in der früher der helle Grund zurückkam.
+      { cx: 540, cy: 978 + voff, w: 1044, h: 112, stops: [[0, 'rgba(30,28,25,0.12)'], [0.5, 'rgba(30,28,25,0.055)'], [1, 'rgba(30,28,25,0)']] },
+      // Kontaktschatten je Seite: dunkelster Punkt DIREKT an der Unterkante (~940),
+      // tief und weich, damit KEIN heller MG_BG-Streifen mehr zwischen Seite und
+      // Schatten steht — auch nicht unter einem dunklen Vollflächen-Foto, wo der
+      // helle Grund sonst als greller Streifen zurückkam (Silvan 19.07., mehrfach).
+      { cx: 306, cy: 948 + voff, w: 500, h: 64, stops: [[0, 'rgba(30,28,25,0.34)'], [0.4, 'rgba(30,28,25,0.18)'], [0.7, 'rgba(30,28,25,0.06)'], [1, 'rgba(30,28,25,0)']] },
+      { cx: 774, cy: 948 + voff, w: 500, h: 64, stops: [[0, 'rgba(30,28,25,0.34)'], [0.4, 'rgba(30,28,25,0.18)'], [0.7, 'rgba(30,28,25,0.06)'], [1, 'rgba(30,28,25,0)']] }
     ];
   } else if (kind === 'cover') {
     // Einzelseite, links gebunden: sehr subtile Falz (mode 1) — die ganze
@@ -11144,7 +11187,10 @@ function updateDeleteBtn() {
   document.getElementById('cropBtn').classList.toggle('show', isImage);
   document.getElementById('replaceBtn').classList.toggle('show', isImage);
   // Library-Schnellgriff: immer wenn etwas ausgewählt ist (v. a. leere Felder)
-  document.getElementById('libraryBtn').classList.toggle('show', hasSel);
+  // Library-Schnellzugriff: bei Auswahl ODER Slide-Fokus (Tipp auf den Slide-
+  // Hintergrund). So kann man auch auf einer reinen Text-Template-Slide ein
+  // Foto einfügen (Silvan 19.07.).
+  document.getElementById('libraryBtn').classList.toggle('show', hasSel || slideFocus);
   setSectionAvail('secLayer', hasSel);
   // Journal-Sektion (Header/Footer-Toggles): sobald etwas ausgewählt ist und
   // die aktive Slide Journal-Kopf-/Fußzeilen trägt.
@@ -12710,9 +12756,9 @@ document.getElementById('rotStepR').addEventListener('click', () => jumpRot(1));
   st.textContent =
     '.pro-badge{display:inline-block;font:600 8.5px -apple-system,sans-serif;letter-spacing:.09em;' +
       'color:#fff;background:#D10101;border-radius:4px;padding:2px 5px;margin-left:6px;vertical-align:1px}' +
-    '#proSimBar{position:fixed;left:12px;bottom:12px;z-index:9999;display:flex;gap:6px;align-items:center;' +
-      'background:rgba(42,40,38,.92);color:#F4F1EB;border-radius:999px;padding:6px 10px;' +
-      'font:600 12px -apple-system,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.25)}' +
+    '#proSimBar{position:fixed;left:12px;bottom:calc(120px + env(safe-area-inset-bottom,0px));z-index:100000;display:flex;gap:6px;align-items:center;' +
+      'background:rgba(42,40,38,.94);color:#F4F1EB;border-radius:999px;padding:7px 11px;' +
+      'font:600 12px -apple-system,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.3)}' +
     '#proSimBar button{border:1px solid rgba(255,255,255,.25);background:transparent;color:inherit;' +
       'border-radius:999px;padding:3px 10px;font:inherit;cursor:pointer}' +
     '#proSimBar button.on{background:#D10101;border-color:#D10101}' +
@@ -12725,6 +12771,7 @@ document.getElementById('rotStepR').addEventListener('click', () => jumpRot(1));
     '#proStub .buy{display:block;width:100%;background:#D10101;color:#fff;border:none;border-radius:999px;' +
       'padding:12px;font:600 14px -apple-system,sans-serif;cursor:pointer;margin-bottom:8px}' +
     '#proStub .later{background:none;border:none;font:500 12.5px -apple-system,sans-serif;color:#9B948A;cursor:pointer}' +
+    '#proStub .restore{display:block;width:100%;background:none;border:none;font:600 12.5px -apple-system,sans-serif;color:#6b655d;cursor:pointer;margin-bottom:6px}' +
     '#proStub .strip{display:block;width:100%;background:transparent;color:#2A2826;border:1px solid #D9D2C4;border-radius:999px;' +
       'padding:11px;font:600 13px -apple-system,sans-serif;cursor:pointer;margin-bottom:8px}';
   document.head.appendChild(st);
@@ -12732,8 +12779,12 @@ document.getElementById('rotStepR').addEventListener('click', () => jumpRot(1));
   function applyProBadges() {
     if (typeof updateProDot === 'function') updateProDot();   // PRO-Punkt am Export-Button mitziehen
     document.querySelectorAll('.pro-badge').forEach(b => b.remove());
-    if (!pfSimTier) return;                   // Badges nur in der Simulation
+    // Badges IMMER zeigen, wenn ein Feature für den aktuellen Nutzer GESPERRT
+    // ist (iOS-Free ODER Simulation Free). Vorher nur in der Simulation → im
+    // echten iOS-Free-Build fehlten die PRO-Hinweise ganz (Silvan 19.07.).
+    // Auf Web/Pro sind alle Features frei → hasFeature true → kein Badge.
     PRO_UI.forEach(([key, ids]) => {
+      if (hasFeature(key)) return;            // freigeschaltet → kein Badge
       ids.forEach(id => {
         if (id === 'maskToggle') return;      // der Schalter selbst bekommt kein Badge
         const el = document.getElementById(id); if (!el) return;
@@ -12750,19 +12801,23 @@ document.getElementById('rotStepR').addEventListener('click', () => jumpRot(1));
     if (document.getElementById('proStubOv')) return;
     const ov = document.createElement('div'); ov.id = 'proStubOv';
     ov.innerHTML = '<div id="proStub"><h3>Postfolio Pro</h3>' +
-      '<p>Einmaliger Kauf — 4,99&nbsp;€ zum Launch, später 9,99&nbsp;€. Was du kaufst, bleibt deins — für immer, inklusive aller Verbesserungen. Kein Abo. Niemals.</p>' +
-      '<button class="buy" type="button">Pro freischalten — 4,99&nbsp;€</button>' +
+      '<p>Für dieses Element brauchst du Postfolio&nbsp;Pro — einmalig ' + pfProPrice + '. Was du kaufst, bleibt deins, inklusive aller Verbesserungen. Kein Abo. Niemals.</p>' +
+      '<button class="buy" type="button">Pro freischalten — ' + pfProPrice + '</button>' +
+      '<button class="restore" type="button">Käufe wiederherstellen</button>' +
       '<button class="later" type="button">Später</button></div>';
     document.body.appendChild(ov);
     ov.addEventListener('click', e => {
       if (e.target === ov || e.target.classList.contains('later')) ov.remove();
     });
-    ov.querySelector('.buy').addEventListener('click', () => {
-      pfSimTier = 'pro';                      // Kauf simulieren
-      try { localStorage.setItem('pfSimTier', 'pro'); } catch (e) {}
-      ov.remove(); applyProBadges(); syncSimBar();
-      if (typeof showToast === 'function') showToast('Pro freigeschaltet (Simulation)');
+    const buyBtn = ov.querySelector('.buy');
+    buyBtn.addEventListener('click', async () => {
+      const label = buyBtn.textContent;
+      buyBtn.disabled = true; buyBtn.textContent = 'Moment …';
+      const ok = await pfPurchasePro();     // echter Apple-Kauf (iOS) bzw. Simulation (Web)
+      // bei Erfolg schließt pfProUnlocked() das Overlay selbst; sonst zurücksetzen
+      if (!ok && document.body.contains(buyBtn)) { buyBtn.disabled = false; buyBtn.textContent = label; }
     });
+    ov.querySelector('.restore').addEventListener('click', () => pfRestorePro());
   }
 
   // „Bauen frei, Export ist die Münze" (13.07.2026): Nur noch AKTIONS-Features
@@ -12812,27 +12867,96 @@ document.getElementById('rotStepR').addEventListener('click', () => jumpRot(1));
     }
     bar.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.t === pfSimTier));
   }
-  // ── Admin-Zugang: 5 schnelle Tipps aufs Splash-Logo schalten die Free/Pro-
-  //    Simulation an/aus — wichtig für iPhone/iPad, wo es keine ?tier=-URL
-  //    gibt. Danach wechselt der Balken unten links jederzeit zwischen
-  //    Free, Pro und Aus (auch mitten im Editor). Bewusst versteckt, damit
-  //    normale Nutzer im Store-Build nie einen Schalter sehen.
+  // ── Admin-Zugang: 5 schnelle Tipps aufs Logo schalten die Free/Pro/Aus-
+  //    Simulation DURCH — wichtig für iPhone/iPad, wo es keine ?tier=-URL gibt.
+  //    Reihenfolge: Aus → Free (Pro gesperrt, PRO-Badges, Paywall-Demo) → Pro
+  //    (alles frei) → Aus. Der Balken unten links wechselt zusätzlich jederzeit.
+  //    Splash-Logo UND Editor-Logo (Editor-Logo navigiert bei EINEM Tipp zur
+  //    Startseite; die 5 schnellen Tipps davor werden trotzdem gezählt und beim
+  //    5. gefeuert — der ✕/Balken bleibt in beiden Ansichten bedienbar).
+  function cycleSimTier() {
+    pfSimTier = !pfSimTier ? 'free' : (pfSimTier === 'free' ? 'pro' : null);
+    try { if (pfSimTier) localStorage.setItem('pfSimTier', pfSimTier); else localStorage.removeItem('pfSimTier'); } catch (err) {}
+    applyProBadges(); syncSimBar();
+    if (typeof showToast === 'function') {
+      showToast(pfSimTier === 'pro' ? 'Sim: PRO — alles frei' : pfSimTier === 'free' ? 'Sim: FREE — Pro gesperrt (PRO-Badges an)' : 'Sim: aus (echter Store-Zustand)');
+    }
+  }
+  window.cycleSimTier = cycleSimTier;
   (function () {
-    const mark = document.querySelector('.splash-mark');
-    if (!mark) return;
-    let taps = 0, timer = null;
-    mark.addEventListener('click', () => {
-      taps++;
-      clearTimeout(timer);
-      timer = setTimeout(() => { taps = 0; }, 1500);
-      if (taps < 5) return;
-      taps = 0;
-      if (pfSimTier) { pfSimTier = null; try { localStorage.removeItem('pfSimTier'); } catch (err) {} }
-      else { pfSimTier = 'free'; try { localStorage.setItem('pfSimTier', 'free'); } catch (err) {} }
-      applyProBadges(); syncSimBar();
-      if (typeof showToast === 'function') showToast(pfSimTier ? 'Simulation ON — switch Free/Pro bottom left' : 'Simulation off');
+    ['.splash-mark', '#logoMark', '#brandBlock'].forEach(selq => {
+      const mark = document.querySelector(selq);
+      if (!mark) return;
+      mark.style.pointerEvents = 'auto';
+      let taps = 0, timer = null;
+      mark.addEventListener('click', () => {
+        taps++;
+        clearTimeout(timer);
+        timer = setTimeout(() => { taps = 0; }, 1600);
+        if (taps < 5) return;
+        taps = 0;
+        cycleSimTier();
+      });
     });
   })();
+  // ═══ Echter Store: StoreKit 2 über das native PostfolioIAP-Plugin ═══
+  // iPhone/iPad → echter Apple-Kauf; Browser (kein Plugin) → Simulation als
+  // Fallback. hasFeature() liest pfIsPro, das hier aus dem echten Kaufstatus
+  // gesetzt wird. Produkt: non-consumable „app.postfolio.pro" (einmalig).
+  function pfIAP() {
+    try { return (window.Capacitor && Capacitor.Plugins && Capacitor.Plugins.PostfolioIAP) || null; }
+    catch (e) { return null; }
+  }
+  let pfProPrice = '4,99 €';    // wird auf iOS vom Store lokalisiert überschrieben
+  function pfProUnlocked(msg) {
+    pfIsPro = true;
+    try { applyProBadges(); } catch (e) {}
+    try { updateProDot(); } catch (e) {}
+    try { syncSimBar(); } catch (e) {}
+    const ov = document.getElementById('proStubOv'); if (ov) ov.remove();
+    if (msg && typeof showToast === 'function') showToast(msg);
+    try { redraw(); } catch (e) {}
+  }
+  async function pfPurchasePro() {
+    const IAP = pfIAP();
+    if (!IAP) {                              // Browser/Test → Simulation
+      pfSimTier = 'pro'; try { localStorage.setItem('pfSimTier', 'pro'); } catch (e) {}
+      pfProUnlocked('Pro freigeschaltet (Simulation)');
+      return true;
+    }
+    try {
+      const r = await IAP.purchase();        // Apple zeigt den Bezahldialog
+      if (r && r.isPro) { pfProUnlocked('Postfolio Pro freigeschaltet ✦'); return true; }
+      if (r && r.status === 'pending' && typeof showToast === 'function') showToast('Kauf wartet auf Freigabe');
+      return false;                          // abgebrochen / ausstehend
+    } catch (e) {
+      if (typeof showToast === 'function') showToast('Kauf nicht abgeschlossen');
+      return false;
+    }
+  }
+  async function pfRestorePro() {
+    const IAP = pfIAP();
+    if (!IAP) { if (typeof showToast === 'function') showToast('Wiederherstellen nur in der App'); return; }
+    if (typeof showToast === 'function') showToast('Käufe werden geprüft …');
+    try {
+      const r = await IAP.restore();
+      if (r && r.isPro) pfProUnlocked('Pro wiederhergestellt ✦');
+      else if (typeof showToast === 'function') showToast('Kein früherer Kauf gefunden');
+    } catch (e) {
+      if (typeof showToast === 'function') showToast('Wiederherstellen fehlgeschlagen');
+    }
+  }
+  window.pfPurchasePro = pfPurchasePro;
+  window.pfRestorePro = pfRestorePro;
+  // Beim Start echten Kaufstatus lesen + lokalisierten Preis holen (nur iOS).
+  (function pfInitStore() {
+    const IAP = pfIAP(); if (!IAP) return;
+    (async () => {
+      try { const s = await IAP.status(); if (s && s.isPro) pfProUnlocked(null); } catch (e) {}
+      try { const p = await IAP.getProduct(); if (p && p.available && p.price) pfProPrice = p.price; } catch (e) {}
+    })();
+  })();
+
   applyProBadges(); syncSimBar();
 })();
 // Tippen auf die „0" in der Mitte → exakt 0°
@@ -13507,7 +13631,13 @@ function draftProSlides() {
 // Entwurf Pro-Inhalte enthält — der Nutzer weiß JEDERZEIT, woran er ist.
 function updateProDot() {
   const b = document.getElementById('exportBtn');
-  if (b) b.classList.toggle('has-pro', draftProSlides().length > 0);
+  if (!b) return;
+  // Export-PRO-Punkt: sichtbar, sobald der Entwurf PRO-Layouts nutzt — bei Free
+  // als Kauf-Erinnerung, bei Pro als bleibendes „hab ich mir gegönnt"-Abzeichen
+  // (Silvan 19.07.). Anders als die Template-Badges (applyProBadges) verschwindet
+  // er also NACH dem Kauf NICHT. Web hat kein Pro-Konzept → nur mit Simulation.
+  const show = (PF_PLATFORM !== 'web' || pfSimTier) && photos.some(p => p.proFeat);
+  b.classList.toggle('has-pro', show);
 }
 // Einmalige Vorwarnung beim ersten Einsatz eines Pro-Features (Sheet mit
 // „Verstanden"), danach nur noch ein kurzer Toast pro Sitzung.
@@ -13533,7 +13663,8 @@ function proPreviewNotice() {
 }
 // Export-Guard: freundlicher Pro-Screen mit KONKRETER Slide-Liste und der
 // fairen Ausstiegsoption „Pro-Seiten entfernen und frei exportieren".
-function showProExportSheet(proSlides) {
+function showProExportSheet(proSlides, slideIndices) {
+  slideIndices = slideIndices || slides.map((_, i) => i);
   if (document.getElementById('proStubOv')) return;
   const list = proSlides.map(i => i + 1).join(', ');
   const ov = document.createElement('div'); ov.id = 'proStubOv';
@@ -13541,11 +13672,21 @@ function showProExportSheet(proSlides) {
     '<p>' + (proSlides.length === 1 ? 'Slide ' + list + ' nutzt ein Pro-Layout.' : 'Die Slides ' + list + ' nutzen Pro-Layouts.') +
     ' Schalte Pro frei, um sie zu exportieren — einmalig 4,99&nbsp;€, kein Abo. Niemals.</p>' +
     '<button class="buy" type="button">Pro freischalten — 4,99&nbsp;€</button>' +
+    '<button class="restore" type="button">Käufe wiederherstellen</button>' +
     '<button class="strip" type="button">Pro-Slides entfernen &amp; frei exportieren</button>' +
     '<button class="later" type="button">Später</button></div>';
   document.body.appendChild(ov);
   ov.addEventListener('click', e => { if (e.target === ov || e.target.classList.contains('later')) ov.remove(); });
-  ov.querySelector('.buy').addEventListener('click', () => { ov.remove(); if (window.showProStub) window.showProStub(); });
+  const _buy = ov.querySelector('.buy');
+  _buy.addEventListener('click', async () => {
+    const label = _buy.textContent; _buy.disabled = true; _buy.textContent = 'Moment …';
+    const ok = window.pfPurchasePro ? await window.pfPurchasePro() : false;
+    if (ok) { runExport(slideIndices); }      // jetzt freigeschaltet → direkt weiter exportieren
+    else if (document.body.contains(_buy)) { _buy.disabled = false; _buy.textContent = label; }
+  });
+  ov.querySelector('.restore').addEventListener('click', async () => {
+    if (window.pfRestorePro) { await window.pfRestorePro(); if (pfIsPro) runExport(slideIndices); }
+  });
   ov.querySelector('.strip').addEventListener('click', () => { ov.remove(); removeProSlidesAndExport(proSlides); });
 }
 // ── Export-Dateinamen: „postfolio" als Absender + optionaler Projekt-Slug +
@@ -13592,7 +13733,7 @@ async function runExport(slideIndices) {
   // Try-before-buy-Sperre: Enthalten die zu exportierenden Slides Pro-Inhalte
   // ohne freigeschaltetes Feature → Pro-Screen statt Export.
   const proSlides = draftProSlides().filter(i => slideIndices.indexOf(i) >= 0);
-  if (proSlides.length) { showProExportSheet(proSlides); return; }
+  if (proSlides.length) { showProExportSheet(proSlides, slideIndices); return; }
   const prevSel = sel;
   sel = -1;
   // Offene Outro-Seitenwahl einklappen (falls der Export neu startet).
