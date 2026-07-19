@@ -9956,10 +9956,13 @@ function addMagazinePage(kind, forceAppend) {
     // Words/Photography-Spalte, zwei Textspalten unten — rechts randloses Foto.
     slides[idx].bg = MG_BG;
     items.push(mgF(jrRect(mid - 14, 678, 1056, 792, { grad: { dir: 'r', stops: [[0, 'rgba(30,28,25,0.30)'], [0.42, 'rgba(30,28,25,0.23)'], [0.62, 'rgba(30,28,25,0.14)'], [0.79, 'rgba(30,28,25,0.065)'], [0.91, 'rgba(30,28,25,0.02)'], [1, 'rgba(30,28,25,0)']] } })));
-    // Kontaktschatten: eng + dichter direkt unter Buchblock und Seitenkanten
-    items.push(mgF(jrRect(mid - 2, 969, 944, 34, { grad: { dir: 'y', stops: [[0, 'rgba(30,28,25,0.26)'], [0.55, 'rgba(30,28,25,0.10)'], [1, 'rgba(30,28,25,0)']] } })));
-    items.push(mgF(jrRect(cx0 + 71, 642, 20, 600, { grad: { dir: 'x', stops: [[0, 'rgba(30,28,25,0)'], [1, 'rgba(30,28,25,0.12)']] } })));
-    items.push(mgF(jrRect(cx0 + 1009, 642, 20, 600, { grad: { dir: 'x', stops: [[0, 'rgba(30,28,25,0.12)'], [1, 'rgba(30,28,25,0)']] } })));
+    // Kontaktschatten als weiche RADIAL-Linsen: laufen an den Enden von selbst
+    // aus (keine harten Rechteck-Kanten, nichts ragt über die Seitenkante
+    // hinaus) und liegen komplett AUSSERHALB der Warp-Region — sonst entsteht
+    // an der Regionsgrenze eine Versatz-Stufe (Silvans Zoom-Screenshot).
+    items.push(mgF(jrRect(mid, 979, 920, 44, { grad: { dir: 'r', stops: [[0, 'rgba(30,28,25,0.22)'], [0.55, 'rgba(30,28,25,0.13)'], [0.85, 'rgba(30,28,25,0.04)'], [1, 'rgba(30,28,25,0)']] } })));
+    items.push(mgF(jrRect(cx0 + 70, 642, 20, 620, { grad: { dir: 'r', stops: [[0, 'rgba(30,28,25,0.11)'], [0.7, 'rgba(30,28,25,0.05)'], [1, 'rgba(30,28,25,0)']] } })));
+    items.push(mgF(jrRect(cx0 + 1010, 642, 20, 620, { grad: { dir: 'r', stops: [[0, 'rgba(30,28,25,0.11)'], [0.7, 'rgba(30,28,25,0.05)'], [1, 'rgba(30,28,25,0)']] } })));
     items.push(jrRect(mid, 640, 920, 600, { fill: MG_PAGE, radius: 3 }));
     items.push(jrRect(mid - 6, 640, 12, 600, { fill: '#EEECE6' }));
     items.push(jrRect(mid, 640, 2, 600, { fill: MG_SPINE }));
@@ -9984,10 +9987,13 @@ function addMagazinePage(kind, forceAppend) {
     slides[idx].palFam = 'magazine'; slides[idx].palId = 'salbei';
     slides[idx].bg = MG_BG;
     items.push(mgF(jrRect(mid - 14, 678, 1056, 792, { grad: { dir: 'r', stops: [[0, 'rgba(30,28,25,0.30)'], [0.42, 'rgba(30,28,25,0.23)'], [0.62, 'rgba(30,28,25,0.14)'], [0.79, 'rgba(30,28,25,0.065)'], [0.91, 'rgba(30,28,25,0.02)'], [1, 'rgba(30,28,25,0)']] } })));
-    // Kontaktschatten: eng + dichter direkt unter Buchblock und Seitenkanten
-    items.push(mgF(jrRect(mid - 2, 969, 944, 34, { grad: { dir: 'y', stops: [[0, 'rgba(30,28,25,0.26)'], [0.55, 'rgba(30,28,25,0.10)'], [1, 'rgba(30,28,25,0)']] } })));
-    items.push(mgF(jrRect(cx0 + 71, 642, 20, 600, { grad: { dir: 'x', stops: [[0, 'rgba(30,28,25,0)'], [1, 'rgba(30,28,25,0.12)']] } })));
-    items.push(mgF(jrRect(cx0 + 1009, 642, 20, 600, { grad: { dir: 'x', stops: [[0, 'rgba(30,28,25,0.12)'], [1, 'rgba(30,28,25,0)']] } })));
+    // Kontaktschatten als weiche RADIAL-Linsen: laufen an den Enden von selbst
+    // aus (keine harten Rechteck-Kanten, nichts ragt über die Seitenkante
+    // hinaus) und liegen komplett AUSSERHALB der Warp-Region — sonst entsteht
+    // an der Regionsgrenze eine Versatz-Stufe (Silvans Zoom-Screenshot).
+    items.push(mgF(jrRect(mid, 979, 920, 44, { grad: { dir: 'r', stops: [[0, 'rgba(30,28,25,0.22)'], [0.55, 'rgba(30,28,25,0.13)'], [0.85, 'rgba(30,28,25,0.04)'], [1, 'rgba(30,28,25,0)']] } })));
+    items.push(mgF(jrRect(cx0 + 70, 642, 20, 620, { grad: { dir: 'r', stops: [[0, 'rgba(30,28,25,0.11)'], [0.7, 'rgba(30,28,25,0.05)'], [1, 'rgba(30,28,25,0)']] } })));
+    items.push(mgF(jrRect(cx0 + 1010, 642, 20, 620, { grad: { dir: 'r', stops: [[0, 'rgba(30,28,25,0.11)'], [0.7, 'rgba(30,28,25,0.05)'], [1, 'rgba(30,28,25,0)']] } })));
     items.push(jrRect(mid, 640, 920, 600, { fill: MG_PAGE, radius: 3 }));
     items.push(jrRect(mid - 6, 640, 12, 600, { fill: '#EEECE6' }));
     items.push(jrRect(mid, 640, 2, 600, { fill: MG_SPINE }));
