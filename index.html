@@ -5785,7 +5785,7 @@ function drawSlideRef(c, p, scale) {
 //    Mapping) und sampelt die Quellregion BILINEAR — glatt in jeder Zoom-
 //    stufe, in allen 3 Render-Pfaden. Ohne WebGL greift der Streifen-Fallback.
 let _wgl = null;
-function warpGL(srcCv, w, h, sag, bowT, bowB, comp, fall) {
+function warpGL(srcCv, w, h, sag, bowT, bowB, comp, fall, mode) {
   if (_wgl === false) return null;
   try {
     if (!_wgl) {
@@ -5793,18 +5793,28 @@ function warpGL(srcCv, w, h, sag, bowT, bowB, comp, fall) {
       const gl = cv.getContext('webgl', { premultipliedAlpha: true, alpha: true, antialias: false });
       if (!gl) { _wgl = false; return null; }
       const vsrc = 'attribute vec2 aP; void main(){ gl_Position = vec4(aP, 0.0, 1.0); }';
+      // uM = Falz-Modus: 0 = symmetrische Bund-Senke in der Mitte (Doppelseite),
+      //                  1 = einseitige Falz an der LINKEN Kante (Cover/Stapel —
+      //                      Blatt ist links gebunden, wölbt sich sanft nach rechts).
       const fsrc = 'precision highp float;' +
-        'uniform sampler2D uT; uniform vec2 uS; uniform float uH2; uniform vec4 uP; uniform float uF;' +
+        'uniform sampler2D uT; uniform vec2 uS; uniform float uH2; uniform vec4 uP; uniform float uF; uniform float uM;' +
         'void main(){' +
         '  vec2 p = vec2(gl_FragCoord.x, uH2 - gl_FragCoord.y);' +
-        '  float midX = uS.x * 0.5;' +
-        '  float u = min(1.0, abs(p.x - midX) / midX);' +
-        '  float f = exp(-u / uF);' +
         '  float PI = 3.14159265358979;' +
+        '  float u; float csign;' +
+        '  if (uM < 0.5) {' +
+        '    float midX = uS.x * 0.5;' +
+        '    u = min(1.0, abs(p.x - midX) / midX);' +
+        '    csign = sign(p.x - midX);' +
+        '  } else {' +
+        '    u = clamp(p.x / uS.x, 0.0, 1.0);' +
+        '    csign = 1.0;' +
+        '  }' +
+        '  float f = exp(-u / uF);' +
         '  float dT = uP.x * f + uP.y * sin(PI * u);' +
         '  float dB = uP.z * sin(PI * u);' +
         '  float sy = (p.y - dT) / (uS.y + dB - dT) * uS.y;' +
-        '  float sx = p.x + uP.w * f * sign(p.x - midX);' +
+        '  float sx = p.x + uP.w * f * csign;' +
         '  float a = clamp(sy + 0.5, 0.0, 1.0) * clamp(uS.y - sy + 0.5, 0.0, 1.0);' +
         '  vec4 c = texture2D(uT, vec2(sx / uS.x, sy / uS.y));' +
         '  gl_FragColor = vec4(c.rgb * a, a);' +
@@ -5834,7 +5844,8 @@ function warpGL(srcCv, w, h, sag, bowT, bowB, comp, fall) {
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
       _wgl = { cv, gl,
         uS: gl.getUniformLocation(prog, 'uS'), uH2: gl.getUniformLocation(prog, 'uH2'),
-        uP: gl.getUniformLocation(prog, 'uP'), uF: gl.getUniformLocation(prog, 'uF') };
+        uP: gl.getUniformLocation(prog, 'uP'), uF: gl.getUniformLocation(prog, 'uF'),
+        uM: gl.getUniformLocation(prog, 'uM') };
     }
     const gl = _wgl.gl, cv = _wgl.cv;
     const H2 = h + Math.ceil(bowB) + 2;
@@ -5848,6 +5859,7 @@ function warpGL(srcCv, w, h, sag, bowT, bowB, comp, fall) {
     gl.uniform1f(_wgl.uH2, H2);
     gl.uniform4f(_wgl.uP, sag, bowT, bowB, comp);
     gl.uniform1f(_wgl.uF, fall);
+    gl.uniform1f(_wgl.uM, mode ? 1 : 0);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     return cv;
   } catch (e) { _wgl = false; return null; }
@@ -5855,8 +5867,17 @@ function warpGL(srcCv, w, h, sag, bowT, bowB, comp, fall) {
 
 let _warpCv = null;
 function applyGutterWarp(c, cv, i, oxDev, oyDev, scale) {
-  const sl = slides[i], wp = sl && sl.mgWarp;
-  if (!wp) return;
+  const sl = slides[i];
+  if (!sl || !sl.mgWarp) return;
+  // mgWarp kann eine EINZELNE Region ODER ein Array sein (Stapel: mehrere
+  // Falze). Jede Region wird für sich gewölbt — z-Reihenfolge = Array-Reihen-
+  // folge (hintere Ausgaben zuerst).
+  const regions = Array.isArray(sl.mgWarp) ? sl.mgWarp : [sl.mgWarp];
+  for (const wp of regions) if (wp) warpRegion(c, cv, sl, wp, oxDev, oyDev, scale);
+}
+function warpRegion(c, cv, sl, wp, oxDev, oyDev, scale) {
+  const mode = wp.mode || 0;               // 0 = Bund mittig, 1 = Falz links
+  const FALL = wp.fall || 0.16;            // Abklinglänge der Falz (kleiner = enger am Bund)
   const x = Math.round(oxDev + wp.x * scale), y = Math.round(oyDev + wp.y * scale);
   const w = Math.max(4, Math.round(wp.w * scale)), h = Math.max(4, Math.round(wp.h * scale));
   if (!_warpCv) _warpCv = document.createElement('canvas');
@@ -5864,9 +5885,14 @@ function applyGutterWarp(c, cv, i, oxDev, oyDev, scale) {
   if (_warpCv.height !== h) _warpCv.height = h;
   // Gebackene Mockup-Licht-Ebenen VOR dem Wölben auf die flache Seite legen —
   // sie werden anschließend zusammen mit dem Inhalt gekrümmt (perfekte
-  // Ausrichtung von Licht und Geometrie, wie beim Smart-Object im PSD).
-  if (typeof MG_LIGHT_MUL !== 'undefined' && MG_LIGHT_MUL.complete && MG_LIGHT_MUL.naturalWidth) {
+  // Ausrichtung von Licht und Geometrie, wie beim Smart-Object im PSD). Nur
+  // für die Doppelseiten-Bund-Falz (mode 0); Cover/Stapel bringen ihr Licht
+  // als gemalte Verläufe mit (die mitgewölbt werden) → wp.light === false.
+  if (wp.light !== false && typeof MG_LIGHT_MUL !== 'undefined' && MG_LIGHT_MUL.complete && MG_LIGHT_MUL.naturalWidth) {
     c.save();
+    // lightAlpha < 1 dämpft die gebackene Bund-/Kanten-Schattierung → weicher,
+    // weniger harte Falz-Kante (Silvan 19.07.: „alles weicher und glatter").
+    if (wp.lightAlpha != null) c.globalAlpha = wp.lightAlpha;
     c.globalCompositeOperation = 'multiply';
     c.drawImage(MG_LIGHT_MUL, x, y, w, h);
     if (MG_LIGHT_SCR.complete && MG_LIGHT_SCR.naturalWidth) {
@@ -5880,9 +5906,12 @@ function applyGutterWarp(c, cv, i, oxDev, oyDev, scale) {
   oc.drawImage(cv, x, y, w, h, 0, 0, w, h);
   c.save();
   c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'high';
-  c.fillStyle = sl.bg || '#ffffff';
+  // flood = Ton, mit dem die (flache) Region vor dem Wölben gefüllt wird.
+  // Für Einzelblätter auf farbigem Grund (Stapel-Frontheft) den Papierton, damit
+  // der schmale Kompressions-Saum an der Falz nicht als Hintergrund-Splitter blitzt.
+  c.fillStyle = wp.flood || sl.bg || '#ffffff';
   c.fillRect(x, y, w, h);
-  const midX = w / 2, FALL = 0.16;
+  const midX = w / 2;
   const sag = wp.sag * scale, comp = wp.comp * scale;
   // Streifen werden GESCHERT gezeichnet (Parallelogramm zwischen den exakten
   // Kurvenwerten an beiden Streifenkanten) — Kanten laufen durchgehend ohne
@@ -5891,7 +5920,12 @@ function applyGutterWarp(c, cv, i, oxDev, oyDev, scale) {
   // Nahe am Bund ist die Kurve STEIL — dort 1-px-Streifen, außen breitere:
   // sonst zeigen sich beim Zoomen Ecken an den Segment-Übergängen (und ein
   // Mini-Sägezahn an der Unterkante, weil vs nur den Strip-Mittelwert nimmt).
-  const uAt = px => Math.min(1, Math.abs(px - midX) / midX);   // 0 Bund … 1 Außenkante
+  // mode 0: u=0 am mittigen Bund … 1 an den Außenkanten.
+  // mode 1: u=0 an der linken Falz … 1 an der rechten Außenkante.
+  const uAt = mode === 1
+    ? px => Math.min(1, Math.max(0, px / w))
+    : px => Math.min(1, Math.abs(px - midX) / midX);
+  const csAt = mode === 1 ? () => 1 : px => (px >= midX ? 1 : -1);
   const fAt = px => Math.exp(-uAt(px) / FALL);
   // Blatt-Geometrie wie bei echten Zeitschriften-Mockups: Bund-Senke (exp)
   // PLUS eine leichte Wölbung über die GANZE Seite (sin-Bauch) — die Kanten
@@ -5902,7 +5936,7 @@ function applyGutterWarp(c, cv, i, oxDev, oyDev, scale) {
   const dTop = px => sag * fAt(px) + bowT * Math.sin(Math.PI * uAt(px));
   const dBot = px => bowB * Math.sin(Math.PI * uAt(px));
   // Bevorzugt: WebGL-Resampling (bilinear, per Pixel — siehe warpGL oben).
-  const _glo = warpGL(_warpCv, w, h, sag, bowT, bowB, comp, FALL);
+  const _glo = warpGL(_warpCv, w, h, sag, bowT, bowB, comp, FALL, mode);
   if (_glo) {
     c.drawImage(_glo, x, y);
   } else {
@@ -5913,7 +5947,7 @@ function applyGutterWarp(c, cv, i, oxDev, oyDev, scale) {
       const d0 = dTop(px), d1 = dTop(x1);
       const bm = (dBot(px) + dBot(x1)) / 2;
       const fm = fAt(px + sw2 / 2);
-      const sx = Math.min(w - sw2, Math.max(0, px + comp * fm * (px >= midX ? 1 : -1)));
+      const sx = Math.min(w - sw2, Math.max(0, px + comp * fm * csAt(px + sw2 / 2)));
       const dm = (d0 + d1) / 2;
       const vs = (h + bm - dm) / h;                // Unterkante folgt der Bow-Kurve
       c.setTransform(1, (d1 - d0) / sw2, 0, vs, x + px, y + d0);
@@ -9986,8 +10020,12 @@ function addMagazinePage(kind, forceAppend) {
     slides[idx].palFam = 'magazine'; slides[idx].palId = 'salbei';
     slides[idx].bg = MG_BG;
     items.push(jrRect(mid, 640, 640, 850, { fill: MG_PAGE, radius: 4, shadow: MG_SHADOW }));
-    items.push(jrRect(mid - 316, 640, 8, 850, { fill: MG_SPINE, radius: 2 }));
-    items.push(mgF(jrRect(mid - 294, 640, 40, 850, { grad: MG_GUT_R })));
+    // Sehr subtile Falz links (Silvan 19.07.): kein harter Bund-Balken mehr,
+    // sondern eine weiche Falz-Schattierung, die zusammen mit der Seite gewölbt
+    // wird (mgWarp mode 1) — der Titel „biegt" sich minimal in die Falz. Dünne
+    // Lichtkante direkt am Bund gibt der Kante Plastizität.
+    items.push(mgF(jrRect(mid - 306, 640, 30, 850, { grad: { dir: 'x', stops: [[0, 'rgba(30,28,25,0.15)'], [0.4, 'rgba(30,28,25,0.055)'], [1, 'rgba(30,28,25,0)']] } })));
+    items.push(mgF(jrRect(mid - 316.5, 640, 2, 850, { fill: 'rgba(255,255,255,0.5)' })));
     items.push(mgF(jrRect(mid, 1067, 632, 3, { fill: '#E7E5DF', radius: 1.5 })));
     items.push(mgF(jrRect(mid, 1070, 622, 3, { fill: '#DBD9D2', radius: 1.5 })));
     items.push(mgF(jrRect(mid + 2, 1072.5, 608, 2.5, { fill: '#CFCDC6', radius: 1.25 })));
@@ -10009,23 +10047,34 @@ function addMagazinePage(kind, forceAppend) {
     // darunterliegende (fan dx −16).
     slides[idx].palFam = 'magazine'; slides[idx].palId = 'salbei';
     slides[idx].bg = MG_BG;
-    const fan = { blur: 28, dx: -30, dy: 20, color: 'rgba(30,28,25,0.6)' };
+    // Weichere, realistischere Schatten (Silvan 19.07.): größerer Blur, deutlich
+    // geringere Deckung — die Hefte werfen einen zarten Kontaktschatten statt
+    // harter dunkler Blöcke. Backmost etwas breiter/diffuser.
+    const fan     = { blur: 44, dx: -22, dy: 15, color: 'rgba(30,28,25,0.26)' };
+    const backSh  = { blur: 58, dx: -18, dy: 26, color: 'rgba(30,28,25,0.22)' };
     const MG_CREDS = [
       'Q&A: Riverside Atelier · Notes from the valley floor\nGolden Season — a photographic essay',
       'Malbon Melrose Place Studio North\nYlaga Nordic Furniture & Objects\nGolden Square Werkraum Alpin',
       'Quiet House Atelier Ost · Moke Cabin Fearon & Co\nSurrey 112 Studio North · Brick Veil House Matyas\nBreeze House Daniel Boddam · Playhouse C. Williamson'
     ];
-    const GRAD_SH = { dir: 'x', stops: [[0, 'rgba(30,28,25,0)'], [1, 'rgba(30,28,25,0.34)']] };
-    [[340, '#EFEAE0', MG_SHADOW, 'WINTER LIGHT', 'Cormorant Garamond', 43, 500, 5, 7.5, 952, -95],
+    // Falz je Blatt: (1) weiche Schatten-Rinne, die zur Blattkante hin sanft
+    // dunkelt (3 Stops, max 0.18 statt hartem 0.34) + (2) hauchdünne Lichtkante
+    // direkt an der Falz — das gibt den „sehr subtilen" Knick ohne harte Bande.
+    const foldShadow = { dir: 'x', stops: [[0, 'rgba(30,28,25,0)'], [0.5, 'rgba(30,28,25,0.045)'], [0.82, 'rgba(30,28,25,0.13)'], [1, 'rgba(30,28,25,0.18)']] };
+    const foldEdge = (leftX) => {
+      items.push(mgF(jrRect(leftX - 22, 675, 44, 672, { grad: foldShadow })));
+      items.push(mgF(jrRect(leftX + 0.75, 675, 1.5, 672, { fill: 'rgba(255,255,255,0.42)' })));
+    };
+    [[340, '#EFEAE0', backSh, 'WINTER LIGHT', 'Cormorant Garamond', 43, 500, 5, 7.5, 952, -95],
      [472, '#F3F1EC', fan, 'The Still North', 'Playfair Display', 36, 400, 1, 6.5, 940, -120],
      [595, '#F8F7F3', fan, 'Quiet Places', 'Archivo', 28, 200, 3, 7, 947, -110]].forEach(([bx, tone, sh, ttl, fnt, fs, fw, tr, cs, cyC, cxOff], bi) => {
-      if (bi > 0) items.push(mgF(jrRect(cx0 + bx - 278, 675, 36, 672, { grad: GRAD_SH })));
+      if (bi > 0) foldEdge(cx0 + bx - 260);
       items.push(jrRect(cx0 + bx, 675, 520, 672, { fill: tone, radius: 4, shadow: sh }));
       items.push(jrText(ttl, fnt, { size: fs, weight: fw, color: MG_INK, tracking: tr, cx: cx0 + bx - 53, cy: 443 }));
       items.push(jrPh(cx0 + bx - 35, 659, 284, 348));
       items.push(mgF(mgC(MG_CREDS[bi], 'Archivo', { size: cs, weight: 400, color: MG_MUTED, cy: cyC }, cx0 + bx + cxOff)));
     });
-    items.push(mgF(jrRect(cx0 + 447, 675, 36, 672, { grad: GRAD_SH })));
+    foldEdge(cx0 + 465);
     items.push(jrRect(cx0 + 725, 675, 520, 672, { fill: MG_PAGE, radius: 4, shadow: fan }));
     items.push(jrText('THE', 'Cormorant Garamond', { size: 28, weight: 500, color: MG_INK, tracking: 5, cx: cx0 + 725, cy: 399 }));
     items.push(jrText('ALPINE ISSUE', 'Cormorant Garamond', { size: 43, weight: 500, color: MG_INK, tracking: 5, cx: cx0 + 725, cy: 443 }));
@@ -10111,11 +10160,22 @@ function addMagazinePage(kind, forceAppend) {
   if (kind !== 'voll') fitItemsToHeight(items, realH());
   // Falz-Wölbung nur für die offenen Doppelseiten; andere Kinds löschen die
   // Zuordnung (falls das Template eine Doppelseite ersetzt hat).
+  const voff = (realH() - 1350) / 2;
   if (kind === 'spread' || kind === 'grid') {
     // h 613: schließt die Papierstapel-Kanten unten MIT ein — sie wölben sich
     // sanft mit (bowB), wie beim echten Buchblock. Die feinen 1-px-Streifen
     // am Bund verhindern die früheren „Zähne".
-    slides[idx].mgWarp = { x: 80, y: 340 + (realH() - 1350) / 2, w: 920, h: 613, sag: 7.5, comp: 2.4, bowT: 4.6, bowB: 3.2 };
+    slides[idx].mgWarp = { x: 80, y: 340 + voff, w: 920, h: 613, sag: 6.8, comp: 2.2, bowT: 5.2, bowB: 3.4, lightAlpha: 0.86 };
+  } else if (kind === 'cover') {
+    // Einzelseite, links gebunden: sehr subtile Falz (mode 1) — die ganze
+    // Seite bekommt eine leichte Plastizität, der Titel biegt sich minimal in
+    // den Bund. light:false → die gemalte Falz-Schattierung wird mitgewölbt.
+    slides[idx].mgWarp = { x: 220, y: 210 + voff, w: 640, h: 872, sag: 3.0, comp: 1.5, bowT: 2.2, bowB: 1.3, mode: 1, fall: 0.10, light: false };
+  } else if (kind === 'stapel') {
+    // Nur das vordere Heft bekommt eine sehr subtile Falz-Plastizität (mode 1).
+    // Die hinteren Blätter bleiben gemalt (Überlappung → kein sauberes Resampling).
+    // flood = Papierton, damit der Kompressionssaum nicht grau durchblitzt.
+    slides[idx].mgWarp = [{ x: 465, y: 339 + voff, w: 520, h: 672, sag: 2.4, comp: 1.0, bowT: 1.8, bowB: 1.0, mode: 1, fall: 0.11, light: false, flood: MG_PAGE }];
   } else {
     delete slides[idx].mgWarp;
   }
