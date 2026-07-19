@@ -1017,7 +1017,8 @@ canvas.picking-color { cursor: crosshair; }
 #textCtrl { flex-direction: column; gap: 8px; align-items: stretch; width: 100%; max-width: 560px; }
 #textCtrl .tc-row { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; }
 #textCtrl .tc-row select { flex: 1 1 0; min-width: 0; }
-#textCtrl #textContentInput { width: 100%; }
+#textCtrl #textContentInput { width: 100%; box-sizing: border-box; resize: none; min-height: 44px; max-height: 132px; line-height: 1.35; font-family: inherit; font-size: 16px; padding: 9px 11px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--text); }
+#textCtrl #textContentInput:focus { outline: none; border-color: var(--text); }
 .tc-gap { flex: 1 1 auto; }
 /* Style-Zeile: umbrechen statt horizontal scrollen — so sind B/I/U + Ausrichtung
    (Zeile 1) UND alle Farben + Pipette (Zeile 2) gleichzeitig sichtbar und
@@ -3271,7 +3272,7 @@ html.native-ios .hlp-browser-only { display: none; }
 
   <div id="textCtrl" style="display:none">
     <div class="acc-sec" id="secFont" style="display:none">
-    <input type="text" id="textContentInput" placeholder="Your text" maxlength="400">
+    <textarea id="textContentInput" placeholder="Your text" maxlength="400" rows="3"></textarea>
     <div class="tc-row">
       <select id="fontSelect" title="Font">
         <optgroup label="Headline · bold / caps">
@@ -10243,6 +10244,40 @@ function wrapToWidth(txt, fontFamily, size, weight, wrapW) {
   });
   return out.join('\n');
 }
+// wrapW für JEDEN editierbaren Text-Baustein sicherstellen — nicht nur Magazine.
+// Damit bricht Text in ALLEN Templates beim Bearbeiten auf die Box-Breite um,
+// statt über den Slide-Rand zu laufen (Silvan 19.07.). wrapW wird aus dem
+// ORIGINAL-Text (längste Zeile) bei der aktuellen Render-Schriftgröße gemessen;
+// bei Blocksatz die volle Box-Breite p.w. mgBody bleibt außen vor (rewrapJustify).
+function ensureWrapW(p) {
+  if (!p || p.kind !== 'text' || p.wrapW != null) return;
+  const lead = p.leading || 1;
+  const n = Math.max(1, String(p.text || '').split('\n').length);
+  const base = p.h / (1 + (n - 1) * lead);
+  const fs = Math.max(4, base * 0.78);
+  const wgt = p.bold ? 700 : (p.weight || 300);
+  // Blocksatz-Spalten (mgBody) und justierte Blöcke: auf die volle Spaltenbreite
+  // p.w umbrechen (nicht auf die längste Zeile) — sie füllen die Spalte.
+  if (p.mgBody || (p.align || 'center') === 'justify') { p.wrapW = Math.max(40, p.w); return; }
+  if (!_measCtx) _measCtx = document.createElement('canvas').getContext('2d');
+  _measCtx.font = `normal ${wgt} ${Math.round(fs)}px "${p.fontFamily}", sans-serif`;
+  let mx = 0;
+  String(p.text || '').split('\n').forEach(l => { mx = Math.max(mx, _measCtx.measureText(l).width); });
+  p.wrapW = Math.max(40, Math.ceil(mx) + 1);
+}
+// Logischer (bearbeitbarer) Text eines Bausteins: Absätze (Leerzeile = \n\n)
+// bleiben erhalten, weiche Zeilenumbrüche INNERHALB eines Absatzes werden zu
+// Leerzeichen zusammengezogen — so bricht der Text beim Tippen sauber neu um
+// und die Absätze gehen NICHT verloren (Silvan 19.07.). `textEdit` ist die vom
+// Nutzer getippte Fassung; sonst aus dem gerenderten `text` abgeleitet.
+function logicalText(p) {
+  if (!p) return '';
+  if (p.textEdit != null) return p.textEdit;
+  return String(p.text || '')
+    .split(/\n[ \t]*\n/)                               // Absätze an Leerzeilen trennen
+    .map(par => par.split('\n').map(s => s.trim()).filter(Boolean).join(' '))
+    .join('\n\n');
+}
 function mgJ(txt, font, o, leftX, colW) {
   o.cx = 0; o.align = 'left';
   const size = o.size || 7.5;
@@ -10733,6 +10768,7 @@ document.getElementById('textContentInput').addEventListener('input', function()
   if (sel < 0 || sel >= photos.length || photos[sel].kind !== 'text') return;
   beginAction('text');
   const p = photos[sel];
+  ensureWrapW(p);   // in JEDEM Template auf die Box-Breite umbrechen (nicht nur Magazine)
   // Formatierung bleibt beim Inhalt-Ändern IMMER gleich (18.07.26): Die
   // Schriftgröße hängt an p.h / Zeilenzahl — ändert sich die Zeilenzahl,
   // wird p.h so nachgeführt, dass die Basis-Zeilenhöhe (= optische Größe)
@@ -10745,6 +10781,7 @@ document.getElementById('textContentInput').addEventListener('input', function()
   // behält. p.w (= Anker/Breite) bleibt unverändert.
   const fontSize = base * 0.78;
   const wgt = p.bold ? 700 : (p.weight || 300);
+  p.textEdit = this.value;   // logische Fassung (mit Absätzen) merken — Absätze bleiben so erhalten
   const val = p.wrapW ? wrapToWidth(this.value, p.fontFamily, fontSize, wgt, p.wrapW) : this.value;
   p.text = val;
   const n1 = Math.max(1, String(val).split('\n').length);
@@ -10928,7 +10965,7 @@ function syncTextUI() {
   if (!isText) return;
   const p = photos[sel];
   const input = document.getElementById('textContentInput');
-  if (document.activeElement !== input) input.value = p.text;
+  if (document.activeElement !== input) input.value = logicalText(p);
   document.getElementById('fontSelect').value = p.fontFamily;
   document.getElementById('weightSelect').value = String(p.weight || 300);
   document.querySelectorAll('#textCtrl .clr-btn').forEach(b => {
@@ -11499,7 +11536,7 @@ function openTextEdit() {
   openSec = 'secFont';
   renderAccordion();
   const inp = document.getElementById('textContentInput');
-  if (inp) { inp.value = photos[sel].text || ''; setTimeout(() => { try { inp.focus(); inp.select(); } catch (e) {} }, 40); }
+  if (inp) { inp.value = logicalText(photos[sel]); setTimeout(() => { try { inp.focus(); inp.select(); } catch (e) {} }, 40); }
 }
 // Doppeltipp-Erkennung (Touch) für Crop
 let _dblTapT = 0, _dblTapSel = -1;
