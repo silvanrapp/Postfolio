@@ -5802,18 +5802,28 @@ function applyGutterWarp(c, cv, i, oxDev, oyDev, scale) {
   // Nahe am Bund ist die Kurve STEIL — dort 1-px-Streifen, außen breitere:
   // sonst zeigen sich beim Zoomen Ecken an den Segment-Übergängen (und ein
   // Mini-Sägezahn an der Unterkante, weil vs nur den Strip-Mittelwert nimmt).
-  const fAt = px => Math.exp(-(Math.abs(px - midX) / midX) / FALL);
+  const uAt = px => Math.min(1, Math.abs(px - midX) / midX);   // 0 Bund … 1 Außenkante
+  const fAt = px => Math.exp(-uAt(px) / FALL);
+  // Blatt-Geometrie wie bei echten Zeitschriften-Mockups: Bund-Senke (exp)
+  // PLUS eine leichte Wölbung über die GANZE Seite (sin-Bauch) — die Kanten
+  // sind nirgends schnurgerade, die Ecken bleiben aber verankert
+  // (sin(0) = sin(π) = 0). Unterkante wölbt sich nur sanft (bowB), ohne
+  // Bund-Senke — der Buchblock liegt auf.
+  const bowT = (wp.bowT || 0) * scale, bowB = (wp.bowB || 0) * scale;
+  const dTop = px => sag * fAt(px) + bowT * Math.sin(Math.PI * uAt(px));
+  const dBot = px => bowB * Math.sin(Math.PI * uAt(px));
   const fineZone = midX * FALL * 3;               // f > e⁻³ ≈ 0.05 ⇒ fein
   const coarse = Math.max(2, Math.round(1.5 * scale));
   for (let px = 0; px < w; ) {
     const stw = Math.abs(px + 0.5 - midX) < fineZone ? 1 : coarse;
     const x1 = Math.min(w, px + stw), sw2 = x1 - px;
     if (sw2 <= 0) break;
-    const d0 = sag * fAt(px), d1 = sag * fAt(x1);
+    const d0 = dTop(px), d1 = dTop(x1);
+    const bm = (dBot(px) + dBot(x1)) / 2;
     const fm = fAt(px + sw2 / 2);
     const sx = Math.min(w - sw2, Math.max(0, px + comp * fm * (px >= midX ? 1 : -1)));
     const dm = (d0 + d1) / 2;
-    const vs = (h - dm) / h;                       // Unterkante bleibt auf y + h
+    const vs = (h + bm - dm) / h;                  // Unterkante folgt der Bow-Kurve
     c.setTransform(1, (d1 - d0) / sw2, 0, vs, x + px, y + d0);
     c.drawImage(_warpCv, sx, 0, sw2, h, 0, 0, sw2, h);
     px = x1;
@@ -5826,15 +5836,15 @@ function applyGutterWarp(c, cv, i, oxDev, oyDev, scale) {
   // zeile DIREKT ÜBER der Region — geclippt auf die exakte Senkenkurve —
   // über das Band strecken. Der Schatten läuft nahtlos weiter, und die
   // Seiten-Oberkante ist eine glatte Pfad-Kurve statt Treppen.
-  if (y > 3 && sag > 0.5) {
+  if (y > 3 && (sag > 0.5 || bowT > 0.5)) {
     c.beginPath();
     c.moveTo(x, y - 1);
-    for (let px = 0; px <= w; px += 2) c.lineTo(x + px, y + sag * fAt(px) - 0.4);
+    for (let px = 0; px <= w; px += 2) c.lineTo(x + px, y + dTop(px) - 0.4);
     c.lineTo(x + w, y - 1);
     c.closePath();
     c.save();
     c.clip();
-    c.drawImage(cv, x, y - 3, w, 1, x, y - 1, w, Math.ceil(sag) + 2);
+    c.drawImage(cv, x, y - 3, w, 1, x, y - 1, w, Math.ceil(sag + bowT) + 2);
     c.restore();
   }
   c.restore();
@@ -8458,15 +8468,42 @@ function fitItemsToHeight(items, Hreal) {
   const H0 = 1350;
   if (!Hreal || Hreal === H0) return;
   const off = (Hreal - H0) / 2;
+  const grow = Hreal - H0;
   items.forEach(it => {
-    if (it.kind !== 'text' && it.h >= H0 * 0.92) {
-      it.h += Hreal - H0;
+    const isText = it.kind === 'text';
+    const top = it.cy - it.h / 2, bot = it.cy + it.h / 2;
+    if (!isText && it.h >= H0 * 0.92) {
+      it.h += grow;
       it.cy = Hreal / 2;
       if (it.home) { it.home.h = it.h; it.home.cy = it.cy; }
       return;
     }
+    // Fast vollhohe, MITTIG sitzende Flächen (z. B. Innenlinien-Rahmen mit
+    // gleichmäßigem Rand): mitwachsen lassen, damit die Ränder gleich bleiben.
+    if (!isText && it.h >= H0 * 0.82 && Math.abs(it.cy - H0 / 2) <= 40) {
+      it.h += grow;
+      it.cy += off;
+      if (it.home) { it.home.h = it.h; it.home.cy = it.cy; }
+      return;
+    }
+    // KANTEN-VERANKERTE Flächen (Halbfeld-Panels, vollbreite Fotos an der
+    // Ober-/Unterkante): Die Slide-Kante bleibt Kante, nur die INNERE Kante
+    // wandert mit dem mittigen Inhalt (± off) mit. Vorher rutschten solche
+    // Flächen um off von der Kante weg — Background blitzte auf (3:4-Bug,
+    // z. B. Statement „Kontrast": rotes Halbfeld hing 45 pt unter der
+    // Oberkante). Kleine Deko-Elemente (h < 200) bleiben davon unberührt.
+    if (!isText && top <= 6 && it.h >= 200) {
+      it.h += off; it.cy = top + it.h / 2;               // Oberkante bleibt
+      if (it.home) { it.home.h = it.h; it.home.cy = it.cy; }
+      return;
+    }
+    if (!isText && bot >= H0 - 6 && it.h >= 200) {
+      it.h += off; it.cy = bot + grow - it.h / 2;        // Unterkante → neue Kante
+      if (it.home) { it.home.h = it.h; it.home.cy = it.cy; }
+      return;
+    }
     if (it.cy <= 150) { /* Kopfzeile bleibt oben */ }
-    else if (it.cy >= H0 - 150) it.cy += Hreal - H0;
+    else if (it.cy >= H0 - 150) it.cy += grow;
     else it.cy += off;
     if (it.home) it.home.cy = it.cy;
   });
@@ -9763,8 +9800,13 @@ CAT_FNS.arthouse = addArthousePage;
 const MG_BG = '#C9CCC4', MG_PAGE = '#FBFBF9', MG_PAGE2 = '#F3F3EF', MG_PAGE3 = '#EDEDE8',
       MG_INK = '#1F1D1A', MG_MUTED = '#8F8B84', MG_SPINE = '#E0DED8',
       MG_SHADOW = { blur: 46, dx: -18, dy: 26, color: 'rgba(30,28,25,0.35)' },
-      MG_GUT_L = { dir: 'x', stops: [[0, 'rgba(30,28,25,0)'], [0.78, 'rgba(30,28,25,0.07)'], [1, 'rgba(30,28,25,0.2)']] },
-      MG_GUT_R = { dir: 'x', stops: [[0, 'rgba(30,28,25,0.2)'], [0.22, 'rgba(30,28,25,0.07)'], [1, 'rgba(30,28,25,0)']] };
+      MG_GUT_L = { dir: 'x', stops: [[0, 'rgba(30,28,25,0)'], [0.5, 'rgba(30,28,25,0.04)'], [0.85, 'rgba(30,28,25,0.12)'], [1, 'rgba(30,28,25,0.24)']] },
+      MG_GUT_R = { dir: 'x', stops: [[0, 'rgba(30,28,25,0.24)'], [0.15, 'rgba(30,28,25,0.12)'], [0.5, 'rgba(30,28,25,0.04)'], [1, 'rgba(30,28,25,0)']] },
+      // Licht-Schicht der Mockup-Optik: zarter Glanz auf dem Blattbauch +
+      // hauchfeine Abdunklung an den Außenkanten (Papier biegt vom Licht weg).
+      MG_SHEEN  = { dir: 'x', stops: [[0, 'rgba(255,255,255,0)'], [0.5, 'rgba(255,255,255,0.06)'], [1, 'rgba(255,255,255,0)']] },
+      MG_EDGE_L = { dir: 'x', stops: [[0, 'rgba(30,28,25,0.05)'], [1, 'rgba(30,28,25,0)']] },
+      MG_EDGE_R = { dir: 'x', stops: [[0, 'rgba(30,28,25,0)'], [1, 'rgba(30,28,25,0.05)']] };
 // Fester Fließtext (Spalten sind auf ~20 Zeichen umbrochen — die Box-Breite
 // wird über align:'left' aus der längsten Zeile geeicht).
 const MG_COL_A = 'Set on a quiet hillside above the\nvalley, the house is shaped by\nits terrain before anything else.\n   Granite boulders, tall spruce\ntrees and the prevailing winds\ndefine the experience of the\nsite, while the elevated position\noffers a changed perspective of\nthe landscape below. You leave\nthe road and, within a few quiet\nsteps, find yourself beneath the\ncanopy. The light changes. The\nair changes. The house becomes\nless of an object and more of a\nliving framework for the forest.\n   The architecture follows this\nshift and, rather than imposing\nitself on the hillside, the house\nsits within it, letting the trees\npuncture the elevated decks and\nnative planting continue beneath\nthe raised timber structure.';
@@ -9907,9 +9949,14 @@ function addMagazinePage(kind, forceAppend) {
     items.push(mgJ(MG_COL_B, 'Archivo', { size: 7.5, weight: 400, color: '#55524E', cy: 811 }, cx0 + 387, 133));
     items.push(jrText('128', 'Archivo', { size: 9, weight: 400, color: MG_MUTED, cx: cx0 + 104, cy: 930 }));
     items.push(jrPh(mid + 230, 640, 460, 600));
-    // Mockup-Plastizität: Seiten wölben sich in den Bund, Papierdicke unten.
-    items.push(mgF(jrRect(mid - 33, 640, 66, 600, { grad: MG_GUT_L })));
-    items.push(mgF(jrRect(mid + 33, 640, 66, 600, { grad: MG_GUT_R })));
+    // Mockup-Plastizität: breite weiche Bund-Verläufe, Blattbauch-Sheen,
+    // Außenkanten-Abdunklung, Papierdicke unten.
+    items.push(mgF(jrRect(mid - 75, 640, 150, 600, { grad: MG_GUT_L })));
+    items.push(mgF(jrRect(mid + 75, 640, 150, 600, { grad: MG_GUT_R })));
+    items.push(mgF(jrRect(mid - 160, 640, 120, 600, { grad: MG_SHEEN })));
+    items.push(mgF(jrRect(mid + 160, 640, 120, 600, { grad: MG_SHEEN })));
+    items.push(mgF(jrRect(cx0 + 103, 640, 46, 600, { grad: MG_EDGE_L })));
+    items.push(mgF(jrRect(cx0 + 977, 640, 46, 600, { grad: MG_EDGE_R })));
     items.push(mgF(jrRect(mid, 943, 912, 3.5, { fill: '#E7E5DF' })));
     items.push(mgF(jrRect(mid - 2, 946.5, 902, 3, { fill: '#DBD9D2' })));
     items.push(mgF(jrRect(mid + 2, 949.5, 890, 2.5, { fill: '#CFCDC6' })));
@@ -9943,8 +9990,12 @@ function addMagazinePage(kind, forceAppend) {
       items.push(mgL(val, 'Archivo', { size: 6.5, weight: 400, color: MG_MUTED, cy: y }, cx0 + 835 + Math.round(lb.length * 6.5 * 0.54) + 7));
     });
     items.push(jrText('081', 'Archivo', { size: 9, weight: 400, color: MG_MUTED, cx: cx0 + 950, cy: 918 }));
-    items.push(mgF(jrRect(mid - 33, 640, 66, 600, { grad: MG_GUT_L })));
-    items.push(mgF(jrRect(mid + 33, 640, 66, 600, { grad: MG_GUT_R })));
+    items.push(mgF(jrRect(mid - 75, 640, 150, 600, { grad: MG_GUT_L })));
+    items.push(mgF(jrRect(mid + 75, 640, 150, 600, { grad: MG_GUT_R })));
+    items.push(mgF(jrRect(mid - 160, 640, 120, 600, { grad: MG_SHEEN })));
+    items.push(mgF(jrRect(mid + 160, 640, 120, 600, { grad: MG_SHEEN })));
+    items.push(mgF(jrRect(cx0 + 103, 640, 46, 600, { grad: MG_EDGE_L })));
+    items.push(mgF(jrRect(cx0 + 977, 640, 46, 600, { grad: MG_EDGE_R })));
     items.push(mgF(jrRect(mid, 943, 912, 3.5, { fill: '#E7E5DF' })));
     items.push(mgF(jrRect(mid - 2, 946.5, 902, 3, { fill: '#DBD9D2' })));
     items.push(mgF(jrRect(mid + 2, 949.5, 890, 2.5, { fill: '#CFCDC6' })));
@@ -9957,7 +10008,10 @@ function addMagazinePage(kind, forceAppend) {
   // Falz-Wölbung nur für die offenen Doppelseiten; andere Kinds löschen die
   // Zuordnung (falls das Template eine Doppelseite ersetzt hat).
   if (kind === 'spread' || kind === 'grid') {
-    slides[idx].mgWarp = { x: 80, y: 340 + (realH() - 1350) / 2, w: 920, h: 601, sag: 7, comp: 2.4 };
+    // h 613: schließt die Papierstapel-Kanten unten MIT ein — sie wölben sich
+    // sanft mit (bowB), wie beim echten Buchblock. Die feinen 1-px-Streifen
+    // am Bund verhindern die früheren „Zähne".
+    slides[idx].mgWarp = { x: 80, y: 340 + (realH() - 1350) / 2, w: 920, h: 613, sag: 7, comp: 2.4, bowT: 3.4, bowB: 2.4 };
   } else {
     delete slides[idx].mgWarp;
   }
