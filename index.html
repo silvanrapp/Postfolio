@@ -3719,6 +3719,9 @@ const PF_PLATFORM = window.Capacitor ? 'ios' : 'web';
 let pfIsPro = false;      // iOS: später aus StoreKit-Kauf gelesen
 let pfSimTier = null;     // 'free' | 'pro' | null (nur intern)
 (function(){
+  // Web = offizielle Website: ALLES frei, kein Pro/Paywall, keine Simulation.
+  // Deshalb den ?tier=-Schalter und einen evtl. alten localStorage-Wert ignorieren.
+  if (PF_PLATFORM === 'web') { try { localStorage.removeItem('pfSimTier'); } catch (e) {} return; }
   try {
     const q = new URLSearchParams(location.search).get('tier');
     if (q === 'off') localStorage.removeItem('pfSimTier');
@@ -12875,6 +12878,7 @@ document.getElementById('rotStepR').addEventListener('click', () => jumpRot(1));
   //    Startseite; die 5 schnellen Tipps davor werden trotzdem gezählt und beim
   //    5. gefeuert — der ✕/Balken bleibt in beiden Ansichten bedienbar).
   function cycleSimTier() {
+    if (PF_PLATFORM === 'web') return;   // Website ist komplett frei — keine Pro-Simulation
     pfSimTier = !pfSimTier ? 'free' : (pfSimTier === 'free' ? 'pro' : null);
     try { if (pfSimTier) localStorage.setItem('pfSimTier', pfSimTier); else localStorage.removeItem('pfSimTier'); } catch (err) {}
     applyProBadges(); syncSimBar();
