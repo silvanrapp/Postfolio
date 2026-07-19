@@ -5933,10 +5933,17 @@ function warpRegion(c, cv, sl, wp, oxDev, oyDev, scale) {
     // weniger harte Falz-Kante (Silvan 19.07.: „alles weicher und glatter").
     if (wp.lightAlpha != null) c.globalAlpha = wp.lightAlpha;
     c.globalCompositeOperation = 'multiply';
-    c.drawImage(MG_LIGHT_MUL, x, y, w, h);
+    // Die gebackene Licht-Map ist 613px hoch, die untersten ~6 % sind ein heller
+    // „Buchblock-Glanz" (Kante), der auf einer Seite bis zur Unterkante als
+    // hellerer Streifen sichtbar wurde (Silvan, mehrfach). Diese Zeilen der
+    // QUELLE weglassen (nur obere 94 % über die volle Regionshöhe ziehen) →
+    // kein aufgehellter Rand mehr an der Seiten-Unterkante.
+    const _lmMulH = Math.round(MG_LIGHT_MUL.naturalHeight * 0.94);
+    c.drawImage(MG_LIGHT_MUL, 0, 0, MG_LIGHT_MUL.naturalWidth, _lmMulH, x, y, w, h);
     if (MG_LIGHT_SCR.complete && MG_LIGHT_SCR.naturalWidth) {
       c.globalCompositeOperation = 'screen';
-      c.drawImage(MG_LIGHT_SCR, x, y, w, h);
+      const _lmScrH = Math.round(MG_LIGHT_SCR.naturalHeight * 0.94);
+      c.drawImage(MG_LIGHT_SCR, 0, 0, MG_LIGHT_SCR.naturalWidth, _lmScrH, x, y, w, h);
     }
     c.restore();
   }
