@@ -9967,6 +9967,7 @@ function mgJ(txt, font, o, leftX, colW) {
   t.w = colW;
   t.cx = leftX + colW / 2;
   t.mgFix = true;   // Fließtext ist auf Mockup-Größe eh unlesbar → fest
+  t.mgBody = true;  // …und bleibt auch aus der Texts-Liste raus (nur Titel/Credits editierbar)
   return t;
 }
 // Element als fixen Magazin-Bestandteil markieren (nicht antipp-/editierbar).
@@ -11190,19 +11191,25 @@ function syncTextItemList() {
   if (!el) return;
   el.innerHTML = '';
   photos.forEach((q, k) => {
-    if (q.kind !== 'text' || q.hidden || q.mgFix || Math.floor(q.cx / W) !== activeSlide) return;
+    // Alle beschrifteten Text-Bausteine der Slide auflisten — Titel, Eyebrow,
+    // Headline, Subline, Issue-Nr, Credits usw. Nur der winzige Blocksatz-
+    // Fließtext (mgBody) bleibt draußen (auf Mockup-Größe unlesbar, fest).
+    if (q.kind !== 'text' || q.hidden || q.mgBody || Math.floor(q.cx / W) !== activeSlide) return;
     const row = document.createElement('div');
     row.className = 'ly-row' + (k === sel ? ' on' : '');
     const name = document.createElement('span');
     name.className = 'ly-name';
     name.textContent = '“' + String(q.text || 'Text').replace(/\n/g, ' · ').trim().slice(0, 30) + '”';
     row.appendChild(name);
+    // Ein Tipp: Baustein wählen UND direkt das Font-Tool mit Inhalts-Eingabe
+    // öffnen (Silvan 19.07.: „auf Baustein klicken → Font-Tool auf + Inhalt
+    // bearbeiten"). Fixierte Bausteine (Credits) sind so trotzdem editierbar.
     row.addEventListener('click', () => {
-      if (sel === k) { openTextEdit(); return; }
       sel = k;
       panelHidden = false;
       updateDeleteBtn();
       redraw();
+      openTextEdit();
     });
     el.appendChild(row);
   });
