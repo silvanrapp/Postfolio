@@ -5901,6 +5901,28 @@ function warpRegion(c, cv, sl, wp, oxDev, oyDev, scale) {
     }
     c.restore();
   }
+  // Bund-Kehle ÜBER ALLES (auch über eingefügte Fotos): weiche vertikale
+  // Schatten-Rinne genau in der Falz-Mitte. Wird VOR dem Region-Copy gemalt →
+  // mitgewölbt, sodass ein Foto an der Innenkante einen echten Falz-Schatten
+  // bekommt (Silvan 19.07.: „Foto soll die Wölbung annehmen mit Schatten an
+  // der Innenseite"). Plus eine hauchdünne Licht-Kante direkt am Bund.
+  if (wp.gutter && mode === 0) {
+    const gx = x + w / 2, gw = w * 0.16;
+    const g = c.createLinearGradient(gx - gw, 0, gx + gw, 0);
+    g.addColorStop(0, 'rgba(30,28,25,0)');
+    g.addColorStop(0.34, 'rgba(30,28,25,' + (wp.gutter * 0.32).toFixed(3) + ')');
+    g.addColorStop(0.5, 'rgba(30,28,25,' + wp.gutter.toFixed(3) + ')');
+    g.addColorStop(0.66, 'rgba(30,28,25,' + (wp.gutter * 0.32).toFixed(3) + ')');
+    g.addColorStop(1, 'rgba(30,28,25,0)');
+    c.save();
+    c.globalCompositeOperation = 'multiply';
+    c.fillStyle = g;
+    c.fillRect(gx - gw, y, gw * 2, h);
+    c.globalCompositeOperation = 'screen';
+    c.fillStyle = 'rgba(255,253,248,0.5)';
+    c.fillRect(gx - 0.75, y, 1.5, h);
+    c.restore();
+  }
   const oc = _warpCv.getContext('2d');
   oc.clearRect(0, 0, w, h);
   oc.drawImage(cv, x, y, w, h, 0, 0, w, h);
@@ -9960,12 +9982,53 @@ function mgL(txt, font, o, leftX) {
 // Zentrierter Mehrzeiler: Box-Breite auf die längste Zeile eichen (makeTextItem
 // zählt sonst den GANZEN String inkl. \n — Hit-Box läge über Slide-Grenzen).
 // Blocksatz-Spalte: exakte Spaltenbreite als Austreib-Ziel (p.w = colW).
+// Blocksatz-Text dicht in die Spaltenbreite umbrechen: so viele Wörter wie
+// möglich pro Zeile → kleine, gleichmäßige Wortlücken statt „luftigem" Satz
+// (Silvan 19.07.: „zu wenige Wörter, Leerzeichen enger"). Absätze werden am
+// Einzug erkannt und behalten ihn (justLine-Erkennung + optischer Absatz).
+let _measCtx = null;
+function rewrapJustify(txt, fontFamily, size, weight, colW) {
+  if (!_measCtx) _measCtx = document.createElement('canvas').getContext('2d');
+  const c = _measCtx;
+  c.font = `normal ${weight || 400} ${Math.round(size)}px "${fontFamily}", sans-serif`;
+  const rawLines = String(txt).split('\n');
+  const paras = [];
+  rawLines.forEach(l => {
+    const ind = (l.match(/^ +/) || [''])[0];
+    const body = l.trim();
+    if (!paras.length || ind) paras.push({ indent: ind, text: body });
+    else paras[paras.length - 1].text += (paras[paras.length - 1].text ? ' ' : '') + body;
+  });
+  const out = [];
+  paras.forEach(par => {
+    const words = par.text.split(/ +/).filter(Boolean);
+    let line = par.indent || '', has = false;
+    words.forEach(w => {
+      const test = has ? line + ' ' + w : line + w;
+      if (has && c.measureText(test).width > colW) { out.push(line); line = w; has = true; }
+      else { line = test; has = true; }
+    });
+    out.push(line);
+  });
+  return out.join('\n');
+}
 function mgJ(txt, font, o, leftX, colW) {
   o.cx = 0; o.align = 'left';
-  const t = jrText(txt, font, o);
+  const size = o.size || 7.5;
+  const wrapped = rewrapJustify(txt, font, size, o.weight || 400, colW);
+  const origLines = Math.max(1, String(txt).split('\n').length);
+  const newLines = Math.max(1, wrapped.split('\n').length);
+  const t = jrText(wrapped, font, o);
   t.align = 'justify';
   t.w = colW;
   t.cx = leftX + colW / 2;
+  // Höhe an die NEUE Zeilenzahl koppeln (Schriftgröße bleibt exakt = size,
+  // h = size/0.78 · Zeilen bei leading 1). OBERKANTE der Spalte bleibt fix
+  // (aus der Original-Zeilenzahl), damit nebeneinanderliegende Spalten oben
+  // bündig bleiben, auch wenn sie jetzt unterschiedlich viele Zeilen haben.
+  const top = o.cy - (size / 0.78) * origLines / 2;
+  t.h = (size / 0.78) * newLines;
+  t.cy = top + t.h / 2;
   t.mgFix = true;   // Fließtext ist auf Mockup-Größe eh unlesbar → fest
   t.mgBody = true;  // …und bleibt auch aus der Texts-Liste raus (nur Titel/Credits editierbar)
   return t;
@@ -10092,7 +10155,12 @@ function addMagazinePage(kind, forceAppend) {
     // aus (keine harten Rechteck-Kanten, nichts ragt über die Seitenkante
     // hinaus) und liegen komplett AUSSERHALB der Warp-Region — sonst entsteht
     // an der Regionsgrenze eine Versatz-Stufe (Silvans Zoom-Screenshot).
-    items.push(mgF(jrRect(mid, 979, 920, 44, { grad: { dir: 'r', stops: [[0, 'rgba(30,28,25,0.22)'], [0.55, 'rgba(30,28,25,0.13)'], [0.85, 'rgba(30,28,25,0.04)'], [1, 'rgba(30,28,25,0)']] } })));
+    // Schatten UNTERHALB des Magazins wie im Original (Silvan 19.07.): weicher,
+    // breiter Schatten-Pool, der nach unten ausläuft — dunkelster Kontakt direkt
+    // an der Unterkante, dann diffuser Abfall. Zwei Lagen: schmaler Kontakt +
+    // breiter, sehr weicher Halo darunter.
+    items.push(mgF(jrRect(mid, 1010, 1010, 172, { grad: { dir: 'r', stops: [[0, 'rgba(30,28,25,0.16)'], [0.4, 'rgba(30,28,25,0.085)'], [0.72, 'rgba(30,28,25,0.025)'], [1, 'rgba(30,28,25,0)']] } })));
+    items.push(mgF(jrRect(mid, 966, 900, 60, { grad: { dir: 'r', stops: [[0, 'rgba(30,28,25,0.24)'], [0.5, 'rgba(30,28,25,0.12)'], [0.82, 'rgba(30,28,25,0.03)'], [1, 'rgba(30,28,25,0)']] } })));
     items.push(mgF(jrRect(cx0 + 70, 642, 20, 620, { grad: { dir: 'r', stops: [[0, 'rgba(30,28,25,0.11)'], [0.7, 'rgba(30,28,25,0.05)'], [1, 'rgba(30,28,25,0)']] } })));
     items.push(mgF(jrRect(cx0 + 1010, 642, 20, 620, { grad: { dir: 'r', stops: [[0, 'rgba(30,28,25,0.11)'], [0.7, 'rgba(30,28,25,0.05)'], [1, 'rgba(30,28,25,0)']] } })));
     items.push(jrRect(mid, 640, 920, 600, { fill: MG_PAGE, radius: 3 }));
@@ -10123,7 +10191,12 @@ function addMagazinePage(kind, forceAppend) {
     // aus (keine harten Rechteck-Kanten, nichts ragt über die Seitenkante
     // hinaus) und liegen komplett AUSSERHALB der Warp-Region — sonst entsteht
     // an der Regionsgrenze eine Versatz-Stufe (Silvans Zoom-Screenshot).
-    items.push(mgF(jrRect(mid, 979, 920, 44, { grad: { dir: 'r', stops: [[0, 'rgba(30,28,25,0.22)'], [0.55, 'rgba(30,28,25,0.13)'], [0.85, 'rgba(30,28,25,0.04)'], [1, 'rgba(30,28,25,0)']] } })));
+    // Schatten UNTERHALB des Magazins wie im Original (Silvan 19.07.): weicher,
+    // breiter Schatten-Pool, der nach unten ausläuft — dunkelster Kontakt direkt
+    // an der Unterkante, dann diffuser Abfall. Zwei Lagen: schmaler Kontakt +
+    // breiter, sehr weicher Halo darunter.
+    items.push(mgF(jrRect(mid, 1010, 1010, 172, { grad: { dir: 'r', stops: [[0, 'rgba(30,28,25,0.16)'], [0.4, 'rgba(30,28,25,0.085)'], [0.72, 'rgba(30,28,25,0.025)'], [1, 'rgba(30,28,25,0)']] } })));
+    items.push(mgF(jrRect(mid, 966, 900, 60, { grad: { dir: 'r', stops: [[0, 'rgba(30,28,25,0.24)'], [0.5, 'rgba(30,28,25,0.12)'], [0.82, 'rgba(30,28,25,0.03)'], [1, 'rgba(30,28,25,0)']] } })));
     items.push(mgF(jrRect(cx0 + 70, 642, 20, 620, { grad: { dir: 'r', stops: [[0, 'rgba(30,28,25,0.11)'], [0.7, 'rgba(30,28,25,0.05)'], [1, 'rgba(30,28,25,0)']] } })));
     items.push(mgF(jrRect(cx0 + 1010, 642, 20, 620, { grad: { dir: 'r', stops: [[0, 'rgba(30,28,25,0.11)'], [0.7, 'rgba(30,28,25,0.05)'], [1, 'rgba(30,28,25,0)']] } })));
     items.push(jrRect(mid, 640, 920, 600, { fill: MG_PAGE, radius: 3 }));
@@ -10166,7 +10239,7 @@ function addMagazinePage(kind, forceAppend) {
     // h 613: schließt die Papierstapel-Kanten unten MIT ein — sie wölben sich
     // sanft mit (bowB), wie beim echten Buchblock. Die feinen 1-px-Streifen
     // am Bund verhindern die früheren „Zähne".
-    slides[idx].mgWarp = { x: 80, y: 340 + voff, w: 920, h: 613, sag: 6.8, comp: 2.2, bowT: 5.2, bowB: 3.4, lightAlpha: 0.86 };
+    slides[idx].mgWarp = { x: 80, y: 340 + voff, w: 920, h: 613, sag: 10.5, comp: 3.2, bowT: 6.4, bowB: 3.6, lightAlpha: 0.82, gutter: 0.34 };
   } else if (kind === 'cover') {
     // Einzelseite, links gebunden: sehr subtile Falz (mode 1) — die ganze
     // Seite bekommt eine leichte Plastizität, der Titel biegt sich minimal in
