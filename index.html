@@ -238,13 +238,20 @@ button {
   box-shadow: 0 10px 28px rgba(0,0,0,0.1);
 }
 #exportMenu.show { display: block; }
-#exportMenu { min-width: 180px; }
-#exportFrameOpt { border-bottom: 1px solid var(--bg); padding: 4px 4px 8px; }
-#expFrameRow { display: flex; align-items: center; gap: 9px; padding: 10px 11px; cursor: pointer; font-size: 13px; color: var(--text); user-select: none; }
-#expFrameRow input { width: 16px; height: 16px; accent-color: var(--dark); flex: 0 0 auto; }
-#expFrameOpts { display: none; padding: 2px 11px 4px; flex-direction: column; gap: 8px; }
-#expFrameOpts.show { display: flex; }
-#expFrameClrs { display: flex; gap: 8px; align-items: center; }
+#exportMenu { min-width: 190px; }
+/* „Frame all slides"-Zeile im Export-Menü: Titel links, Status (z. B. „24 pt") rechts */
+#frameAllMenuBtn { display: flex !important; align-items: center; justify-content: space-between; gap: 12px; }
+#frameAllStatus.fa-status { color: var(--muted); font-size: 12px; font-weight: 500; }
+#frameAllMenuBtn.on #frameAllStatus { color: var(--accent); }
+/* Eigenes Rahmen-Popover (Stil wie die anderen Menüs) */
+#frameAllMenu {
+  display: none; position: fixed; z-index: 120; min-width: 236px;
+  padding: 13px 14px 14px; flex-direction: column; gap: 11px;
+}
+#frameAllMenu.show { display: flex; }
+#frameAllMenu .fa-title { font-size: 13px; font-weight: 600; color: var(--text); }
+#frameAllMenu .fa-row { display: flex; align-items: center; gap: 8px; }
+#frameAllMenu .fa-lbl { font-size: 12px; color: var(--muted); min-width: 44px; }
 #exportMenu button {
   display: block; width: 100%; text-align: left; height: auto;
   background: var(--surface); color: var(--text); border: none;
@@ -2026,7 +2033,7 @@ html.native-ios .hlp-browser-only { display: none; }
   box-shadow: var(--shadow-ctl), var(--edge-light);
 }
 /* Dropdown-Menüs & Popover */
-#formatMenu, #textMenu, #bgMenu, #exportMenu, #settingsMenu {
+#formatMenu, #textMenu, #bgMenu, #exportMenu, #settingsMenu, #frameAllMenu {
   background: var(--glass-bg-strong);
   -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
   border: 1px solid var(--hairline);
@@ -2177,25 +2184,34 @@ html.native-ios .hlp-browser-only { display: none; }
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 8l5-5 5 5"/><path d="M5 21h14"/></svg>
     </button>
     <div id="exportMenu">
-      <div id="exportFrameOpt">
-        <label id="expFrameRow"><input type="checkbox" id="expFrameChk"><span id="expFrameLabel">Frame all slides</span></label>
-        <div id="expFrameOpts">
-          <div class="size-chips" id="expFrameChips">
-            <button class="size-chip" data-v="12" title="12 pt">12</button>
-            <button class="size-chip" data-v="24" title="24 pt">24</button>
-            <button class="size-chip" data-v="40" title="40 pt">40</button>
-            <button class="size-chip" data-v="60" title="60 pt">60</button>
-          </div>
-          <div id="expFrameClrs">
-            <button class="clr-btn white" data-fclr="#ffffff" title="White"></button>
-            <button class="clr-btn black" data-fclr="#111111" title="Black"></button>
-            <button class="clr-btn beige" data-fclr="#F4F1EB" title="Beige"></button>
-            <button class="clr-btn grey"  data-fclr="#888888" title="Grey"></button>
-          </div>
-        </div>
-      </div>
+      <button id="frameAllMenuBtn" type="button"><span id="expFrameLabel">Frame all slides</span><span id="frameAllStatus" class="fa-status">Off</span></button>
       <button id="exportAllBtn">All slides</button>
       <button id="exportOneBtn">This slide</button>
+    </div>
+    <!-- Eigenes Popover für den globalen Rahmen (öffnet aus dem Export-Menü) —
+         pt-Stepper + Farben im Stil des Border-Tools. -->
+    <div id="frameAllMenu">
+      <div class="fa-title">Frame all slides</div>
+      <div class="fa-row">
+        <span class="fa-lbl">Width</span>
+        <div class="stepper">
+          <button class="step-btn" id="faStepDown" type="button" title="Less">−</button>
+          <input type="number" class="px-val pt-in" id="faWidthIn" min="0" max="120" step="1" value="0" inputmode="numeric" title="Frame width in pt">
+          <span class="pt-unit">pt</span>
+          <button class="step-btn" id="faStepUp" type="button" title="More">＋</button>
+        </div>
+      </div>
+      <div class="fa-row" id="faColorRow">
+        <span class="fa-lbl">Color</span>
+        <button class="clr-btn white" data-fclr="#ffffff" title="White"></button>
+        <button class="clr-btn black" data-fclr="#111111" title="Black"></button>
+        <button class="clr-btn beige" data-fclr="#F4F1EB" title="Beige"></button>
+        <button class="clr-btn grey"  data-fclr="#888888" title="Grey"></button>
+        <input type="color" id="faColorPick" class="color-pick" value="#ffffff" title="Pick any frame color">
+      </div>
+      <div class="fa-row">
+        <button id="faLine" class="jr-tgl" type="button" title="Thin inner line"><span class="jr-tgl-txt">Inner line</span><span class="jr-tgl-dot" aria-hidden="true"></span></button>
+      </div>
     </div>
   </div>
 
@@ -3051,8 +3067,11 @@ html.native-ios .hlp-browser-only { display: none; }
     </div>
     <!-- Globaler Rahmen für ALLE Slides gleichmäßig (Breite + Farbe + Linie).
          Wirkt live auf jede Seite; PRO-Feature (auf Web für alle frei). -->
-    <div class="row" style="margin-top:8px">
-      <span class="label" id="frameAllLabel">Frame</span>
+    <div class="row" style="margin-top:10px">
+      <span class="label" id="frameAllLabel" style="font-weight:600">Frame all slides</span>
+    </div>
+    <div class="row">
+      <span class="label">Width</span>
       <div class="size-chips" id="frameAllChips">
         <button class="size-chip sel" data-v="0" title="No frame">0</button>
         <button class="size-chip" data-v="12" title="12 pt">12</button>
@@ -4490,7 +4509,7 @@ function positionMenu(menu, toggle) {
 }
 // Nur EIN Dropdown gleichzeitig: Öffnet sich eines, schließen die anderen.
 function closeMenusExcept(keepId) {
-  ['formatMenu', 'textMenu', 'bgMenu', 'exportMenu'].forEach(id => {
+  ['formatMenu', 'textMenu', 'bgMenu', 'exportMenu', 'frameAllMenu'].forEach(id => {
     if (id === keepId) return;
     const m = document.getElementById(id);
     if (m) m.classList.remove('show');
@@ -6140,12 +6159,14 @@ function syncFrameAllUI() {
   if (cr) cr.querySelectorAll('.clr-btn').forEach(b => b.classList.toggle('sel', (b.dataset.fclr || '').toLowerCase() === (slideFrame.color || '').toLowerCase()));
   const cp = document.getElementById('frameAllColorPick'); if (cp && /^#([0-9a-fA-F]{6})$/.test(slideFrame.color || '')) cp.value = slideFrame.color;
   const lb = document.getElementById('frameAllLine'); if (lb) lb.classList.toggle('sel', !!slideFrame.line);
-  // Export-Dropdown-Widgets identisch spiegeln (gleicher State slideFrame).
+  // Export-Rahmen-Popover + Status-Zeile spiegeln (gleicher State slideFrame).
   const on = slideFrame.w > 0;
-  const chk = document.getElementById('expFrameChk'); if (chk) chk.checked = on;
-  const opts = document.getElementById('expFrameOpts'); if (opts) opts.classList.toggle('show', on);
-  const ech = document.getElementById('expFrameChips'); if (ech) ech.querySelectorAll('.size-chip').forEach(b => b.classList.toggle('sel', (+b.dataset.v) === (slideFrame.w | 0)));
-  const ecl = document.getElementById('expFrameClrs'); if (ecl) ecl.querySelectorAll('.clr-btn').forEach(b => b.classList.toggle('sel', (b.dataset.fclr || '').toLowerCase() === (slideFrame.color || '').toLowerCase()));
+  const st = document.getElementById('frameAllStatus'); if (st) st.textContent = on ? (slideFrame.w + ' pt' + (slideFrame.line ? ' · line' : '')) : 'Off';
+  const stBtn = document.getElementById('frameAllMenuBtn'); if (stBtn) stBtn.classList.toggle('on', on);
+  const wi = document.getElementById('faWidthIn'); if (wi && document.activeElement !== wi) wi.value = slideFrame.w | 0;
+  const fcr = document.getElementById('faColorRow'); if (fcr) fcr.querySelectorAll('.clr-btn').forEach(b => b.classList.toggle('sel', (b.dataset.fclr || '').toLowerCase() === (slideFrame.color || '').toLowerCase()));
+  const fcp = document.getElementById('faColorPick'); if (fcp && /^#([0-9a-fA-F]{6})$/.test(slideFrame.color || '')) fcp.value = slideFrame.color;
+  const fl = document.getElementById('faLine'); if (fl) fl.classList.toggle('sel', !!slideFrame.line);
 }
 (function initFrameAllUI() {
   const chips = document.getElementById('frameAllChips'); if (!chips) return;
@@ -6157,13 +6178,36 @@ function syncFrameAllUI() {
   if (cp) cp.addEventListener('input', () => { slideFrame.color = cp.value; syncFrameAllUI(); redraw(); scheduleSave(); });
   const lb = document.getElementById('frameAllLine');
   if (lb) lb.addEventListener('click', () => { if (typeof beginAction === 'function') beginAction(); slideFrame.line = !slideFrame.line; syncFrameAllUI(); redraw(); scheduleSave(); });
-  // Export-Dropdown: „Frame all slides"-Kästchen + Optionen (gleicher State).
-  const chk = document.getElementById('expFrameChk');
-  if (chk) chk.addEventListener('change', () => { if (typeof beginAction === 'function') beginAction(); slideFrame.w = chk.checked ? (slideFrame.w > 0 ? slideFrame.w : 24) : 0; syncFrameAllUI(); redraw(); scheduleSave(); if (typeof updateProDot === 'function') updateProDot(); });
-  const ech = document.getElementById('expFrameChips');
-  if (ech) ech.querySelectorAll('.size-chip').forEach(b => b.addEventListener('click', () => setW(+b.dataset.v)));
-  const ecl = document.getElementById('expFrameClrs');
-  if (ecl) ecl.querySelectorAll('.clr-btn').forEach(b => b.addEventListener('click', () => { if (typeof beginAction === 'function') beginAction(); slideFrame.color = b.dataset.fclr; syncFrameAllUI(); redraw(); scheduleSave(); }));
+  // Export-Menü → eigenes Rahmen-Popover (pt-Stepper + Farben, Border-Stil).
+  const faBtn = document.getElementById('frameAllMenuBtn');
+  const faMenu = document.getElementById('frameAllMenu');
+  if (faBtn && faMenu) {
+    faBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const em = document.getElementById('exportMenu'); if (em) em.classList.remove('show');
+      if (typeof closeMenusExcept === 'function') closeMenusExcept('frameAllMenu');
+      const anchor = document.getElementById('exportBtn') || faBtn;
+      if (!faMenu.classList.contains('show') && typeof positionMenu === 'function') positionMenu(faMenu, anchor);
+      faMenu.classList.add('show');
+      syncFrameAllUI();
+    });
+    document.addEventListener('click', (e) => {
+      if (!faMenu.classList.contains('show')) return;
+      if (faMenu.contains(e.target) || faBtn.contains(e.target)) return;
+      faMenu.classList.remove('show');
+    });
+    const wi = document.getElementById('faWidthIn');
+    if (wi) wi.addEventListener('input', () => { if (typeof beginAction === 'function') beginAction(); slideFrame.w = Math.max(0, Math.min(120, parseInt(wi.value, 10) || 0)); syncFrameAllUI(); redraw(); scheduleSave(); if (typeof updateProDot === 'function') updateProDot(); });
+    const dn = document.getElementById('faStepDown'), up = document.getElementById('faStepUp');
+    if (dn) dn.addEventListener('click', () => setW(Math.max(0, (slideFrame.w | 0) - 1)));
+    if (up) up.addEventListener('click', () => setW(Math.min(120, (slideFrame.w | 0) + 1)));
+    const fcr = document.getElementById('faColorRow');
+    if (fcr) fcr.querySelectorAll('.clr-btn').forEach(b => b.addEventListener('click', () => { if (typeof beginAction === 'function') beginAction(); slideFrame.color = b.dataset.fclr; syncFrameAllUI(); redraw(); scheduleSave(); }));
+    const fcp = document.getElementById('faColorPick');
+    if (fcp) fcp.addEventListener('input', () => { slideFrame.color = fcp.value; syncFrameAllUI(); redraw(); scheduleSave(); });
+    const fl2 = document.getElementById('faLine');
+    if (fl2) fl2.addEventListener('click', () => { if (typeof beginAction === 'function') beginAction(); slideFrame.line = !slideFrame.line; syncFrameAllUI(); redraw(); scheduleSave(); });
+  }
   syncFrameAllUI();
 })();
 function renderNow() {
