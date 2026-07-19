@@ -5777,6 +5777,82 @@ function drawSlideRef(c, p, scale) {
   c.drawImage(_srCache.cv, -w / 2, -h / 2, w, h);
 }
 
+// ── WebGL-Warp (Mockup 3.0): ECHTES per-Pixel-Resampling der Falz-Wölbung.
+//    Der Canvas-2D-Streifen-Warp kann prinzipbedingt nicht ÜBER Streifen-
+//    grenzen hinweg interpolieren — Text/Fotos bekamen ein feines Kamm-
+//    Zittern, Kanten Sägezähne (Silvans Zooms 19.07.). Der Fragment-Shader
+//    rechnet die IDENTISCHE Geometrie (Bund-Senke + Blattbauch, inverses
+//    Mapping) und sampelt die Quellregion BILINEAR — glatt in jeder Zoom-
+//    stufe, in allen 3 Render-Pfaden. Ohne WebGL greift der Streifen-Fallback.
+let _wgl = null;
+function warpGL(srcCv, w, h, sag, bowT, bowB, comp, fall) {
+  if (_wgl === false) return null;
+  try {
+    if (!_wgl) {
+      const cv = document.createElement('canvas');
+      const gl = cv.getContext('webgl', { premultipliedAlpha: true, alpha: true, antialias: false });
+      if (!gl) { _wgl = false; return null; }
+      const vsrc = 'attribute vec2 aP; void main(){ gl_Position = vec4(aP, 0.0, 1.0); }';
+      const fsrc = 'precision highp float;' +
+        'uniform sampler2D uT; uniform vec2 uS; uniform float uH2; uniform vec4 uP; uniform float uF;' +
+        'void main(){' +
+        '  vec2 p = vec2(gl_FragCoord.x, uH2 - gl_FragCoord.y);' +
+        '  float midX = uS.x * 0.5;' +
+        '  float u = min(1.0, abs(p.x - midX) / midX);' +
+        '  float f = exp(-u / uF);' +
+        '  float PI = 3.14159265358979;' +
+        '  float dT = uP.x * f + uP.y * sin(PI * u);' +
+        '  float dB = uP.z * sin(PI * u);' +
+        '  float sy = (p.y - dT) / (uS.y + dB - dT) * uS.y;' +
+        '  float sx = p.x + uP.w * f * sign(p.x - midX);' +
+        '  float a = clamp(sy + 0.5, 0.0, 1.0) * clamp(uS.y - sy + 0.5, 0.0, 1.0);' +
+        '  vec4 c = texture2D(uT, vec2(sx / uS.x, sy / uS.y));' +
+        '  gl_FragColor = vec4(c.rgb * a, a);' +
+        '}';
+      const sh = (type, src) => {
+        const o = gl.createShader(type); gl.shaderSource(o, src); gl.compileShader(o);
+        if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(o));
+        return o;
+      };
+      const prog = gl.createProgram();
+      gl.attachShader(prog, sh(gl.VERTEX_SHADER, vsrc));
+      gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, fsrc));
+      gl.linkProgram(prog);
+      if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error('link');
+      gl.useProgram(prog);
+      const buf = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+      const aP = gl.getAttribLocation(prog, 'aP');
+      gl.enableVertexAttribArray(aP);
+      gl.vertexAttribPointer(aP, 2, gl.FLOAT, false, 0, 0);
+      const tex = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, tex);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      _wgl = { cv, gl,
+        uS: gl.getUniformLocation(prog, 'uS'), uH2: gl.getUniformLocation(prog, 'uH2'),
+        uP: gl.getUniformLocation(prog, 'uP'), uF: gl.getUniformLocation(prog, 'uF') };
+    }
+    const gl = _wgl.gl, cv = _wgl.cv;
+    const H2 = h + Math.ceil(bowB) + 2;
+    if (cv.width !== w)   cv.width  = w;
+    if (cv.height !== H2) cv.height = H2;
+    gl.viewport(0, 0, w, H2);
+    gl.clearColor(0, 0, 0, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, srcCv);
+    gl.uniform2f(_wgl.uS, w, h);
+    gl.uniform1f(_wgl.uH2, H2);
+    gl.uniform4f(_wgl.uP, sag, bowT, bowB, comp);
+    gl.uniform1f(_wgl.uF, fall);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    return cv;
+  } catch (e) { _wgl = false; return null; }
+}
+
 let _warpCv = null;
 function applyGutterWarp(c, cv, i, oxDev, oyDev, scale) {
   const sl = slides[i], wp = sl && sl.mgWarp;
@@ -5825,21 +5901,27 @@ function applyGutterWarp(c, cv, i, oxDev, oyDev, scale) {
   const bowT = (wp.bowT || 0) * scale, bowB = (wp.bowB || 0) * scale;
   const dTop = px => sag * fAt(px) + bowT * Math.sin(Math.PI * uAt(px));
   const dBot = px => bowB * Math.sin(Math.PI * uAt(px));
-  // 1-px-Streifen ÜBERALL: eliminiert Segment-Knicke an Ober- UND Unterkante
-  // restlos (Live-Canvas ≈ 330 Streifen pro Doppelseite — unkritisch).
-  for (let px = 0; px < w; ) {
-    const x1 = px + 1, sw2 = 1;
-    const d0 = dTop(px), d1 = dTop(x1);
-    const bm = (dBot(px) + dBot(x1)) / 2;
-    const fm = fAt(px + sw2 / 2);
-    const sx = Math.min(w - sw2, Math.max(0, px + comp * fm * (px >= midX ? 1 : -1)));
-    const dm = (d0 + d1) / 2;
-    const vs = (h + bm - dm) / h;                  // Unterkante folgt der Bow-Kurve
-    c.setTransform(1, (d1 - d0) / sw2, 0, vs, x + px, y + d0);
-    c.drawImage(_warpCv, sx, 0, sw2, h, 0, 0, sw2, h);
-    px = x1;
+  // Bevorzugt: WebGL-Resampling (bilinear, per Pixel — siehe warpGL oben).
+  const _glo = warpGL(_warpCv, w, h, sag, bowT, bowB, comp, FALL);
+  if (_glo) {
+    c.drawImage(_glo, x, y);
+  } else {
+    // Fallback ohne WebGL: 1-px-Streifen (kann bei starkem Zoom minimal
+    // zittern — Canvas 2D interpoliert nicht über Streifengrenzen).
+    for (let px = 0; px < w; ) {
+      const x1 = px + 1, sw2 = 1;
+      const d0 = dTop(px), d1 = dTop(x1);
+      const bm = (dBot(px) + dBot(x1)) / 2;
+      const fm = fAt(px + sw2 / 2);
+      const sx = Math.min(w - sw2, Math.max(0, px + comp * fm * (px >= midX ? 1 : -1)));
+      const dm = (d0 + d1) / 2;
+      const vs = (h + bm - dm) / h;                // Unterkante folgt der Bow-Kurve
+      c.setTransform(1, (d1 - d0) / sw2, 0, vs, x + px, y + d0);
+      c.drawImage(_warpCv, sx, 0, sw2, h, 0, 0, sw2, h);
+      px = x1;
+    }
+    c.setTransform(1, 0, 0, 1, 0, 0);
   }
-  c.setTransform(1, 0, 0, 1, 0, 0);
   // GLATTE Oberkante + Schatten-Anschluss: Die Bund-Senke gibt oben ein Band
   // frei, das der flache bg-Flood füllte — das schnitt den GEMALTEN Grund-
   // schatten an der Regionsoberkante hart ab (sichtbare waagerechte Kante),
@@ -9906,9 +9988,9 @@ function addMagazinePage(kind, forceAppend) {
     items.push(jrRect(mid, 640, 640, 850, { fill: MG_PAGE, radius: 4, shadow: MG_SHADOW }));
     items.push(jrRect(mid - 316, 640, 8, 850, { fill: MG_SPINE, radius: 2 }));
     items.push(mgF(jrRect(mid - 294, 640, 40, 850, { grad: MG_GUT_R })));
-    items.push(mgF(jrRect(mid, 1067, 632, 3, { fill: '#E7E5DF' })));
-    items.push(mgF(jrRect(mid, 1070, 622, 3, { fill: '#DBD9D2' })));
-    items.push(mgF(jrRect(mid + 2, 1072.5, 608, 2.5, { fill: '#CFCDC6' })));
+    items.push(mgF(jrRect(mid, 1067, 632, 3, { fill: '#E7E5DF', radius: 1.5 })));
+    items.push(mgF(jrRect(mid, 1070, 622, 3, { fill: '#DBD9D2', radius: 1.5 })));
+    items.push(mgF(jrRect(mid + 2, 1072.5, 608, 2.5, { fill: '#CFCDC6', radius: 1.25 })));
     items.push(jrText('THE', 'Cormorant Garamond', { size: 36, weight: 500, color: MG_INK, tracking: 6, cx: mid, cy: 291 }));
     items.push(jrText('ALPINE ISSUE', 'Cormorant Garamond', { size: 54, weight: 500, color: MG_INK, tracking: 6, cx: mid, cy: 347 }));
     items.push(jrPh(mid, 620, 350, 440));
@@ -9978,9 +10060,9 @@ function addMagazinePage(kind, forceAppend) {
     items.push(jrPh(mid + 230, 640, 460, 600));
     // Mockup-Plastizität: breite weiche Bund-Verläufe, Blattbauch-Sheen,
     // Außenkanten-Abdunklung, Papierdicke unten.
-    items.push(mgF(jrRect(mid, 943, 912, 3.5, { fill: '#E7E5DF' })));
-    items.push(mgF(jrRect(mid - 2, 946.5, 902, 3, { fill: '#DBD9D2' })));
-    items.push(mgF(jrRect(mid + 2, 949.5, 890, 2.5, { fill: '#CFCDC6' })));
+    items.push(mgF(jrRect(mid, 943, 912, 3.5, { fill: '#E7E5DF', radius: 1.75 })));
+    items.push(mgF(jrRect(mid - 2, 946.5, 902, 3, { fill: '#DBD9D2', radius: 1.5 })));
+    items.push(mgF(jrRect(mid + 2, 949.5, 890, 2.5, { fill: '#CFCDC6', radius: 1.25 })));
   } else if (kind === 'grid') {
     // 5/10-Referenz: links 2×2-Grid fast seitenfüllend (kleine Stege), rechts
     // Foto OBEN RECHTS, darunter Subhead + zwei Spalten, unten Mini-Credits.
@@ -10018,9 +10100,9 @@ function addMagazinePage(kind, forceAppend) {
       items.push(mgL(val, 'Archivo', { size: 6.5, weight: 400, color: MG_MUTED, cy: y }, cx0 + 835 + Math.round(lb.length * 6.5 * 0.54) + 7));
     });
     items.push(jrText('081', 'Archivo', { size: 9, weight: 400, color: MG_MUTED, cx: cx0 + 950, cy: 918 }));
-    items.push(mgF(jrRect(mid, 943, 912, 3.5, { fill: '#E7E5DF' })));
-    items.push(mgF(jrRect(mid - 2, 946.5, 902, 3, { fill: '#DBD9D2' })));
-    items.push(mgF(jrRect(mid + 2, 949.5, 890, 2.5, { fill: '#CFCDC6' })));
+    items.push(mgF(jrRect(mid, 943, 912, 3.5, { fill: '#E7E5DF', radius: 1.75 })));
+    items.push(mgF(jrRect(mid - 2, 946.5, 902, 3, { fill: '#DBD9D2', radius: 1.5 })));
+    items.push(mgF(jrRect(mid + 2, 949.5, 890, 2.5, { fill: '#CFCDC6', radius: 1.25 })));
   }
 
   // Try-before-buy wie überall: Pro-Seiten taggen, Sperre sitzt am Export.
