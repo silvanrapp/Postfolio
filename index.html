@@ -5899,6 +5899,15 @@ function applyGutterWarp(c, cv, i, oxDev, oyDev, scale) {
   // Kante. Koordinaten slide-lokal wie wp.x. { cx, cy, w, h, stops }.
   if (sl.mgFloorShadow) {
     c.save();
+    // Schatten NUR unterhalb der Seitenunterkante zeichnen — nichts davon auf die
+    // Seite/das Foto (Silvan 19.07.: „Schatten nur unterhalb der Seite"). Clip auf
+    // alles ab y = mgFloorClipY abwärts, volle Breite.
+    if (sl.mgFloorClipY != null) {
+      const clipY = oyDev + sl.mgFloorClipY * scale;
+      c.beginPath();
+      c.rect(oxDev - 100000, clipY, 200000, 100000);
+      c.clip();
+    }
     sl.mgFloorShadow.forEach(s => {
       const scx = oxDev + s.cx * scale, scy = oyDev + s.cy * scale;
       const sw = s.w * scale, sh = s.h * scale;
@@ -10372,16 +10381,18 @@ function addMagazinePage(kind, forceAppend) {
     // applyGutterWarp), sitzt direkt unter der gewölbten Unterkante, keine
     // gerade Abschnittkante. Je eine Linse unter linker/rechter Seite (Mitte
     // heller) + ein hauchzarter breiter Grundschatten.
+    // Der Bodenschatten wird an der Seiten-UNTERKANTE abgeschnitten (mgFloorClipY),
+    // liegt also AUSSCHLIESSLICH unterhalb der Seite — nichts davon auf dem Foto
+    // (Silvan 19.07.: „Schatten nur unterhalb der Seite"). Seitenunterkante = y340+h600.
+    slides[idx].mgFloorClipY = 940 + voff;
     slides[idx].mgFloorShadow = [
-      // Tiefer, breiter Boden-Halo (Ambient), läuft weich nach unten aus — füllt
-      // die Zone, in der früher der helle Grund zurückkam.
-      { cx: 540, cy: 978 + voff, w: 1044, h: 112, stops: [[0, 'rgba(30,28,25,0.12)'], [0.5, 'rgba(30,28,25,0.055)'], [1, 'rgba(30,28,25,0)']] },
-      // Kontaktschatten je Seite: dunkelster Punkt DIREKT an der Unterkante (~940),
-      // tief und weich, damit KEIN heller MG_BG-Streifen mehr zwischen Seite und
-      // Schatten steht — auch nicht unter einem dunklen Vollflächen-Foto, wo der
-      // helle Grund sonst als greller Streifen zurückkam (Silvan 19.07., mehrfach).
-      { cx: 306, cy: 948 + voff, w: 500, h: 64, stops: [[0, 'rgba(30,28,25,0.34)'], [0.4, 'rgba(30,28,25,0.18)'], [0.7, 'rgba(30,28,25,0.06)'], [1, 'rgba(30,28,25,0)']] },
-      { cx: 774, cy: 948 + voff, w: 500, h: 64, stops: [[0, 'rgba(30,28,25,0.34)'], [0.4, 'rgba(30,28,25,0.18)'], [0.7, 'rgba(30,28,25,0.06)'], [1, 'rgba(30,28,25,0)']] }
+      // Breiter, sehr zarter Boden-Halo (Ambient), weit unter der Seite auslaufend.
+      { cx: 540, cy: 990 + voff, w: 1040, h: 100, stops: [[0, 'rgba(30,28,25,0.07)'], [0.55, 'rgba(30,28,25,0.03)'], [1, 'rgba(30,28,25,0)']] },
+      // Kontaktschatten je Seite — Zentrum LIEGT UNTER der Unterkante (cy 966,
+      // Kante bei 940), am Clip oben schon fast aus → weicher Ansatz an der Kante,
+      // dann sanft dunkler und wieder aus. Deutlich zurückgenommen (war zu stark).
+      { cx: 306, cy: 966 + voff, w: 486, h: 58, stops: [[0, 'rgba(30,28,25,0.24)'], [0.45, 'rgba(30,28,25,0.12)'], [0.75, 'rgba(30,28,25,0.035)'], [1, 'rgba(30,28,25,0)']] },
+      { cx: 774, cy: 966 + voff, w: 486, h: 58, stops: [[0, 'rgba(30,28,25,0.24)'], [0.45, 'rgba(30,28,25,0.12)'], [0.75, 'rgba(30,28,25,0.035)'], [1, 'rgba(30,28,25,0)']] }
     ];
   } else if (kind === 'cover') {
     // Einzelseite, links gebunden: sehr subtile Falz (mode 1) — die ganze
