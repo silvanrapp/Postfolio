@@ -10109,13 +10109,13 @@ function addMagazinePage(kind, forceAppend) {
     items.push(mgF(jrRect(mid, 640, 640, 850, { fill: MG_PAGE, radius: 4, shadow: { blur: 92, dx: -6, dy: 30, color: 'rgba(30,28,25,0.13)' } })));
     items.push(mgF(jrRect(mid, 640, 640, 850, { fill: MG_PAGE, radius: 4, shadow: { blur: 40, dx: -14, dy: 20, color: 'rgba(30,28,25,0.20)' } })));
     items.push(jrRect(mid, 640, 640, 850, { fill: MG_PAGE, radius: 4 }));
-    // FEINE Falz links (Silvan 19.07.): klar erkennbar, aber fein. Drei Lagen,
-    // die zusammen mit der Seite gewölbt werden (mgWarp mode 1): weiche Schatten-
-    // Rinne, die rechts der Falz in die Seite ausläuft + dünnes Crease-Tal +
-    // Lichtkante am Bund. So „knickt" die Seite sichtbar am Bund.
-    items.push(mgF(jrRect(mid - 284, 640, 46, 850, { grad: { dir: 'x', stops: [[0, 'rgba(30,28,25,0.14)'], [0.5, 'rgba(30,28,25,0.045)'], [1, 'rgba(30,28,25,0)']] } })));
-    items.push(mgF(jrRect(mid - 307, 640, 2.5, 850, { fill: 'rgba(30,28,25,0.17)' })));
-    items.push(mgF(jrRect(mid - 315, 640, 2, 850, { fill: 'rgba(255,255,255,0.55)' })));
+    // Falz links als ZARTES Relief nach INNEN (Silvan 19.07.: „viel subtiler").
+    // Nur eine hauchdünne Licht- + Schattenlinie am Bund, die zusammen als
+    // leicht eingedrückte Rille wirken (Emboss nach innen), plus ein kaum
+    // sichtbarer Schatten-Auslauf. Wird mit der Seite gewölbt (mgWarp mode 1).
+    items.push(mgF(jrRect(mid - 292, 640, 30, 850, { grad: { dir: 'x', stops: [[0, 'rgba(30,28,25,0.06)'], [0.6, 'rgba(30,28,25,0.02)'], [1, 'rgba(30,28,25,0)']] } })));
+    items.push(mgF(jrRect(mid - 309, 640, 1.4, 850, { fill: 'rgba(255,255,255,0.32)' })));
+    items.push(mgF(jrRect(mid - 306, 640, 1.6, 850, { fill: 'rgba(30,28,25,0.09)' })));
     items.push(mgF(jrRect(mid, 1067, 632, 3, { fill: '#E7E5DF', radius: 1.5 })));
     items.push(mgF(jrRect(mid, 1070, 622, 3, { fill: '#DBD9D2', radius: 1.5 })));
     items.push(mgF(jrRect(mid + 2, 1072.5, 608, 2.5, { fill: '#CFCDC6', radius: 1.25 })));
@@ -10204,9 +10204,11 @@ function addMagazinePage(kind, forceAppend) {
     items.push(jrPh(mid + 230, 640, 460, 600));
     // Mockup-Plastizität: breite weiche Bund-Verläufe, Blattbauch-Sheen,
     // Außenkanten-Abdunklung, Papierdicke unten.
-    items.push(mgF(jrRect(mid, 943, 912, 3.5, { fill: '#E7E5DF', radius: 1.75 })));
-    items.push(mgF(jrRect(mid - 2, 946.5, 902, 3, { fill: '#DBD9D2', radius: 1.5 })));
-    items.push(mgF(jrRect(mid + 2, 949.5, 890, 2.5, { fill: '#CFCDC6', radius: 1.25 })));
+    // Dünnerer, eleganterer Buchblock (Silvan 19.07.: „unten wirkt es zu dick"):
+    // statt drei kräftiger Kanten nur eine feine Blockkante + ein hauchzarter
+    // Schattenstrich darunter → das Heft wirkt schlank.
+    items.push(mgF(jrRect(mid, 943, 906, 1.8, { fill: '#E4E2DC', radius: 0.9 })));
+    items.push(mgF(jrRect(mid, 945, 892, 1.3, { fill: '#D4D2CB', radius: 0.65 })));
   } else if (kind === 'grid') {
     // 5/10-Referenz: links 2×2-Grid fast seitenfüllend (kleine Stege), rechts
     // Foto OBEN RECHTS, darunter Subhead + zwei Spalten, unten Mini-Credits.
@@ -10249,9 +10251,11 @@ function addMagazinePage(kind, forceAppend) {
       items.push(mgL(val, 'Archivo', { size: 6.5, weight: 400, color: MG_MUTED, cy: y }, cx0 + 835 + Math.round(lb.length * 6.5 * 0.54) + 7));
     });
     items.push(jrText('081', 'Archivo', { size: 9, weight: 400, color: MG_MUTED, cx: cx0 + 950, cy: 918 }));
-    items.push(mgF(jrRect(mid, 943, 912, 3.5, { fill: '#E7E5DF', radius: 1.75 })));
-    items.push(mgF(jrRect(mid - 2, 946.5, 902, 3, { fill: '#DBD9D2', radius: 1.5 })));
-    items.push(mgF(jrRect(mid + 2, 949.5, 890, 2.5, { fill: '#CFCDC6', radius: 1.25 })));
+    // Dünnerer, eleganterer Buchblock (Silvan 19.07.: „unten wirkt es zu dick"):
+    // statt drei kräftiger Kanten nur eine feine Blockkante + ein hauchzarter
+    // Schattenstrich darunter → das Heft wirkt schlank.
+    items.push(mgF(jrRect(mid, 943, 906, 1.8, { fill: '#E4E2DC', radius: 0.9 })));
+    items.push(mgF(jrRect(mid, 945, 892, 1.3, { fill: '#D4D2CB', radius: 0.65 })));
   }
 
   // Try-before-buy wie überall: Pro-Seiten taggen, Sperre sitzt am Export.
@@ -10270,7 +10274,7 @@ function addMagazinePage(kind, forceAppend) {
     // Einzelseite, links gebunden: sehr subtile Falz (mode 1) — die ganze
     // Seite bekommt eine leichte Plastizität, der Titel biegt sich minimal in
     // den Bund. light:false → die gemalte Falz-Schattierung wird mitgewölbt.
-    slides[idx].mgWarp = { x: 220, y: 210 + voff, w: 640, h: 872, sag: 4.4, comp: 2.4, bowT: 3.0, bowB: 1.6, mode: 1, fall: 0.085, light: false };
+    slides[idx].mgWarp = { x: 220, y: 210 + voff, w: 640, h: 872, sag: 2.4, comp: 1.3, bowT: 1.7, bowB: 1.0, mode: 1, fall: 0.10, light: false };
   } else if (kind === 'stapel') {
     // Nur das vordere Heft bekommt eine sehr subtile Falz-Plastizität (mode 1).
     // Die hinteren Blätter bleiben gemalt (Überlappung → kein sauberes Resampling).
