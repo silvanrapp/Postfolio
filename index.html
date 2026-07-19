@@ -10101,13 +10101,21 @@ function addMagazinePage(kind, forceAppend) {
     slides[idx].palFam = 'magazine'; slides[idx].palId = 'salbei';
     slides[idx].palFam = 'magazine'; slides[idx].palId = 'salbei';
     slides[idx].bg = MG_BG;
-    items.push(jrRect(mid, 640, 640, 850, { fill: MG_PAGE, radius: 4, shadow: MG_SHADOW }));
-    // Sehr subtile Falz links (Silvan 19.07.): kein harter Bund-Balken mehr,
-    // sondern eine weiche Falz-Schattierung, die zusammen mit der Seite gewölbt
-    // wird (mgWarp mode 1) — der Titel „biegt" sich minimal in die Falz. Dünne
-    // Lichtkante direkt am Bund gibt der Kante Plastizität.
-    items.push(mgF(jrRect(mid - 306, 640, 30, 850, { grad: { dir: 'x', stops: [[0, 'rgba(30,28,25,0.15)'], [0.4, 'rgba(30,28,25,0.055)'], [1, 'rgba(30,28,25,0)']] } })));
-    items.push(mgF(jrRect(mid - 316.5, 640, 2, 850, { fill: 'rgba(255,255,255,0.5)' })));
+    // Hochwertiger, GLATTER Schlagschatten in zwei Lagen (Silvan 19.07.: „high
+    // end resolution im Schatten"). Canvas-shadowBlur = echte Gauß-Unschärfe →
+    // bandingfrei in jeder Auflösung. Schattenwerfer liegen exakt UNTER der
+    // Seite (Versatz nur über shadow dx/dy), damit keine Füllung heraussteht:
+    //  1) großer, sehr weicher Umgebungsschatten  2) tieferer Kontaktschatten.
+    items.push(mgF(jrRect(mid, 640, 640, 850, { fill: MG_PAGE, radius: 4, shadow: { blur: 92, dx: -6, dy: 30, color: 'rgba(30,28,25,0.13)' } })));
+    items.push(mgF(jrRect(mid, 640, 640, 850, { fill: MG_PAGE, radius: 4, shadow: { blur: 40, dx: -14, dy: 20, color: 'rgba(30,28,25,0.20)' } })));
+    items.push(jrRect(mid, 640, 640, 850, { fill: MG_PAGE, radius: 4 }));
+    // FEINE Falz links (Silvan 19.07.): klar erkennbar, aber fein. Drei Lagen,
+    // die zusammen mit der Seite gewölbt werden (mgWarp mode 1): weiche Schatten-
+    // Rinne, die rechts der Falz in die Seite ausläuft + dünnes Crease-Tal +
+    // Lichtkante am Bund. So „knickt" die Seite sichtbar am Bund.
+    items.push(mgF(jrRect(mid - 284, 640, 46, 850, { grad: { dir: 'x', stops: [[0, 'rgba(30,28,25,0.14)'], [0.5, 'rgba(30,28,25,0.045)'], [1, 'rgba(30,28,25,0)']] } })));
+    items.push(mgF(jrRect(mid - 307, 640, 2.5, 850, { fill: 'rgba(30,28,25,0.17)' })));
+    items.push(mgF(jrRect(mid - 315, 640, 2, 850, { fill: 'rgba(255,255,255,0.55)' })));
     items.push(mgF(jrRect(mid, 1067, 632, 3, { fill: '#E7E5DF', radius: 1.5 })));
     items.push(mgF(jrRect(mid, 1070, 622, 3, { fill: '#DBD9D2', radius: 1.5 })));
     items.push(mgF(jrRect(mid + 2, 1072.5, 608, 2.5, { fill: '#CFCDC6', radius: 1.25 })));
@@ -10262,7 +10270,7 @@ function addMagazinePage(kind, forceAppend) {
     // Einzelseite, links gebunden: sehr subtile Falz (mode 1) — die ganze
     // Seite bekommt eine leichte Plastizität, der Titel biegt sich minimal in
     // den Bund. light:false → die gemalte Falz-Schattierung wird mitgewölbt.
-    slides[idx].mgWarp = { x: 220, y: 210 + voff, w: 640, h: 872, sag: 3.0, comp: 1.5, bowT: 2.2, bowB: 1.3, mode: 1, fall: 0.10, light: false };
+    slides[idx].mgWarp = { x: 220, y: 210 + voff, w: 640, h: 872, sag: 4.4, comp: 2.4, bowT: 3.0, bowB: 1.6, mode: 1, fall: 0.085, light: false };
   } else if (kind === 'stapel') {
     // Nur das vordere Heft bekommt eine sehr subtile Falz-Plastizität (mode 1).
     // Die hinteren Blätter bleiben gemalt (Überlappung → kein sauberes Resampling).
